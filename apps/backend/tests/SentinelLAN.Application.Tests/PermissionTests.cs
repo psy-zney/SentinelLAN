@@ -10,6 +10,8 @@ public sealed class PermissionTests
     [InlineData("Technician", Permissions.ManageCommands, true)]
     [InlineData("Technician", Permissions.ViewAudit, false)]
     [InlineData("Employee", Permissions.ViewDevices, false)]
+    [InlineData("Employee", Permissions.ViewAssignedDevice, true)]
+    [InlineData("Agent", Permissions.ViewAssignedDevice, false)]
     public void RolePermissionsAreExplicit(string role, string permission, bool expected) => Assert.Equal(expected, Permissions.RoleHas(role, permission));
 
     [Fact]

@@ -1,4 +1,4 @@
-import type { AuditEvent, CommandType, Dashboard, Device } from "@/types/api";
+import type { AuditEvent, CommandType, CurrentSession, Dashboard, Device, EmployeeDevice, Role } from "@/types/api";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -7,7 +7,8 @@ export class ApiClient {
 
   private async request<T>(path: string, init?: RequestInit, retryAfterRefresh = true): Promise<T> {
     let response = await this.send(path, init);
-    if (response.status === 401 && retryAfterRefresh && !path.startsWith("/api/v1/auth/")) {
+    const cannotRefresh = ["/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/logout"].includes(path);
+    if (response.status === 401 && retryAfterRefresh && !cannotRefresh) {
       const refreshed = await this.refreshSession();
       if (refreshed) response = await this.send(path, init);
     }
@@ -42,14 +43,16 @@ export class ApiClient {
 
   login(organizationCode: string, email: string, password: string) { return this.request<AuthSession>("/api/v1/auth/login", { method: "POST", body: JSON.stringify({ organizationCode, email, password }) }, false); }
   logout() { return this.request<void>("/api/v1/auth/logout", { method: "POST" }, false); }
+  session() { return this.request<CurrentSession>("/api/v1/auth/session"); }
   dashboard() { return this.request<Dashboard>("/api/v1/dashboard"); }
   devices() { return this.request<Device[]>("/api/v1/devices"); }
   device(id: string) { return this.request<Device>(`/api/v1/devices/${id}`); }
+  myDevice() { return this.request<EmployeeDevice>("/api/v1/my-device"); }
   auditLogs() { return this.request<AuditEvent[]>("/api/v1/audit-logs"); }
   createCommand(deviceId: string, type: CommandType, reason: string) { return this.request(`/api/v1/commands`, { method: "POST", body: JSON.stringify({ deviceId, type, reason }) }); }
 }
 
-export type AuthSession = { expiresIn: number; role: string; displayName: string };
+export type AuthSession = { expiresIn: number; role: Role; displayName: string };
 
 export const demoDashboard: Dashboard = {
   totalDevices: 3,

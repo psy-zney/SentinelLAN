@@ -12,7 +12,11 @@ using SentinelLAN.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddProblemDetails();
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer<AuthenticationOpenApiTransformer>();
+    options.AddOperationTransformer<AuthenticationOpenApiTransformer>();
+});
 builder.Services.AddSignalR();
 var allowedOrigins = (builder.Configuration["SENTINELLAN_WEB_ORIGINS"] ?? "http://localhost:3000")
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -51,10 +55,21 @@ builder.Services.AddScoped<SentinelLAN.Application.AuthenticationService>();
 builder.Services.AddSingleton<AuthCookieManager>();
 builder.Services
     .AddAuthentication(SentinelAuthenticationDefaults.Scheme)
-    .AddScheme<AuthenticationSchemeOptions, AccessTokenAuthenticationHandler>(SentinelAuthenticationDefaults.Scheme, _ => { });
+    .AddScheme<AuthenticationSchemeOptions, AccessTokenAuthenticationHandler>(SentinelAuthenticationDefaults.Scheme, _ => { })
+    .AddScheme<AuthenticationSchemeOptions, AgentAuthenticationHandler>(AgentAuthenticationDefaults.Scheme, _ => { });
 builder.Services.AddAuthorization(options =>
 {
+    options.AddPolicy(AuthorizationPolicies.Admin, policy => policy.RequireRole(Roles.Admin));
+    options.AddPolicy(AuthorizationPolicies.Technician, policy => policy.RequireRole(Roles.Admin, Roles.Technician));
+    options.AddPolicy(AuthorizationPolicies.Employee, policy => policy.RequireRole(Roles.Employee));
+    options.AddPolicy(AuthorizationPolicies.Agent, policy =>
+    {
+        policy.AddAuthenticationSchemes(AgentAuthenticationDefaults.Scheme);
+        policy.RequireAuthenticatedUser();
+        policy.RequireRole(Roles.Agent);
+    });
     options.AddPolicy(AuthorizationPolicies.ViewDevices, policy => policy.RequireRole(Roles.Admin, Roles.Technician));
+    options.AddPolicy(AuthorizationPolicies.ViewAssignedDevice, policy => policy.RequireRole(Roles.Employee));
     options.AddPolicy(AuthorizationPolicies.ManageCommands, policy => policy.RequireRole(Roles.Admin, Roles.Technician));
     options.AddPolicy(AuthorizationPolicies.ViewAudit, policy => policy.RequireRole(Roles.Admin));
 });
@@ -119,6 +134,15 @@ v1.MapPost("/auth/logout", async (HttpContext http, SentinelLAN.Application.Auth
     return Results.NoContent();
 }).RequireRateLimiting("sensitive");
 
+v1.MapGet("/auth/session", async (HttpContext http, SentinelDbContext db, CancellationToken ct) =>
+{
+    var actor = http.User.ToActorContext()!.Value;
+    var user = await db.Users
+        .AsNoTracking()
+        .SingleAsync(item => item.Id == actor.UserId && item.OrganizationId == actor.OrganizationId, ct);
+    return Results.Ok(new CurrentSessionResponse(user.Role, user.DisplayName));
+}).RequireAuthorization();
+
 v1.MapGet("/devices", async (HttpContext http, SentinelDbContext db, CancellationToken ct) =>
 {
     var actor = http.User.ToActorContext()!.Value;
@@ -148,6 +172,31 @@ v1.MapGet("/dashboard", async (HttpContext http, SentinelDbContext db, Cancellat
     return Results.Ok(new DashboardDto(dto.Count, dto.Count(x => x.IsOnline), dto.Count(x => !x.IsOnline), await db.Alerts.CountAsync(x => x.OrganizationId == actor.OrganizationId && x.IsOpen, ct), dto));
 }).RequireAuthorization(AuthorizationPolicies.ViewDevices);
 
+v1.MapGet("/my-device", async (HttpContext http, SentinelDbContext db, CancellationToken ct) =>
+{
+    var actor = http.User.ToActorContext()!.Value;
+    var device = await DeviceScope.ForActor(db.Devices.AsNoTracking(), actor).SingleOrDefaultAsync(ct);
+    if (device is null) return Results.NotFound();
+
+    var policyName = await (
+        from assignment in db.PolicyAssignments.AsNoTracking()
+        join policy in db.Policies.AsNoTracking() on assignment.PolicyId equals policy.Id
+        where assignment.OrganizationId == actor.OrganizationId &&
+              assignment.DeviceId == device.Id &&
+              policy.OrganizationId == actor.OrganizationId
+        orderby assignment.CreatedAt descending
+        select policy.Name).FirstOrDefaultAsync(ct);
+    var actions = await db.AuditLogs
+        .AsNoTracking()
+        .Where(item => item.OrganizationId == actor.OrganizationId && item.DeviceId == device.Id)
+        .OrderByDescending(item => item.CreatedAt)
+        .Take(20)
+        .Select(item => new EmployeeDeviceActionDto(item.Action, item.Reason, item.Outcome, item.CreatedAt))
+        .ToListAsync(ct);
+    var dto = new DeviceDto(device.Id, device.Name, device.OsVersion, device.AgentVersion, device.LastSeenAt, device.IsOnline(DateTimeOffset.UtcNow));
+    return Results.Ok(new EmployeeDeviceDto(dto, policyName, actions));
+}).RequireAuthorization(AuthorizationPolicies.ViewAssignedDevice);
+
 v1.MapPost("/agent/enroll", async (EnrollRequest request, SentinelDbContext db, CancellationToken ct) =>
 {
     var hash = SecretHash.Create(request.Token);
@@ -161,12 +210,11 @@ v1.MapPost("/agent/enroll", async (EnrollRequest request, SentinelDbContext db, 
     return Results.Ok(new EnrollResponse(device.Id, secret));
 }).RequireRateLimiting("sensitive");
 
-v1.MapPost("/agent/heartbeat", async (HeartbeatRequest request, SentinelDbContext db, IHubContext<UpdatesHub> hub, CancellationToken ct) =>
+v1.MapPost("/agent/heartbeat", async (HeartbeatRequest request, HttpContext http, SentinelDbContext db, IHubContext<UpdatesHub> hub, CancellationToken ct) =>
 {
-    var credential = await db.DeviceCredentials.SingleOrDefaultAsync(x => x.DeviceId == request.DeviceId && x.RevokedAt == null, ct);
-    if (credential is null || !SecretHash.Matches(request.DeviceSecret, credential.SecretHash)) return Results.Unauthorized();
-    if (await db.Heartbeats.AnyAsync(x => x.DeviceId == request.DeviceId && x.IdempotencyKey == request.IdempotencyKey, ct)) return Results.Ok(new { duplicate = true });
-    var device = await db.Devices.SingleAsync(x => x.Id == request.DeviceId, ct);
+    var agent = http.User.ToAgentContext()!.Value;
+    if (await db.Heartbeats.AnyAsync(x => x.DeviceId == agent.DeviceId && x.OrganizationId == agent.OrganizationId && x.IdempotencyKey == request.IdempotencyKey, ct)) return Results.Ok(new { duplicate = true });
+    var device = await db.Devices.SingleAsync(x => x.Id == agent.DeviceId && x.OrganizationId == agent.OrganizationId, ct);
     device.LastSeenAt = DateTimeOffset.UtcNow;
     device.OsVersion = request.OsVersion;
     device.AgentVersion = request.AgentVersion;
@@ -175,7 +223,7 @@ v1.MapPost("/agent/heartbeat", async (HeartbeatRequest request, SentinelDbContex
     await db.SaveChangesAsync(ct);
     await hub.Clients.Group(TenantGroup.Name(device.OrganizationId)).SendAsync("device-status", new { device.Id, online = true, device.LastSeenAt }, ct);
     return Results.Accepted();
-}).RequireRateLimiting("sensitive");
+}).RequireAuthorization(AuthorizationPolicies.Agent).RequireRateLimiting("sensitive");
 
 v1.MapPost("/commands", async (CreateCommandRequest request, HttpContext http, SentinelDbContext db, ICommandSigner signer, IHubContext<UpdatesHub> hub, CancellationToken ct) =>
 {
@@ -193,26 +241,24 @@ v1.MapPost("/commands", async (CreateCommandRequest request, HttpContext http, S
     return Results.Created($"/api/v1/commands/{command.Id}", command);
 }).RequireAuthorization(AuthorizationPolicies.ManageCommands);
 
-v1.MapPost("/agent/commands/poll", async (Guid deviceId, string deviceSecret, SentinelDbContext db, ICommandSigner signer, CancellationToken ct) =>
+v1.MapPost("/agent/commands/poll", async (HttpContext http, SentinelDbContext db, ICommandSigner signer, CancellationToken ct) =>
 {
-    var credential = await db.DeviceCredentials.SingleOrDefaultAsync(x => x.DeviceId == deviceId && x.RevokedAt == null, ct);
-    if (credential is null || !SecretHash.Matches(deviceSecret, credential.SecretHash)) return Results.Unauthorized();
+    var agent = http.User.ToAgentContext()!.Value;
     var now = DateTimeOffset.UtcNow;
-    var expired = await db.Commands.Where(x => x.DeviceId == deviceId && x.Status == DeviceCommandStatus.Pending && x.ExpiresAt <= now).ToListAsync(ct);
+    var expired = await db.Commands.Where(x => x.DeviceId == agent.DeviceId && x.OrganizationId == agent.OrganizationId && x.Status == DeviceCommandStatus.Pending && x.ExpiresAt <= now).ToListAsync(ct);
     foreach (var item in expired) item.Status = DeviceCommandStatus.Expired;
-    var command = await db.Commands.OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(x => x.DeviceId == deviceId && x.Status == DeviceCommandStatus.Pending && x.ExpiresAt > now, ct);
+    var command = await db.Commands.OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(x => x.DeviceId == agent.DeviceId && x.OrganizationId == agent.OrganizationId && x.Status == DeviceCommandStatus.Pending && x.ExpiresAt > now, ct);
     if (command is null) { await db.SaveChangesAsync(ct); return Results.NoContent(); }
     if (!signer.Verify(command)) return Results.Problem("Command signature validation failed", statusCode: 409);
     command.Status = DeviceCommandStatus.Delivered;
     await db.SaveChangesAsync(ct);
     return Results.Ok(command);
-}).RequireRateLimiting("sensitive");
+}).RequireAuthorization(AuthorizationPolicies.Agent).RequireRateLimiting("sensitive");
 
-v1.MapPost("/agent/commands/{id:guid}/result", async (Guid id, CommandResultRequest request, SentinelDbContext db, IHubContext<UpdatesHub> hub, CancellationToken ct) =>
+v1.MapPost("/agent/commands/{id:guid}/result", async (Guid id, CommandResultRequest request, HttpContext http, SentinelDbContext db, IHubContext<UpdatesHub> hub, CancellationToken ct) =>
 {
-    var credential = await db.DeviceCredentials.SingleOrDefaultAsync(x => x.DeviceId == request.DeviceId && x.RevokedAt == null, ct);
-    if (credential is null || !SecretHash.Matches(request.DeviceSecret, credential.SecretHash)) return Results.Unauthorized();
-    var command = await db.Commands.SingleOrDefaultAsync(x => x.Id == id && x.DeviceId == request.DeviceId, ct);
+    var agent = http.User.ToAgentContext()!.Value;
+    var command = await db.Commands.SingleOrDefaultAsync(x => x.Id == id && x.DeviceId == agent.DeviceId && x.OrganizationId == agent.OrganizationId, ct);
     if (command is null) return Results.NotFound();
     if (await db.CommandResults.AnyAsync(x => x.CommandId == id, ct)) return Results.Ok(new { duplicate = true });
     command.Status = request.Succeeded ? DeviceCommandStatus.Succeeded : DeviceCommandStatus.Failed;
@@ -222,7 +268,7 @@ v1.MapPost("/agent/commands/{id:guid}/result", async (Guid id, CommandResultRequ
     await db.SaveChangesAsync(ct);
     await hub.Clients.Group(TenantGroup.Name(command.OrganizationId)).SendAsync("command-status", new { command.Id, status = command.Status.ToString() }, ct);
     return Results.Accepted();
-});
+}).RequireAuthorization(AuthorizationPolicies.Agent);
 
 v1.MapGet("/audit-logs", async (HttpContext http, SentinelDbContext db, CancellationToken ct) =>
 {
@@ -230,10 +276,12 @@ v1.MapGet("/audit-logs", async (HttpContext http, SentinelDbContext db, Cancella
     return Results.Ok(await db.AuditLogs.Where(x => x.OrganizationId == actor.OrganizationId).OrderByDescending(x => x.CreatedAt).Take(200).ToListAsync(ct));
 }).RequireAuthorization(AuthorizationPolicies.ViewAudit);
 
-foreach (var resource in new[] { "organizations", "users", "policies", "alerts" })
-    v1.MapGet($"/{resource}", () => Results.Ok(Array.Empty<object>())).RequireAuthorization();
+foreach (var resource in new[] { "organizations", "users" })
+    v1.MapGet($"/{resource}", () => Results.Ok(Array.Empty<object>())).RequireAuthorization(AuthorizationPolicies.Admin);
+foreach (var resource in new[] { "policies", "alerts" })
+    v1.MapGet($"/{resource}", () => Results.Ok(Array.Empty<object>())).RequireAuthorization(AuthorizationPolicies.Technician);
 
-app.MapHub<UpdatesHub>("/hubs/updates").RequireAuthorization();
+app.MapHub<UpdatesHub>("/hubs/updates").RequireAuthorization(AuthorizationPolicies.ViewDevices);
 app.Run();
 
 public partial class Program;
