@@ -122,6 +122,7 @@ public sealed class AuthenticationApiTests(SentinelApiFactory factory) : IClassF
         Assert.Equal(
             factory.UsesPostgreSql ? "Npgsql.EntityFrameworkCore.PostgreSQL" : "Microsoft.EntityFrameworkCore.InMemory",
             db.Database.ProviderName);
+        Assert.NotEmpty((await db.Devices.FirstAsync()).RowVersion);
     }
 
     private async Task<(Guid AssignedDeviceId, Guid UnassignedDeviceId, Guid OtherTenantDeviceId)> SeedScopedDevicesAsync()
