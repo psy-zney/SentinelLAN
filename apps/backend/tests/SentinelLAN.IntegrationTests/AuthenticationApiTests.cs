@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +15,7 @@ namespace SentinelLAN.IntegrationTests;
 public sealed class AuthenticationApiTests(SentinelApiFactory factory) : IClassFixture<SentinelApiFactory>
 {
     [Fact]
-    public async Task DevelopmentOpenApiIncludesTheAuthenticationLifecycle()
+    public async Task DevelopmentOpenApiIncludesAuthenticationAndCsrfMetadata()
     {
         using var client = factory.CreateClient();
         var document = await client.GetStringAsync("/openapi/v1.json");
@@ -22,6 +23,16 @@ public sealed class AuthenticationApiTests(SentinelApiFactory factory) : IClassF
         Assert.Contains("/api/v1/auth/login", document, StringComparison.Ordinal);
         Assert.Contains("/api/v1/auth/refresh", document, StringComparison.Ordinal);
         Assert.Contains("/api/v1/auth/logout", document, StringComparison.Ordinal);
+        using var json = JsonDocument.Parse(document);
+        var schemes = json.RootElement.GetProperty("components").GetProperty("securitySchemes");
+        Assert.True(schemes.TryGetProperty("accessCookie", out _));
+        Assert.True(schemes.TryGetProperty("refreshCookie", out _));
+        Assert.True(schemes.TryGetProperty("csrfHeader", out _));
+        Assert.True(schemes.TryGetProperty("agentDeviceId", out _));
+        Assert.True(schemes.TryGetProperty("agentDeviceSecret", out _));
+        AssertSecurityRequirement(json, "/api/v1/devices", "get", "accessCookie");
+        AssertSecurityRequirement(json, "/api/v1/auth/refresh", "post", "refreshCookie", "csrfHeader");
+        AssertSecurityRequirement(json, "/api/v1/agent/heartbeat", "post", "agentDeviceId", "agentDeviceSecret");
     }
 
     [Fact]
@@ -81,6 +92,37 @@ public sealed class AuthenticationApiTests(SentinelApiFactory factory) : IClassF
         Assert.Equal(HttpStatusCode.OK, (await employee.GetAsync($"/api/v1/devices/{seeded.AssignedDeviceId}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await employee.GetAsync($"/api/v1/devices/{seeded.UnassignedDeviceId}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await employee.GetAsync($"/api/v1/devices/{seeded.OtherTenantDeviceId}")).StatusCode);
+        var myDevice = await employee.GetFromJsonAsync<EmployeeDeviceDto>("/api/v1/my-device");
+        Assert.NotNull(myDevice);
+        Assert.Equal(seeded.AssignedDeviceId, myDevice.Device.Id);
+    }
+
+    [Fact]
+    public async Task AgentPolicyRequiresSeparateHeaderCredentialAndBindsTheDevice()
+    {
+        var seeded = await SeedScopedDevicesAsync();
+        using var client = factory.CreateClient();
+        var heartbeat = new HeartbeatRequest(Guid.NewGuid().ToString("N"), 10, 20, 30, "Windows 11", "test");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/v1/agent/heartbeat", heartbeat)).StatusCode);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agent/heartbeat") { Content = JsonContent.Create(heartbeat) };
+        request.Headers.Add("X-SentinelLAN-Device-Id", seeded.AssignedDeviceId.ToString());
+        request.Headers.Add("X-SentinelLAN-Device-Secret", "agent-test-secret");
+        Assert.Equal(HttpStatusCode.Accepted, (await client.SendAsync(request)).StatusCode);
+    }
+
+    [Fact]
+    public async Task ConfiguredDatabaseProviderUsesPostgreSqlInsteadOfTheFallback()
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<SentinelDbContext>();
+
+        Assert.True(await db.Database.CanConnectAsync());
+        Assert.Equal(
+            factory.UsesPostgreSql ? "Npgsql.EntityFrameworkCore.PostgreSQL" : "Microsoft.EntityFrameworkCore.InMemory",
+            db.Database.ProviderName);
+        Assert.NotEmpty((await db.Devices.FirstAsync()).RowVersion);
     }
 
     private async Task<(Guid AssignedDeviceId, Guid UnassignedDeviceId, Guid OtherTenantDeviceId)> SeedScopedDevicesAsync()
@@ -96,11 +138,22 @@ public sealed class AuthenticationApiTests(SentinelApiFactory factory) : IClassF
             db.Add(other);
         }
 
-        var assigned = await db.Devices.SingleOrDefaultAsync(device => device.Name == "EMPLOYEE-TEST");
+        var assigned = await db.Devices.SingleOrDefaultAsync(device => device.OrganizationId == demo.Id && device.AssignedUserId == employee.Id);
         if (assigned is null)
         {
             assigned = new Device { OrganizationId = demo.Id, AssignedUserId = employee.Id, Name = "EMPLOYEE-TEST", OsVersion = "Windows 11", AgentVersion = "test" };
             db.Add(assigned);
+        }
+
+        var credential = await db.DeviceCredentials.SingleOrDefaultAsync(item => item.DeviceId == assigned.Id);
+        if (credential is null)
+        {
+            db.Add(new DeviceCredential
+            {
+                OrganizationId = demo.Id,
+                DeviceId = assigned.Id,
+                SecretHash = SecretHash.Create("agent-test-secret")
+            });
         }
 
         var unassigned = await db.Devices.SingleOrDefaultAsync(device => device.Name == "UNASSIGNED-TEST");
@@ -138,20 +191,31 @@ public sealed class AuthenticationApiTests(SentinelApiFactory factory) : IClassF
         var value = response.Headers.GetValues("Set-Cookie").Single(header => header.StartsWith(prefix, StringComparison.Ordinal));
         return value[prefix.Length..value.IndexOf(';')];
     }
+
+    private static void AssertSecurityRequirement(JsonDocument document, string path, string method, params string[] expectedSchemes)
+    {
+        var requirements = document.RootElement.GetProperty("paths").GetProperty(path).GetProperty(method).GetProperty("security");
+        Assert.Contains(requirements.EnumerateArray(), requirement =>
+            expectedSchemes.All(scheme => requirement.TryGetProperty(scheme, out _)));
+    }
 }
 
 public sealed class SentinelApiFactory : WebApplicationFactory<Program>
 {
     private readonly string databaseName = $"sentinellan-auth-tests-{Guid.NewGuid():N}";
+    public bool UsesPostgreSql { get; } = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ConnectionStrings__SentinelLAN"));
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
         builder.ConfigureServices(services =>
         {
-            services.RemoveAll<SentinelDbContext>();
-            services.RemoveAll<DbContextOptions<SentinelDbContext>>();
-            services.AddDbContext<SentinelDbContext>(options => options.UseInMemoryDatabase(databaseName));
+            if (!UsesPostgreSql)
+            {
+                services.RemoveAll<SentinelDbContext>();
+                services.RemoveAll<DbContextOptions<SentinelDbContext>>();
+                services.AddDbContext<SentinelDbContext>(options => options.UseInMemoryDatabase(databaseName));
+            }
         });
     }
 }

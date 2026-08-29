@@ -38,8 +38,30 @@ public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> option
         modelBuilder.Entity<DeviceCredential>().HasIndex(x => x.DeviceId).IsUnique();
         modelBuilder.Entity<CommandResult>().HasIndex(x => x.CommandId).IsUnique();
         modelBuilder.Entity<DeviceCommand>().HasIndex(x => new { x.DeviceId, x.Nonce }).IsUnique();
-        modelBuilder.Entity<Device>().Property(x => x.RowVersion).IsRowVersion();
+        modelBuilder.Entity<Device>()
+            .Property(x => x.RowVersion)
+            .IsRequired()
+            .IsConcurrencyToken()
+            .ValueGeneratedNever();
         foreach (var type in modelBuilder.Model.GetEntityTypes().Where(x => typeof(ITenantOwned).IsAssignableFrom(x.ClrType)))
             modelBuilder.Entity(type.ClrType).HasIndex(nameof(ITenantOwned.OrganizationId));
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        SetDeviceRowVersions();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        SetDeviceRowVersions();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    private void SetDeviceRowVersions()
+    {
+        foreach (var entry in ChangeTracker.Entries<Device>().Where(entry => entry.State is EntityState.Added or EntityState.Modified))
+            entry.Property(device => device.RowVersion).CurrentValue = Guid.NewGuid().ToByteArray();
     }
 }

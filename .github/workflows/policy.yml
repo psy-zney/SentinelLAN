@@ -1,0 +1,56 @@
+name: Pull Request Policy
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: policy-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate branch and pull request title
+        shell: bash
+        env:
+          ACTOR: ${{ github.actor }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$BASE_REF" != "main" ]]; then
+            echo "Pull requests must target main."
+            exit 1
+          fi
+
+          if [[ "$ACTOR" == "dependabot[bot]" ]]; then
+            if [[ ! "$HEAD_REF" =~ ^dependabot/ ]]; then
+              echo "Dependabot pull requests must use the dependabot/ namespace."
+              exit 1
+            fi
+            exit 0
+          fi
+
+          branch_pattern='^(feature|fix|hotfix|refactor|docs|test|chore|build|ci|perf|release)/[a-z0-9][a-z0-9._-]{2,79}$'
+          title_pattern='^(feat|fix|hotfix|refactor|docs|test|chore|build|ci|perf|revert)(\([a-z0-9._/-]+\))?!?:[[:space:]].+'
+
+          if [[ ! "$HEAD_REF" =~ $branch_pattern ]]; then
+            echo "Invalid branch name: $HEAD_REF"
+            echo "Use: feature/, fix/, hotfix/, refactor/, docs/, test/, chore/, build/, ci/, perf/, or release/."
+            exit 1
+          fi
+
+          if [[ ! "$PR_TITLE" =~ $title_pattern ]]; then
+            echo "Invalid pull request title: $PR_TITLE"
+            echo "Example: feat(auth): complete employee login flow"
+            exit 1
+          fi
