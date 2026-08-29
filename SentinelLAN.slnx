@@ -1,0 +1,25 @@
+<Solution>
+  <Folder Name="/apps/" />
+  <Folder Name="/apps/agent/" />
+  <Folder Name="/apps/agent/src/">
+    <Project Path="apps/agent/src/SentinelLAN.Agent.Core/SentinelLAN.Agent.Core.csproj" />
+    <Project Path="apps/agent/src/SentinelLAN.Agent.Infrastructure/SentinelLAN.Agent.Infrastructure.csproj" />
+    <Project Path="apps/agent/src/SentinelLAN.Agent/SentinelLAN.Agent.csproj" />
+  </Folder>
+  <Folder Name="/apps/agent/tests/">
+    <Project Path="apps/agent/tests/SentinelLAN.Agent.Tests/SentinelLAN.Agent.Tests.csproj" />
+  </Folder>
+  <Folder Name="/apps/backend/" />
+  <Folder Name="/apps/backend/src/">
+    <Project Path="apps/backend/src/SentinelLAN.Api/SentinelLAN.Api.csproj" />
+    <Project Path="apps/backend/src/SentinelLAN.Application/SentinelLAN.Application.csproj" />
+    <Project Path="apps/backend/src/SentinelLAN.Domain/SentinelLAN.Domain.csproj" />
+    <Project Path="apps/backend/src/SentinelLAN.Infrastructure/SentinelLAN.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/apps/backend/tests/">
+    <Project Path="apps/backend/tests/SentinelLAN.Application.Tests/SentinelLAN.Application.Tests.csproj" />
+    <Project Path="apps/backend/tests/SentinelLAN.ArchitectureTests/SentinelLAN.ArchitectureTests.csproj" />
+    <Project Path="apps/backend/tests/SentinelLAN.Domain.Tests/SentinelLAN.Domain.Tests.csproj" />
+    <Project Path="apps/backend/tests/SentinelLAN.IntegrationTests/SentinelLAN.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,20 @@
+{
+  "name": "sentinellan",
+  "version": "0.1.0",
+  "private": true,
+  "engines": { "node": ">=24.17.0 <25", "npm": ">=11.13.0 <12" },
+  "workspaces": ["apps/web", "packages/*"],
+  "overrides": {
+    "next@16.2.11": {
+      "postcss": "8.5.26",
+      "sharp": "0.35.0"
+    }
+  },
+  "scripts": {
+    "dev": "npm run dev --workspace=@sentinellan/web",
+    "lint": "npm run lint --workspace=@sentinellan/web",
+    "typecheck": "npm run typecheck --workspace=@sentinellan/web",
+    "test": "npm run test --workspace=@sentinellan/web",
+    "build": "npm run build --workspace=@sentinellan/web"
+  }
+}

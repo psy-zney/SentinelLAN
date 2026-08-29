@@ -1,0 +1,47 @@
+name: sentinellan
+services:
+  postgres:
+    image: postgres:18.1-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sentinellan}
+      POSTGRES_USER: ${POSTGRES_USER:-sentinellan}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-for-local-development}
+    ports: ["5432:5432"]
+    volumes: ["sentinellan-postgres:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+  api:
+    build:
+      context: .
+      dockerfile: deploy/docker/api.Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__SentinelLAN: Host=postgres;Port=5432;Database=${POSTGRES_DB:-sentinellan};Username=${POSTGRES_USER:-sentinellan};Password=${POSTGRES_PASSWORD:-change-me-for-local-development}
+      SENTINELLAN_DEMO_ADMIN_EMAIL: ${SENTINELLAN_DEMO_ADMIN_EMAIL:-admin@sentinellan.local}
+      SENTINELLAN_DEMO_ADMIN_PASSWORD: ${SENTINELLAN_DEMO_ADMIN_PASSWORD:-local-demo-only}
+      SENTINELLAN_ENROLLMENT_TOKEN: ${SENTINELLAN_ENROLLMENT_TOKEN:-local-enroll-only}
+      SENTINELLAN_SIGNING_KEY: ${SENTINELLAN_SIGNING_KEY:-local-signing-key-change-me}
+      SENTINELLAN_ACCESS_TOKEN_SIGNING_KEY: ${SENTINELLAN_ACCESS_TOKEN_SIGNING_KEY:-local-access-token-signing-key-change-before-deployment}
+      SENTINELLAN_WEB_ORIGINS: ${SENTINELLAN_WEB_ORIGINS:-http://localhost:3000}
+    ports: ["8080:8080"]
+    depends_on:
+      postgres: { condition: service_healthy }
+  web:
+    build:
+      context: .
+      dockerfile: deploy/docker/web.Dockerfile
+      args: { NEXT_PUBLIC_API_URL: "http://localhost:8080" }
+    environment: { NEXT_PUBLIC_API_URL: "http://localhost:8080" }
+    ports: ["3000:3000"]
+    depends_on: [api]
+  redis:
+    image: redis:8.2.1-alpine
+    profiles: [extended]
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: ["sentinellan-redis:/data"]
+volumes:
+  sentinellan-postgres:
+  sentinellan-redis:
