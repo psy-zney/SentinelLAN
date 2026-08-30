@@ -26,9 +26,14 @@ playwright-report/
 *.dump
 agent-data/
 
-# Temporarily ignored
+# Auxiliary and internal project files
 scripts/
 docs/
+plan/
+plans/
+aio/
+.aio/
+CONTRIBUTING.md
 LICENSE
 .agents/
 .claude/
@@ -37,39 +42,3 @@ AGENTS.md
 CLAUDE.md
 deploy/
 .github/
-
-# Week 1 completion evidence and verification automation
-!docs/
-docs/*
-!docs/index.md
-!docs/html/
-docs/html/*
-!docs/html/*.html
-!docs/api/
-docs/api/*
-!docs/api/README.md
-!docs/database/
-docs/database/*
-!docs/database/schema-gap-review.md
-!docs/security/
-docs/security/*
-!docs/security/authentication.md
-!docs/plan/
-docs/plan/*
-!docs/plan/6-weeks/
-docs/plan/6-weeks/*
-!docs/plan/6-weeks/week-01-foundation-and-auth.md
-!scripts/
-scripts/*
-!scripts/test-all.ps1
-!scripts/test-all.sh
-!.github/
-.github/*
-!.github/CODEOWNERS
-!.github/dependabot.yml
-!.github/pull_request_template.md
-!.github/workflows/
-.github/workflows/*
-!.github/workflows/ci.yml
-!.github/workflows/policy.yml
-!.github/workflows/security.yml
