@@ -344,52 +344,6 @@ GitHub Actions có ba gate:
 2. **Security:** quét package NuGet và chạy `npm audit --audit-level=high`.
 3. **Pull Request Policy:** kiểm tra tên nhánh, target và tiêu đề Conventional Commit.
 
-## Kế hoạch Week 1 và Week 2
-
-### Week 1 — Đã hoàn thành
-
-- Rà soát schema Organization, User, Role và Permission.
-- Xây dựng login, session, refresh-token rotation và logout.
-- Chuyển web sang cookie `HttpOnly`, role guard và `/my-device`.
-- Áp dụng policy cho Admin, Technician, Employee và Agent.
-- Bắt buộc tenant/assignment scope và kiểm thử truy cập chéo tenant.
-- Tách Agent authentication; loại device secret khỏi URL/payload nghiệp vụ.
-- Bổ sung unit, integration, OpenAPI và Playwright E2E tests.
-- Cấu hình PostgreSQL service và quality gate trên CI.
-
-### Week 2 — Phạm vi tiếp theo
-
-- Chuẩn hóa enrollment, device identity, heartbeat và telemetry tối thiểu.
-- Bảo đảm enrollment token dùng một lần, có tenant, hạn dùng, hash và audit.
-- Bổ sung idempotency key để heartbeat retry không tạo dữ liệu trùng.
-- Hoàn thiện quy tắc online/offline theo UTC và cập nhật SignalR.
-- Kết nối đầy đủ danh sách/chi tiết thiết bị với typed API client.
-- Viết integration test PostgreSQL cho enrollment reuse/expiry, heartbeat duplicate và tenant isolation.
-- Cập nhật data flow, OpenAPI và privacy disclosure.
-
-Tiêu chí Week 2: Agent enroll đúng một lần, heartbeat retry an toàn và người dùng chỉ thấy thiết bị thuộc phạm vi được cấp quyền.
-
-## Quy trình Git
-
-- Không phát triển trực tiếp trên `main`.
-- Mỗi nhánh xử lý một mục tiêu review độc lập.
-- Dùng `feature/<chuc-nang>`, `fix/<loi>`, `docs/<noi-dung>`, `test/<pham-vi>` hoặc namespace được quy định.
-- Pull request target `main`, tiêu đề Conventional Commit, ví dụ `feat(devices): add idempotent heartbeat`.
-- Chỉ merge khi CI, Security và PR Policy đạt.
-- Ưu tiên squash/rebase merge; không force-push hoặc xóa `main`.
-- Xóa nhánh feature sau khi merge.
-
-Chi tiết tại [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Tài liệu liên quan
-
-- [API và cơ chế xác thực](docs/api/README.md)
-- [Browser authentication và tenant authorization](docs/security/authentication.md)
-- [Đánh giá khoảng trống schema Week 1](docs/database/schema-gap-review.md)
-- [Kế hoạch Week 1](docs/plan/6-weeks/week-01-foundation-and-auth.md)
-- [Project board tổng quan](docs/html/sentinellan-project-board.html)
-- [Quy trình đóng góp](CONTRIBUTING.md)
-
 ## Giới hạn hiện tại
 
 SentinelLAN là MVP phục vụ học tập, trình diễn và kiểm thử trong môi trường được ủy quyền; chưa phải endpoint protection production-ready. Không bật khóa/cô lập thật ngoài lab. Repository chưa khai báo giấy phép nguồn mở, vì vậy không mặc định cho phép sử dụng hoặc phân phối lại ngoài phạm vi được chủ sở hữu chấp thuận.
