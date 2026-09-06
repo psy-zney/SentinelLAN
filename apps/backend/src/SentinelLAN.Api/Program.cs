@@ -18,19 +18,16 @@ builder.Services.AddOpenApi(options =>
     options.AddOperationTransformer<AuthenticationOpenApiTransformer>();
 });
 builder.Services.AddSignalR();
+builder.Services.AddHostedService<DeviceStatusPublisher>();
 var allowedOrigins = (builder.Configuration["SENTINELLAN_WEB_ORIGINS"] ?? "http://localhost:3000")
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.AddFixedWindowLimiter("sensitive", limiter =>
-    {
-        limiter.PermitLimit = 30;
-        limiter.Window = TimeSpan.FromMinutes(1);
-        limiter.QueueLimit = 0;
-        limiter.AutoReplenishment = true;
-    });
+    options.AddPolicy("sensitive", context => RateLimitPartition.GetFixedWindowLimiter(
+        $"{context.Request.Path}|{context.User.ToAgentContext()?.DeviceId.ToString() ?? context.User.ToActorContext()?.UserId.ToString() ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }));
 });
 
 var connectionString = builder.Configuration.GetConnectionString("SentinelLAN");
@@ -82,13 +79,13 @@ app.Use(async (context, next) =>
     await next();
 });
 app.UseCors();
-app.UseRateLimiter();
 app.Use(async (context, next) =>
 {
     var unsafeMethod = HttpMethods.IsPost(context.Request.Method) || HttpMethods.IsPut(context.Request.Method) || HttpMethods.IsPatch(context.Request.Method) || HttpMethods.IsDelete(context.Request.Method);
     var cookieAuthenticated = context.Request.Cookies.ContainsKey(AuthCookieManager.AccessCookieName) || context.Request.Cookies.ContainsKey(AuthCookieManager.RefreshCookieName);
     var isLogin = context.Request.Path.Equals("/api/v1/auth/login", StringComparison.OrdinalIgnoreCase);
-    if (unsafeMethod && cookieAuthenticated && !isLogin && context.Request.Headers[AuthCookieManager.CsrfHeaderName] != "1")
+    var isHub = context.Request.Path.StartsWithSegments("/hubs");
+    if (unsafeMethod && cookieAuthenticated && !isLogin && !isHub && context.Request.Headers[AuthCookieManager.CsrfHeaderName] != "1")
     {
         await Results.Problem("The anti-CSRF header is required.", statusCode: StatusCodes.Status400BadRequest).ExecuteAsync(context);
         return;
@@ -97,6 +94,7 @@ app.Use(async (context, next) =>
 });
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 if (app.Environment.IsDevelopment()) app.MapOpenApi();
 
 using (var scope = app.Services.CreateScope())
@@ -161,7 +159,13 @@ v1.MapGet("/devices/{id:guid}/telemetry", async (Guid id, HttpContext http, Sent
     var actor = http.User.ToActorContext()!.Value;
     var canAccess = await DeviceScope.ForActor(db.Devices, actor).AnyAsync(x => x.Id == id, ct);
     if (!canAccess) return Results.NotFound();
-    return Results.Ok(await db.Telemetry.Where(x => x.DeviceId == id && x.OrganizationId == actor.OrganizationId).OrderByDescending(x => x.CreatedAt).Take(100).ToListAsync(ct));
+    var snapshots = await db.Telemetry
+        .Where(x => x.DeviceId == id && x.OrganizationId == actor.OrganizationId)
+        .OrderByDescending(x => x.CreatedAt)
+        .Take(100)
+        .Select(x => new TelemetrySnapshotDto(x.Id, x.DeviceId, x.CpuPercent, x.RamPercent, x.DiskPercent, x.CreatedAt))
+        .ToListAsync(ct);
+    return Results.Ok(snapshots);
 }).RequireAuthorization();
 v1.MapGet("/dashboard", async (HttpContext http, SentinelDbContext db, CancellationToken ct) =>
 {
@@ -197,22 +201,63 @@ v1.MapGet("/my-device", async (HttpContext http, SentinelDbContext db, Cancellat
     return Results.Ok(new EmployeeDeviceDto(dto, policyName, actions));
 }).RequireAuthorization(AuthorizationPolicies.ViewAssignedDevice);
 
-v1.MapPost("/agent/enroll", async (EnrollRequest request, SentinelDbContext db, CancellationToken ct) =>
+v1.MapPost("/agent/enroll", async (EnrollRequest request, SentinelDbContext db, IHubContext<UpdatesHub> hub, CancellationToken ct) =>
 {
+    using var developmentWrite = db.Database.IsRelational() ? null : await DevelopmentWriteGate.EnterAsync(ct);
+    if (!DeviceRequestValidation.IsValid(request)) return Results.BadRequest(new ProblemDetails { Title = "Valid token, device name, OS and Agent version are required", Status = 400 });
     var hash = SecretHash.Create(request.Token);
     var token = await db.EnrollmentTokens.SingleOrDefaultAsync(x => x.TokenHash == hash, ct);
-    if (token is null || !token.TryUse(DateTimeOffset.UtcNow)) return Results.BadRequest(new ProblemDetails { Title = "Invalid enrollment token", Status = 400 });
+    var now = DateTimeOffset.UtcNow;
+    if (token is null)
+    {
+        return Results.BadRequest(new ProblemDetails { Title = "Invalid enrollment token", Status = 400 });
+    }
+    if (!token.TryUse(now))
+    {
+        var failureReason = token.UsedAt is not null ? "Token already used" : "Token expired";
+        db.Add(new AuditLog
+        {
+            OrganizationId = token.OrganizationId,
+            ActorId = token.Id,
+            DeviceId = null,
+            Action = "AgentEnrollmentFailed",
+            Reason = failureReason,
+            Outcome = "Failed"
+        });
+        await db.SaveChangesAsync(ct);
+        return Results.BadRequest(new ProblemDetails { Title = "Invalid enrollment token", Status = 400 });
+    }
+
     var secret = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
     var device = new Device { OrganizationId = token.OrganizationId, Name = request.DeviceName, OsVersion = request.OsVersion, AgentVersion = request.AgentVersion };
     db.Add(device);
     db.Add(new DeviceCredential { OrganizationId = token.OrganizationId, DeviceId = device.Id, SecretHash = SecretHash.Create(secret) });
-    await db.SaveChangesAsync(ct);
+    db.Add(new AuditLog
+    {
+        OrganizationId = token.OrganizationId,
+        ActorId = device.Id,
+        DeviceId = device.Id,
+        Action = "AgentEnrolled",
+        Reason = $"Device '{request.DeviceName}' successfully enrolled.",
+        Outcome = "Success"
+    });
+    try { await db.SaveChangesAsync(ct); }
+    catch (DbUpdateConcurrencyException)
+    {
+        db.ChangeTracker.Clear();
+        db.Add(new AuditLog { OrganizationId = token.OrganizationId, ActorId = token.Id, Action = "AgentEnrollmentFailed", Reason = "Token already used", Outcome = "Failed" });
+        await db.SaveChangesAsync(ct);
+        return Results.BadRequest(new ProblemDetails { Title = "Invalid enrollment token", Status = 400 });
+    }
+    await hub.Clients.Group(TenantGroup.Name(token.OrganizationId)).SendAsync("device-status", new { device.Id, online = false, device.LastSeenAt }, ct);
     return Results.Ok(new EnrollResponse(device.Id, secret));
 }).RequireRateLimiting("sensitive");
 
 v1.MapPost("/agent/heartbeat", async (HeartbeatRequest request, HttpContext http, SentinelDbContext db, IHubContext<UpdatesHub> hub, CancellationToken ct) =>
 {
+    using var developmentWrite = db.Database.IsRelational() ? null : await DevelopmentWriteGate.EnterAsync(ct);
     var agent = http.User.ToAgentContext()!.Value;
+    if (!DeviceRequestValidation.IsValid(request)) return Results.BadRequest(new ProblemDetails { Title = "Valid idempotency key, 0-100 telemetry percentages, OS and Agent version are required", Status = 400 });
     if (await db.Heartbeats.AnyAsync(x => x.DeviceId == agent.DeviceId && x.OrganizationId == agent.OrganizationId && x.IdempotencyKey == request.IdempotencyKey, ct)) return Results.Ok(new { duplicate = true });
     var device = await db.Devices.SingleAsync(x => x.Id == agent.DeviceId && x.OrganizationId == agent.OrganizationId, ct);
     device.LastSeenAt = DateTimeOffset.UtcNow;
@@ -220,7 +265,14 @@ v1.MapPost("/agent/heartbeat", async (HeartbeatRequest request, HttpContext http
     device.AgentVersion = request.AgentVersion;
     db.Add(new DeviceHeartbeat { OrganizationId = device.OrganizationId, DeviceId = device.Id, IdempotencyKey = request.IdempotencyKey, RecordedAt = DateTimeOffset.UtcNow });
     db.Add(new TelemetrySnapshot { OrganizationId = device.OrganizationId, DeviceId = device.Id, CpuPercent = request.CpuPercent, RamPercent = request.RamPercent, DiskPercent = request.DiskPercent });
-    await db.SaveChangesAsync(ct);
+    try { await db.SaveChangesAsync(ct); }
+    catch (DbUpdateException)
+    {
+        db.ChangeTracker.Clear();
+        if (await db.Heartbeats.AnyAsync(x => x.DeviceId == agent.DeviceId && x.OrganizationId == agent.OrganizationId && x.IdempotencyKey == request.IdempotencyKey, ct))
+            return Results.Ok(new { duplicate = true });
+        throw;
+    }
     await hub.Clients.Group(TenantGroup.Name(device.OrganizationId)).SendAsync("device-status", new { device.Id, online = true, device.LastSeenAt }, ct);
     return Results.Accepted();
 }).RequireAuthorization(AuthorizationPolicies.Agent).RequireRateLimiting("sensitive");
@@ -228,9 +280,10 @@ v1.MapPost("/agent/heartbeat", async (HeartbeatRequest request, HttpContext http
 v1.MapPost("/commands", async (CreateCommandRequest request, HttpContext http, SentinelDbContext db, ICommandSigner signer, IHubContext<UpdatesHub> hub, CancellationToken ct) =>
 {
     var actor = http.User.ToActorContext()!.Value;
-    if (string.IsNullOrWhiteSpace(request.Reason) || request.ValidForSeconds is < 30 or > 900) return Results.BadRequest(new ProblemDetails { Title = "Reason and a 30-900 second validity are required", Status = 400 });
+    if (!request.Confirmed || string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Length > 1000 || request.ValidForSeconds is < 30 or > 900) return Results.BadRequest(new ProblemDetails { Title = "Confirmation, a reason (up to 1000 characters) and a 30-900 second validity are required", Status = 400 });
     var device = await DeviceScope.ForActor(db.Devices, actor).SingleOrDefaultAsync(x => x.Id == request.DeviceId, ct);
     if (device is null) return Results.NotFound();
+    if (device.IsRevoked) return Results.Conflict(new ProblemDetails { Title = "Device is revoked", Status = 409 });
     var command = new DeviceCommand { OrganizationId = device.OrganizationId, DeviceId = device.Id, IssuedByUserId = actor.UserId, Type = request.Type, Reason = request.Reason.Trim(), Nonce = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)), Signature = "pending", IssuedAt = DateTimeOffset.UtcNow, ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(request.ValidForSeconds), Status = DeviceCommandStatus.Pending };
     if (!command.CanDeliver(DateTimeOffset.UtcNow)) return Results.BadRequest(new ProblemDetails { Title = "Unsupported command type", Status = 400 });
     command.Signature = signer.Sign(command);
@@ -243,6 +296,7 @@ v1.MapPost("/commands", async (CreateCommandRequest request, HttpContext http, S
 
 v1.MapPost("/agent/commands/poll", async (HttpContext http, SentinelDbContext db, ICommandSigner signer, CancellationToken ct) =>
 {
+    using var developmentWrite = db.Database.IsRelational() ? null : await DevelopmentWriteGate.EnterAsync(ct);
     var agent = http.User.ToAgentContext()!.Value;
     var now = DateTimeOffset.UtcNow;
     var expired = await db.Commands.Where(x => x.DeviceId == agent.DeviceId && x.OrganizationId == agent.OrganizationId && x.Status == DeviceCommandStatus.Pending && x.ExpiresAt <= now).ToListAsync(ct);
@@ -251,21 +305,32 @@ v1.MapPost("/agent/commands/poll", async (HttpContext http, SentinelDbContext db
     if (command is null) { await db.SaveChangesAsync(ct); return Results.NoContent(); }
     if (!signer.Verify(command)) return Results.Problem("Command signature validation failed", statusCode: 409);
     command.Status = DeviceCommandStatus.Delivered;
-    await db.SaveChangesAsync(ct);
+    try { await db.SaveChangesAsync(ct); }
+    catch (DbUpdateConcurrencyException) { return Results.NoContent(); }
     return Results.Ok(command);
 }).RequireAuthorization(AuthorizationPolicies.Agent).RequireRateLimiting("sensitive");
 
 v1.MapPost("/agent/commands/{id:guid}/result", async (Guid id, CommandResultRequest request, HttpContext http, SentinelDbContext db, IHubContext<UpdatesHub> hub, CancellationToken ct) =>
 {
+    using var developmentWrite = db.Database.IsRelational() ? null : await DevelopmentWriteGate.EnterAsync(ct);
     var agent = http.User.ToAgentContext()!.Value;
     var command = await db.Commands.SingleOrDefaultAsync(x => x.Id == id && x.DeviceId == agent.DeviceId && x.OrganizationId == agent.OrganizationId, ct);
     if (command is null) return Results.NotFound();
-    if (await db.CommandResults.AnyAsync(x => x.CommandId == id, ct)) return Results.Ok(new { duplicate = true });
+    if (string.IsNullOrWhiteSpace(request.Message) || request.Message.Length > 2000) return Results.BadRequest();
+    if (await db.CommandResults.AnyAsync(x => x.CommandId == id && x.OrganizationId == agent.OrganizationId, ct)) return Results.Ok(new { duplicate = true });
+    if (command.Status != DeviceCommandStatus.Delivered || command.ExpiresAt <= DateTimeOffset.UtcNow)
+        return Results.Conflict(new ProblemDetails { Title = "Only a delivered, unexpired command can receive a result", Status = 409 });
     command.Status = request.Succeeded ? DeviceCommandStatus.Succeeded : DeviceCommandStatus.Failed;
     db.Add(new CommandResult { OrganizationId = command.OrganizationId, DeviceId = command.DeviceId, CommandId = id, Succeeded = request.Succeeded, Message = request.Message });
-    var audit = await db.AuditLogs.SingleAsync(x => x.OrganizationId == command.OrganizationId && x.DeviceId == command.DeviceId && x.Action == $"CommandCreated:{command.Type}" && x.Outcome == "Pending", ct);
-    audit.Outcome = command.Status.ToString();
-    await db.SaveChangesAsync(ct);
+    db.Add(new AuditLog { OrganizationId = command.OrganizationId, ActorId = agent.DeviceId, DeviceId = command.DeviceId, Action = $"CommandCompleted:{command.Id:N}:{command.Type}", Reason = command.Reason, Outcome = command.Status.ToString() });
+    try { await db.SaveChangesAsync(ct); }
+    catch (DbUpdateException)
+    {
+        db.ChangeTracker.Clear();
+        if (await db.CommandResults.AnyAsync(x => x.CommandId == id && x.OrganizationId == agent.OrganizationId, ct))
+            return Results.Ok(new { duplicate = true });
+        throw;
+    }
     await hub.Clients.Group(TenantGroup.Name(command.OrganizationId)).SendAsync("command-status", new { command.Id, status = command.Status.ToString() }, ct);
     return Results.Accepted();
 }).RequireAuthorization(AuthorizationPolicies.Agent);
