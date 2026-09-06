@@ -15,12 +15,12 @@ SentinelLAN là MVP quản lý endpoint trong mạng LAN dành cho doanh nghiệ
 | Phiên đăng nhập, refresh token và đăng xuất | Hoàn thành trong Week 1 |
 | Phân quyền Admin, Technician, Employee và Agent | Hoàn thành trong Week 1 |
 | Cô lập dữ liệu theo tenant và thiết bị được gán | Hoàn thành trong Week 1 |
-| Enrollment, heartbeat và telemetry cơ bản | Có lát cắt MVP, tiếp tục hoàn thiện trong Week 2 |
-| Dashboard thiết bị và cập nhật SignalR | Có lát cắt MVP, tiếp tục hoàn thiện trong Week 2 |
+| Enrollment, heartbeat và telemetry cơ bản | Đã kiểm chứng local; chờ gate PostgreSQL Week 2 |
+| Dashboard thiết bị và cập nhật SignalR | Đã kiểm chứng local; chờ gate PostgreSQL Week 2 |
 | Policy, alert và audit đầy đủ | Đang phát triển theo roadmap |
 | Khóa/cô lập thiết bị thật | Tắt mặc định; chỉ được phép trong lab có ủy quyền |
 
-Phiên bản hiện tại: `0.1.0`.
+Phiên bản hiện tại: `0.1.0`. Kết quả kiểm tra ngày 06/09/2026 và điều kiện chuyển Week 3: [VERIFICATION.md](VERIFICATION.md).
 
 ## Phạm vi và vai trò
 
@@ -244,7 +244,7 @@ $env:SENTINELLAN_ENROLLMENT_TOKEN = 'local-enroll-only'
 dotnet run --project apps/agent/src/SentinelLAN.Agent
 ```
 
-Agent đang dùng identity store dạng tệp trong thư mục `agent-data` cho Development. Production phải dùng kho credential được hệ điều hành bảo vệ. Agent không cần quyền Administrator trong phạm vi MVP.
+Để nhận lệnh trong MVP, cấu hình cùng `SENTINELLAN_SIGNING_KEY` ở API và Agent. Nếu thiếu key, Agent chỉ gửi telemetry và không polling lệnh. Agent đang dùng identity store dạng tệp trong thư mục `agent-data` cho Development. Production phải dùng kho credential được hệ điều hành bảo vệ. Agent không cần quyền Administrator trong phạm vi MVP.
 
 ## Tài khoản demo
 
@@ -267,7 +267,7 @@ Mật khẩu Development mặc định của Compose là `local-demo-only`. Khô
 | `SENTINELLAN_DEMO_ADMIN_EMAIL` | Email Admin demo |
 | `SENTINELLAN_DEMO_ADMIN_PASSWORD` | Mật khẩu dùng để seed tài khoản demo |
 | `SENTINELLAN_ENROLLMENT_TOKEN` | Token enrollment một lần |
-| `SENTINELLAN_SIGNING_KEY` | Khóa ký lệnh MVP |
+| `SENTINELLAN_SIGNING_KEY` | Khóa HMAC chung API/Agent trong MVP; Agent không polling lệnh khi thiếu key |
 | `SENTINELLAN_ACCESS_TOKEN_SIGNING_KEY` | Khóa access token, tối thiểu 32 ký tự ngoài Development |
 | `SENTINELLAN_WEB_ORIGINS` | Origin web được phép gửi credential |
 | `NEXT_PUBLIC_API_URL` | URL API dành cho dashboard |
@@ -338,7 +338,7 @@ npm.cmd run test:e2e
 
 Linux/macOS dùng `./scripts/test-all.sh`.
 
-GitHub Actions có ba gate:
+Các gate CI cần cấu hình (checkout này chưa có `.github/workflows`; chưa xác minh CI từ xa):
 
 1. **CI:** format, build, backend tests, frontend lint/typecheck/test/build và Playwright E2E với PostgreSQL.
 2. **Security:** quét package NuGet và chạy `npm audit --audit-level=high`.
