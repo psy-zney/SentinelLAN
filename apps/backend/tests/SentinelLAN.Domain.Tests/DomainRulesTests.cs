@@ -5,6 +5,18 @@ namespace SentinelLAN.Domain.Tests;
 public sealed class DomainRulesTests
 {
     [Fact]
+    public void DeviceBecomesOfflineAtTwoMinutesAndRevocationOverridesHeartbeat()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var device = new Device { OrganizationId = Guid.NewGuid(), Name = "Test", OsVersion = "Windows", AgentVersion = "test" };
+        Assert.False(device.IsOnline(now));
+        device.LastSeenAt = now;
+        Assert.True(device.IsOnline(now.AddSeconds(119)));
+        Assert.False(device.IsOnline(now.AddMinutes(2)));
+        device.IsRevoked = true;
+        Assert.False(device.IsOnline(now));
+    }
+    [Fact]
     public void EnrollmentTokenIsSingleUseAndExpires()
     {
         var now = DateTimeOffset.UtcNow;
