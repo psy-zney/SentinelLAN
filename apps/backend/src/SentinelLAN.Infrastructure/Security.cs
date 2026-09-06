@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using SentinelLAN.Application;
 using SentinelLAN.Domain;
 
@@ -15,13 +16,14 @@ public sealed class HmacCommandSigner(string key) : ICommandSigner
 {
     public string Sign(DeviceCommand command)
     {
-        var data = $"{command.Id:N}|{command.DeviceId:N}|{command.Type}|{command.IssuedAt:O}|{command.ExpiresAt:O}|{command.Nonce}";
+        var data = JsonSerializer.Serialize(new object[] { command.Id, command.OrganizationId, command.DeviceId, command.IssuedByUserId, command.Type, command.Reason, command.IssuedAt.ToUnixTimeMilliseconds(), command.ExpiresAt.ToUnixTimeMilliseconds(), command.Nonce });
         return Convert.ToHexString(HMACSHA256.HashData(Encoding.UTF8.GetBytes(key), Encoding.UTF8.GetBytes(data)));
     }
 
     public bool Verify(DeviceCommand command)
     {
         var expected = Sign(command);
-        return CryptographicOperations.FixedTimeEquals(Convert.FromHexString(expected), Convert.FromHexString(command.Signature));
+        try { return CryptographicOperations.FixedTimeEquals(Convert.FromHexString(expected), Convert.FromHexString(command.Signature)); }
+        catch (FormatException) { return false; }
     }
 }
