@@ -1,4 +1,4 @@
-import type { AuditEvent, CommandType, CurrentSession, Dashboard, Device, EmployeeDevice, Role } from "@/types/api";
+import type { AuditEvent, CommandType, CurrentSession, Dashboard, Device, EmployeeDevice, Role, TelemetrySnapshot } from "@/types/api";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -47,9 +47,10 @@ export class ApiClient {
   dashboard() { return this.request<Dashboard>("/api/v1/dashboard"); }
   devices() { return this.request<Device[]>("/api/v1/devices"); }
   device(id: string) { return this.request<Device>(`/api/v1/devices/${id}`); }
+  deviceTelemetry(id: string) { return this.request<TelemetrySnapshot[]>(`/api/v1/devices/${id}/telemetry`); }
   myDevice() { return this.request<EmployeeDevice>("/api/v1/my-device"); }
   auditLogs() { return this.request<AuditEvent[]>("/api/v1/audit-logs"); }
-  createCommand(deviceId: string, type: CommandType, reason: string) { return this.request(`/api/v1/commands`, { method: "POST", body: JSON.stringify({ deviceId, type, reason }) }); }
+  createCommand(deviceId: string, type: CommandType, reason: string, confirmed = false) { return this.request(`/api/v1/commands`, { method: "POST", body: JSON.stringify({ deviceId, type, reason, confirmed }) }); }
 }
 
 export type AuthSession = { expiresIn: number; role: Role; displayName: string };

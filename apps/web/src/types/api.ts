@@ -6,3 +6,4 @@ export type Role = "Admin" | "Technician" | "Employee" | "Agent";
 export type CurrentSession = { role: Role; displayName: string };
 export type EmployeeDeviceAction = { action: string; reason: string; outcome: string; createdAt: string };
 export type EmployeeDevice = { device: Device; appliedPolicy: string | null; recentActions: EmployeeDeviceAction[] };
+export type TelemetrySnapshot = { id: string; deviceId: string; cpuPercent: number; ramPercent: number; diskPercent: number; createdAt: string };
