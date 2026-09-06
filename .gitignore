@@ -27,6 +27,9 @@ playwright-report/
 agent-data/
 
 # Auxiliary and internal project files
+Takenote.md
+Takenote*
+VERIFICATION.md
 scripts/
 docs/
 plan/
