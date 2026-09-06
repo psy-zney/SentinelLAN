@@ -8,6 +8,7 @@ var baseUrl = builder.Configuration["SENTINELLAN_API_URL"] ?? "http://localhost:
 builder.Services.AddSingleton<IDeviceIdentityStore>(new DevelopmentIdentityStore(Path.Combine(AppContext.BaseDirectory, "agent-data", "identity.json")));
 builder.Services.AddSingleton<ITelemetryCollector, SystemTelemetryCollector>();
 builder.Services.AddSingleton<CommandVerifier>();
+builder.Services.AddSingleton<ICommandSignatureVerifier>(new HmacCommandVerifier(builder.Configuration["SENTINELLAN_SIGNING_KEY"]));
 builder.Services.AddSingleton<IAgentApi>(new AgentApi(new HttpClient { BaseAddress = new Uri(baseUrl), Timeout = TimeSpan.FromSeconds(20) }, Environment.MachineName));
 builder.Services.AddHostedService<Worker>();
 await builder.Build().RunAsync();

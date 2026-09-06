@@ -2,7 +2,7 @@ using SentinelLAN.Agent.Core;
 
 namespace SentinelLAN.Agent;
 
-public sealed class Worker(ILogger<Worker> logger, IDeviceIdentityStore identityStore, ITelemetryCollector telemetry, IAgentApi api, CommandVerifier verifier, IConfiguration configuration) : BackgroundService
+public sealed class Worker(ILogger<Worker> logger, IDeviceIdentityStore identityStore, ITelemetryCollector telemetry, IAgentApi api, CommandVerifier verifier, ICommandSignatureVerifier signatureVerifier, IConfiguration configuration) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -16,23 +16,18 @@ public sealed class Worker(ILogger<Worker> logger, IDeviceIdentityStore identity
             logger.LogWarning("Development identity store is file-based. Use an OS-protected credential store before deployment.");
         }
 
+        if (!signatureVerifier.IsConfigured) logger.LogWarning("Command polling is disabled until SENTINELLAN_SIGNING_KEY is configured. Telemetry remains active.");
+        var cycle = new AgentCycle(identity, telemetry, api, verifier, signatureVerifier, TimeProvider.System);
         var delay = TimeSpan.FromSeconds(5);
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await api.SendHeartbeatAsync(identity, telemetry.Collect(), stoppingToken);
-                var command = await api.PollCommandAsync(identity, stoppingToken);
-                if (command is not null)
-                {
-                    // Transport TLS plus server-side HMAC verification protects this MVP path. A production Agent receives a public verification key during enrollment.
-                    if (verifier.TryAccept(command, identity.DeviceId, DateTimeOffset.UtcNow, _ => true, out var reason))
-                        await api.SendResultAsync(identity, command.Id, SafeCommandExecutor.Execute(command), stoppingToken);
-                    else logger.LogWarning("Rejected command {CommandId}: {Reason}", command.Id, reason);
-                }
+                var rejection = await cycle.RunAsync(stoppingToken);
+                if (rejection is not null) logger.LogWarning("Rejected command: {Reason}", rejection);
                 delay = TimeSpan.FromSeconds(5);
             }
-            catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+            catch (Exception exception) when (!stoppingToken.IsCancellationRequested && exception is HttpRequestException or TaskCanceledException or IOException or System.ComponentModel.Win32Exception)
             {
                 logger.LogWarning(exception, "Agent offline; retrying in {DelaySeconds}s", delay.TotalSeconds);
                 delay = TimeSpan.FromSeconds(Math.Min(delay.TotalSeconds * 2, 60));
