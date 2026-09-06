@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\SentinelLAN.Api\SentinelLAN.Api.csproj" />
+    <ProjectReference Include="..\..\..\agent\src\SentinelLAN.Agent.Infrastructure\SentinelLAN.Agent.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
