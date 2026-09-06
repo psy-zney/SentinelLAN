@@ -55,12 +55,13 @@ public record CurrentSessionResponse(string Role, string DisplayName);
 public record EnrollRequest(string Token, string DeviceName, string OsVersion, string AgentVersion);
 public record EnrollResponse(Guid DeviceId, string DeviceSecret);
 public record HeartbeatRequest(string IdempotencyKey, double CpuPercent, double RamPercent, double DiskPercent, string OsVersion, string AgentVersion);
-public record CreateCommandRequest(Guid DeviceId, string Type, string Reason, int ValidForSeconds = 120);
+public record CreateCommandRequest(Guid DeviceId, string Type, string Reason, int ValidForSeconds = 120, bool Confirmed = false);
 public record CommandResultRequest(bool Succeeded, string Message);
 public record DeviceDto(Guid Id, string Name, string OsVersion, string AgentVersion, DateTimeOffset? LastSeenAt, bool IsOnline);
 public record DashboardDto(int TotalDevices, int OnlineDevices, int OfflineDevices, int OpenAlerts, IReadOnlyList<DeviceDto> Devices);
 public record EmployeeDeviceActionDto(string Action, string Reason, string Outcome, DateTimeOffset CreatedAt);
 public record EmployeeDeviceDto(DeviceDto Device, string? AppliedPolicy, IReadOnlyList<EmployeeDeviceActionDto> RecentActions);
+public record TelemetrySnapshotDto(Guid Id, Guid DeviceId, double CpuPercent, double RamPercent, double DiskPercent, DateTimeOffset CreatedAt);
 
 public interface ICommandSigner
 {
