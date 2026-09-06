@@ -3,7 +3,8 @@ using System.Collections.Concurrent;
 namespace SentinelLAN.Agent.Core;
 
 public record DeviceIdentity(Guid DeviceId, string DeviceSecret);
-public record RemoteCommand(Guid Id, Guid DeviceId, string Type, string Reason, string Nonce, string Signature, DateTimeOffset IssuedAt, DateTimeOffset ExpiresAt);
+public record RemoteCommand(Guid Id, Guid DeviceId, string Type, string Reason, string Nonce, string Signature, DateTimeOffset IssuedAt, DateTimeOffset ExpiresAt, Guid OrganizationId = default, Guid IssuedByUserId = default);
+public interface ICommandSignatureVerifier { bool IsConfigured { get; } bool Verify(RemoteCommand command); }
 public record ExecutionResult(bool Succeeded, string Message);
 
 public interface IDeviceIdentityStore { Task<DeviceIdentity?> LoadAsync(CancellationToken cancellationToken); Task SaveAsync(DeviceIdentity identity, CancellationToken cancellationToken); }
@@ -13,6 +14,7 @@ public interface IAgentApi
 {
     Task<DeviceIdentity> EnrollAsync(string token, CancellationToken cancellationToken);
     Task SendHeartbeatAsync(DeviceIdentity identity, TelemetrySnapshot telemetry, CancellationToken cancellationToken);
+    Task SendHeartbeatAsync(DeviceIdentity identity, TelemetrySnapshot telemetry, string? idempotencyKey, CancellationToken cancellationToken);
     Task<RemoteCommand?> PollCommandAsync(DeviceIdentity identity, CancellationToken cancellationToken);
     Task SendResultAsync(DeviceIdentity identity, Guid commandId, ExecutionResult result, CancellationToken cancellationToken);
 }
@@ -26,6 +28,7 @@ public sealed class CommandVerifier
     {
         if (command.DeviceId != expectedDeviceId) { reason = "Wrong device"; return false; }
         if (!Allowed.Contains(command.Type)) { reason = "Unsupported type"; return false; }
+        if (string.IsNullOrWhiteSpace(command.Nonce) || string.IsNullOrWhiteSpace(command.Signature) || command.ExpiresAt <= command.IssuedAt || command.ExpiresAt - command.IssuedAt > TimeSpan.FromMinutes(15)) { reason = "Invalid command envelope"; return false; }
         if (now < command.IssuedAt.AddMinutes(-1) || now >= command.ExpiresAt) { reason = "Expired or issued in the future"; return false; }
         if (!verifySignature(command)) { reason = "Invalid signature"; return false; }
         if (!_seenNonces.TryAdd(command.Nonce, 0)) { reason = "Replay detected"; return false; }
