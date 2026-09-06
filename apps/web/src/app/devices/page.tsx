@@ -1,2 +1,11 @@
-import { AppShell } from "@/components/app-shell"; import { DeviceTable } from "@/components/device-table"; import { demoDashboard } from "@/lib/api-client";
-export default function DevicesPage() { return <AppShell title="Device inventory"><p className="subtitle">Enrollment, availability, Agent version, and minimal health telemetry.</p><DeviceTable initialDevices={demoDashboard.devices} /></AppShell>; }
+import { AppShell } from "@/components/app-shell";
+import { DevicesView } from "@/components/devices-view";
+
+export default function DevicesPage() {
+  return (
+    <AppShell title="Device inventory">
+      <p className="subtitle">Enrollment, availability, Agent version, and minimal health telemetry.</p>
+      <DevicesView />
+    </AppShell>
+  );
+}
