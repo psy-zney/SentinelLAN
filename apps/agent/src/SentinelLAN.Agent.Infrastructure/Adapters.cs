@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -23,18 +22,6 @@ public sealed class DevelopmentIdentityStore(string path) : IDeviceIdentityStore
     }
 }
 
-public sealed class SystemTelemetryCollector : ITelemetryCollector
-{
-    public TelemetrySnapshot Collect()
-    {
-        var memory = GC.GetGCMemoryInfo();
-        var ram = memory.TotalAvailableMemoryBytes <= 0 ? 0 : Math.Clamp(GC.GetTotalMemory(false) * 100d / memory.TotalAvailableMemoryBytes, 0, 100);
-        var drive = DriveInfo.GetDrives().FirstOrDefault(x => x.IsReady);
-        var disk = drive is null || drive.TotalSize == 0 ? 0 : (drive.TotalSize - drive.AvailableFreeSpace) * 100d / drive.TotalSize;
-        return new TelemetrySnapshot(Math.Clamp(Process.GetCurrentProcess().TotalProcessorTime.TotalMilliseconds / Math.Max(Environment.ProcessorCount * 1000d, 1), 0, 100), ram, disk, RuntimeInformation.OSDescription, "0.1.0");
-    }
-}
-
 public sealed class AgentApi(HttpClient httpClient, string deviceName) : IAgentApi
 {
     public async Task<DeviceIdentity> EnrollAsync(string token, CancellationToken cancellationToken)
@@ -44,10 +31,13 @@ public sealed class AgentApi(HttpClient httpClient, string deviceName) : IAgentA
         return (await response.Content.ReadFromJsonAsync<DeviceIdentity>(cancellationToken))!;
     }
 
-    public async Task SendHeartbeatAsync(DeviceIdentity identity, TelemetrySnapshot telemetry, CancellationToken cancellationToken)
+    public Task SendHeartbeatAsync(DeviceIdentity identity, TelemetrySnapshot telemetry, CancellationToken cancellationToken) =>
+        SendHeartbeatAsync(identity, telemetry, null, cancellationToken);
+
+    public async Task SendHeartbeatAsync(DeviceIdentity identity, TelemetrySnapshot telemetry, string? idempotencyKey, CancellationToken cancellationToken)
     {
         using var request = CreateAuthenticatedRequest(HttpMethod.Post, "/api/v1/agent/heartbeat", identity);
-        request.Content = JsonContent.Create(new { idempotencyKey = Guid.NewGuid().ToString("N"), telemetry.CpuPercent, telemetry.RamPercent, telemetry.DiskPercent, telemetry.OsVersion, telemetry.AgentVersion });
+        request.Content = JsonContent.Create(new { idempotencyKey = idempotencyKey ?? Guid.NewGuid().ToString("N"), telemetry.CpuPercent, telemetry.RamPercent, telemetry.DiskPercent, telemetry.OsVersion, telemetry.AgentVersion });
         using var response = await httpClient.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
