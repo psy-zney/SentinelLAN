@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SentinelLAN.Infrastructure;
@@ -11,9 +12,11 @@ using SentinelLAN.Infrastructure;
 namespace SentinelLAN.Infrastructure.Migrations
 {
     [DbContext(typeof(SentinelDbContext))]
-    partial class SentinelDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260906073736_EnrollmentSingleUseConcurrency")]
+    partial class EnrollmentSingleUseConcurrency
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -249,7 +252,6 @@ namespace SentinelLAN.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<int>("Status")
-                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.Property<string>("Type")

@@ -35,9 +35,11 @@ public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> option
         modelBuilder.Entity<Device>().HasIndex(x => new { x.OrganizationId, x.AssignedUserId });
         modelBuilder.Entity<DeviceHeartbeat>().HasIndex(x => new { x.DeviceId, x.IdempotencyKey }).IsUnique();
         modelBuilder.Entity<DeviceEnrollmentToken>().HasIndex(x => x.TokenHash).IsUnique();
+        modelBuilder.Entity<DeviceEnrollmentToken>().Property(x => x.UsedAt).IsConcurrencyToken();
         modelBuilder.Entity<DeviceCredential>().HasIndex(x => x.DeviceId).IsUnique();
         modelBuilder.Entity<CommandResult>().HasIndex(x => x.CommandId).IsUnique();
         modelBuilder.Entity<DeviceCommand>().HasIndex(x => new { x.DeviceId, x.Nonce }).IsUnique();
+        modelBuilder.Entity<DeviceCommand>().Property(x => x.Status).IsConcurrencyToken();
         modelBuilder.Entity<Device>()
             .Property(x => x.RowVersion)
             .IsRequired()
@@ -61,6 +63,8 @@ public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> option
 
     private void SetDeviceRowVersions()
     {
+        if (ChangeTracker.Entries<AuditLog>().Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Audit entries are append-only.");
         foreach (var entry in ChangeTracker.Entries<Device>().Where(entry => entry.State is EntityState.Added or EntityState.Modified))
             entry.Property(device => device.RowVersion).CurrentValue = Guid.NewGuid().ToByteArray();
     }
