@@ -45,13 +45,19 @@ public sealed class DeviceEnrollmentToken : Entity, ITenantOwned
 public sealed class DeviceCredential : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public Guid DeviceId { get; init; } public required string SecretHash { get; init; } public DateTimeOffset? RevokedAt { get; set; } }
 public sealed class DeviceHeartbeat : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public Guid DeviceId { get; init; } public required string IdempotencyKey { get; init; } public DateTimeOffset RecordedAt { get; init; } }
 public sealed class TelemetrySnapshot : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public Guid DeviceId { get; init; } public double CpuPercent { get; init; } public double RamPercent { get; init; } public double DiskPercent { get; init; } }
-public sealed class Policy : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public required string Name { get; init; } public int IdleTimeoutMinutes { get; init; } public required string UsbMode { get; init; } }
+public sealed class Policy : Entity, ITenantOwned
+{
+    public Guid OrganizationId { get; init; }
+    public required string Name { get; set; }
+    public int IdleTimeoutMinutes { get; set; }
+    public required string UsbMode { get; set; }
+}
 public sealed class PolicyAssignment : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public Guid PolicyId { get; init; } public Guid DeviceId { get; init; } }
 
 public enum DeviceCommandStatus { Pending, Delivered, Succeeded, Failed, Expired }
 public sealed class DeviceCommand : Entity, ITenantOwned
 {
-    private static readonly HashSet<string> Allowed = ["ShowNotification", "CollectTelemetryNow", "RefreshPolicy", "SimulateLock", "SimulateNetworkIsolation"];
+    private static readonly HashSet<string> Allowed = ["ShowNotification", "CollectTelemetryNow", "RefreshPolicy", "SimulateLock", "SimulateNetworkIsolation", "RestartService"];
     public Guid OrganizationId { get; init; }
     public Guid DeviceId { get; init; }
     public required Guid IssuedByUserId { get; init; }
@@ -59,6 +65,7 @@ public sealed class DeviceCommand : Entity, ITenantOwned
     public required string Reason { get; init; }
     public required string Nonce { get; init; }
     public required string Signature { get; set; }
+    public string? Parameter { get; set; }
     public DateTimeOffset IssuedAt { get; init; }
     public DateTimeOffset ExpiresAt { get; init; }
     public DeviceCommandStatus Status { get; set; }
@@ -66,6 +73,19 @@ public sealed class DeviceCommand : Entity, ITenantOwned
 }
 
 public sealed class CommandResult : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public Guid DeviceId { get; init; } public Guid CommandId { get; init; } public bool Succeeded { get; init; } public required string Message { get; init; } }
-public sealed class Alert : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public Guid? DeviceId { get; init; } public required string Severity { get; init; } public required string Message { get; init; } public bool IsOpen { get; set; } = true; }
+public sealed class Alert : Entity, ITenantOwned
+{
+    public Guid OrganizationId { get; init; }
+    public Guid? DeviceId { get; init; }
+    public required string Severity { get; init; }
+    public required string Message { get; init; }
+    public bool IsOpen { get; set; } = true;
+    public DateTimeOffset? AcknowledgedAt { get; set; }
+    public DateTimeOffset? ResolvedAt { get; set; }
+    public Guid? ResolvedByUserId { get; set; }
+    public void Acknowledge(DateTimeOffset now) => AcknowledgedAt = now;
+    public void Resolve(Guid userId, DateTimeOffset now) { IsOpen = false; ResolvedAt = now; ResolvedByUserId = userId; }
+}
 public sealed class SecurityEvent : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public Guid? DeviceId { get; init; } public required string Type { get; init; } public required string Summary { get; init; } }
 public sealed class AuditLog : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public required Guid ActorId { get; init; } public Guid? DeviceId { get; init; } public required string Action { get; init; } public required string Reason { get; init; } public required string Outcome { get; set; } }
+

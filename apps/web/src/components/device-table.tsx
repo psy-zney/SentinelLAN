@@ -2,8 +2,55 @@
 
 import Link from "next/link";
 import type { Device } from "@/types/api";
+import { useTranslation } from "@/lib/i18n";
 
 export function DeviceTable({ initialDevices }: { initialDevices: Device[] }) {
+  const { t, lang } = useTranslation();
   const devices = initialDevices;
-  return <div className="panel"><div className="panel-head"><h2>Managed devices</h2><Link href="/devices">View inventory →</Link></div><table><thead><tr><th>Device</th><th>Status</th><th>Operating system</th><th>Agent</th><th>Last seen</th></tr></thead><tbody>{devices.map(device => <tr key={device.id}><td><Link href={`/devices/${device.id}`}>{device.name}</Link></td><td><span className={`status ${device.isOnline ? "" : "offline"}`}><span className="dot" />{device.isOnline ? "Online" : "Offline"}</span></td><td>{device.osVersion}</td><td>{device.agentVersion}</td><td>{device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleTimeString() : "Never"}</td></tr>)}</tbody></table></div>;
+
+  return (
+    <div className="panel">
+      <div className="panel-head">
+        <h2>{t("managedDevices")}</h2>
+        <Link href="/devices" style={{ fontSize: ".85rem", color: "var(--accent)", fontWeight: 700 }}>
+          {lang === "vi" ? "Xem danh mục chi tiết →" : "View inventory →"}
+        </Link>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>{t("deviceName")}</th>
+            <th>{t("status")}</th>
+            <th>{t("osVersion")}</th>
+            <th>{t("agentVersion")}</th>
+            <th>{t("lastSeen")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {devices.map(device => (
+            <tr key={device.id}>
+              <td>
+                <Link href={`/devices/${device.id}`} style={{ fontWeight: 600 }}>
+                  {device.name}
+                </Link>
+              </td>
+              <td>
+                <span className={`status ${device.isOnline ? "" : "offline"}`}>
+                  <span className="dot" />
+                  {device.isOnline ? t("online") : t("offline")}
+                </span>
+              </td>
+              <td>{device.osVersion}</td>
+              <td><code>{device.agentVersion}</code></td>
+              <td>
+                {device.lastSeenAt
+                  ? new Date(device.lastSeenAt).toLocaleTimeString()
+                  : t("none")}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }

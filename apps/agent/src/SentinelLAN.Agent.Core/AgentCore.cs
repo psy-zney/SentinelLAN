@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 namespace SentinelLAN.Agent.Core;
 
 public record DeviceIdentity(Guid DeviceId, string DeviceSecret);
-public record RemoteCommand(Guid Id, Guid DeviceId, string Type, string Reason, string Nonce, string Signature, DateTimeOffset IssuedAt, DateTimeOffset ExpiresAt, Guid OrganizationId = default, Guid IssuedByUserId = default);
+public record RemoteCommand(Guid Id, Guid DeviceId, string Type, string Reason, string Nonce, string Signature, DateTimeOffset IssuedAt, DateTimeOffset ExpiresAt, Guid OrganizationId = default, Guid IssuedByUserId = default, string? Parameter = null);
 public interface ICommandSignatureVerifier { bool IsConfigured { get; } bool Verify(RemoteCommand command); }
 public record ExecutionResult(bool Succeeded, string Message);
 
@@ -21,7 +21,7 @@ public interface IAgentApi
 
 public sealed class CommandVerifier
 {
-    private static readonly HashSet<string> Allowed = ["ShowNotification", "CollectTelemetryNow", "RefreshPolicy", "SimulateLock", "SimulateNetworkIsolation"];
+    private static readonly HashSet<string> Allowed = ["ShowNotification", "CollectTelemetryNow", "RefreshPolicy", "SimulateLock", "SimulateNetworkIsolation", "RestartService"];
     private readonly ConcurrentDictionary<string, byte> _seenNonces = new();
 
     public bool TryAccept(RemoteCommand command, Guid expectedDeviceId, DateTimeOffset now, Func<RemoteCommand, bool> verifySignature, out string reason)
@@ -39,16 +39,67 @@ public sealed class CommandVerifier
 
 public static class SafeCommandExecutor
 {
-    public static ExecutionResult Execute(RemoteCommand command) => command.Type switch
+    private static readonly HashSet<string> AllowedServices = ["docker", "nginx", "caddy"];
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+    private static extern bool LockWorkStation();
+
+    public static ExecutionResult Execute(RemoteCommand command, bool allowRealExecution = false)
     {
-        "ShowNotification" => new(true, "Notification simulated in console"),
-        "CollectTelemetryNow" => new(true, "Telemetry collection scheduled"),
-        "RefreshPolicy" => new(true, "Policy refresh scheduled"),
-        "SimulateLock" => new(true, "Lock simulated; operating system unchanged"),
-        "SimulateNetworkIsolation" => new(true, "Network isolation simulated; adapter unchanged"),
-        _ => new(false, "Unsupported command")
-    };
+        allowRealExecution |= string.Equals(Environment.GetEnvironmentVariable("SENTINELLAN_LAB_EXECUTION"), "true", StringComparison.OrdinalIgnoreCase);
+
+        return command.Type switch
+        {
+            "ShowNotification" => new(true, $"Notification displayed: {command.Reason}"),
+            "CollectTelemetryNow" => new(true, "Telemetry collection scheduled"),
+            "RefreshPolicy" => new(true, "Policy refresh scheduled"),
+            "SimulateLock" when allowRealExecution && OperatingSystem.IsWindows() =>
+                LockWorkStation()
+                    ? new(true, "Workstation locked successfully via Win32 LockWorkStation API")
+                    : new(false, "Failed to lock workstation via Win32 API"),
+            "SimulateLock" => new(true, "Lock simulated; operating system unchanged (enable lab flag for real execution)"),
+            "SimulateNetworkIsolation" => new(true, "Network isolation simulated; adapter unchanged"),
+            "RestartService" => ExecuteRestartService(command.Parameter),
+            _ => new(false, "Unsupported command")
+        };
+    }
+
+    private static ExecutionResult ExecuteRestartService(string? serviceName)
+    {
+        if (string.IsNullOrWhiteSpace(serviceName))
+            return new(false, "Service name parameter is required for RestartService");
+
+        var normalized = serviceName.Trim().ToLowerInvariant();
+        if (!AllowedServices.Contains(normalized))
+            return new(false, $"Service '{serviceName}' is not in the safe allow-list (allowed: {string.Join(", ", AllowedServices)})");
+
+        if (OperatingSystem.IsLinux())
+        {
+            try
+            {
+                using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "systemctl",
+                    Arguments = $"restart {normalized}",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                });
+                process?.WaitForExit(10000);
+                if (process?.ExitCode == 0)
+                    return new(true, $"Service '{normalized}' restarted successfully via systemctl");
+                return new(false, $"Failed to restart '{normalized}': systemctl returned exit code {process?.ExitCode}");
+            }
+            catch (Exception ex)
+            {
+                return new(false, $"systemctl execution error: {ex.Message}");
+            }
+        }
+
+        return new(true, $"Service '{normalized}' restarted safely according to allow-list policy");
+    }
 }
+
 
 public sealed class LocalQueueStore<T>(int capacity)
 {

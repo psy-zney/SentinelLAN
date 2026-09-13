@@ -1,4 +1,18 @@
-import type { AuditEvent, CommandType, CurrentSession, Dashboard, Device, EmployeeDevice, Role, TelemetrySnapshot } from "@/types/api";
+import type {
+  AlertItem,
+  AuditEvent,
+  CommandHistoryItem,
+  CommandType,
+  CurrentSession,
+  Dashboard,
+  Device,
+  EmployeeDevice,
+  OrganizationItem,
+  Policy,
+  Role,
+  TelemetrySnapshot,
+  UserItem
+} from "@/types/api";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -41,16 +55,108 @@ export class ApiClient {
     return ApiClient.refreshInFlight;
   }
 
-  login(organizationCode: string, email: string, password: string) { return this.request<AuthSession>("/api/v1/auth/login", { method: "POST", body: JSON.stringify({ organizationCode, email, password }) }, false); }
-  logout() { return this.request<void>("/api/v1/auth/logout", { method: "POST" }, false); }
-  session() { return this.request<CurrentSession>("/api/v1/auth/session"); }
-  dashboard() { return this.request<Dashboard>("/api/v1/dashboard"); }
-  devices() { return this.request<Device[]>("/api/v1/devices"); }
-  device(id: string) { return this.request<Device>(`/api/v1/devices/${id}`); }
-  deviceTelemetry(id: string) { return this.request<TelemetrySnapshot[]>(`/api/v1/devices/${id}/telemetry`); }
-  myDevice() { return this.request<EmployeeDevice>("/api/v1/my-device"); }
-  auditLogs() { return this.request<AuditEvent[]>("/api/v1/audit-logs"); }
-  createCommand(deviceId: string, type: CommandType, reason: string, confirmed = false) { return this.request(`/api/v1/commands`, { method: "POST", body: JSON.stringify({ deviceId, type, reason, confirmed }) }); }
+  login(organizationCode: string, email: string, password: string) {
+    return this.request<AuthSession>("/api/v1/auth/login", { method: "POST", body: JSON.stringify({ organizationCode, email, password }) }, false);
+  }
+
+  logout() {
+    return this.request<void>("/api/v1/auth/logout", { method: "POST" }, false);
+  }
+
+  session() {
+    return this.request<CurrentSession>("/api/v1/auth/session");
+  }
+
+  dashboard() {
+    return this.request<Dashboard>("/api/v1/dashboard");
+  }
+
+  devices() {
+    return this.request<Device[]>("/api/v1/devices");
+  }
+
+  device(id: string) {
+    return this.request<Device>(`/api/v1/devices/${id}`);
+  }
+
+  deviceTelemetry(id: string) {
+    return this.request<TelemetrySnapshot[]>(`/api/v1/devices/${id}/telemetry`);
+  }
+
+  myDevice() {
+    return this.request<EmployeeDevice>("/api/v1/my-device");
+  }
+
+  // POLICIES
+  policies() {
+    return this.request<Policy[]>("/api/v1/policies");
+  }
+
+  createPolicy(data: { name: string; idleTimeoutMinutes: number; usbMode: string }) {
+    return this.request<Policy>("/api/v1/policies", { method: "POST", body: JSON.stringify(data) });
+  }
+
+  updatePolicy(id: string, data: { name: string; idleTimeoutMinutes: number; usbMode: string }) {
+    return this.request<Policy>(`/api/v1/policies/${id}`, { method: "PUT", body: JSON.stringify(data) });
+  }
+
+  assignPolicy(policyId: string, deviceId: string) {
+    return this.request<{ assigned: boolean }>(`/api/v1/policies/${policyId}/assign`, {
+      method: "POST",
+      body: JSON.stringify({ policyId, deviceId })
+    });
+  }
+
+  // COMMANDS
+  commands() {
+    return this.request<CommandHistoryItem[]>("/api/v1/commands");
+  }
+
+  createCommand(deviceId: string, type: CommandType, reason: string, confirmed = true, validForSeconds = 300, parameter?: string) {
+    return this.request<{ id: string }>(`/api/v1/commands`, {
+      method: "POST",
+      body: JSON.stringify({ deviceId, type, reason, confirmed, validForSeconds, parameter: parameter || null })
+    });
+  }
+
+  // ALERTS
+  alerts(onlyOpen?: boolean) {
+    const query = typeof onlyOpen === "boolean" ? `?onlyOpen=${onlyOpen}` : "";
+    return this.request<AlertItem[]>(`/api/v1/alerts${query}`);
+  }
+
+  createAlert(data: { deviceId?: string | null; severity: string; message: string }) {
+    return this.request<{ id: string }>("/api/v1/alerts", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+  }
+
+  acknowledgeAlert(id: string) {
+    return this.request<{ acknowledged: boolean }>(`/api/v1/alerts/${id}/acknowledge`, { method: "POST" });
+  }
+
+  resolveAlert(id: string) {
+    return this.request<{ resolved: boolean }>(`/api/v1/alerts/${id}/resolve`, { method: "POST" });
+  }
+
+  // AUDIT LOGS
+  auditLogs(deviceId?: string, action?: string) {
+    const params = new URLSearchParams();
+    if (deviceId) params.set("deviceId", deviceId);
+    if (action) params.set("action", action);
+    const query = params.toString() ? `?${params.toString()}` : "";
+    return this.request<AuditEvent[]>(`/api/v1/audit-logs${query}`);
+  }
+
+  // USERS & ORG
+  users() {
+    return this.request<UserItem[]>("/api/v1/users");
+  }
+
+  organization() {
+    return this.request<OrganizationItem>("/api/v1/organizations");
+  }
 }
 
 export type AuthSession = { expiresIn: number; role: Role; displayName: string };

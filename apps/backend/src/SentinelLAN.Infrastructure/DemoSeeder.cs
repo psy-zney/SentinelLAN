@@ -25,7 +25,16 @@ public static class DemoSeeder
             AgentVersion = "0.1.0",
             LastSeenAt = DateTimeOffset.UtcNow
         };
-        var standardPolicy = new Policy { OrganizationId = organization.Id, Name = "Standard", IdleTimeoutMinutes = 15, UsbMode = "ReadOnly" };
+        var standardPolicy = new Policy { OrganizationId = organization.Id, Name = "Standard Workstation", IdleTimeoutMinutes = 15, UsbMode = "ReadOnly" };
+        var serverPolicy = new Policy { OrganizationId = organization.Id, Name = "Cloud Server (VPS)", IdleTimeoutMinutes = 60, UsbMode = "Disabled" };
+        var sampleAlert = new Alert
+        {
+            OrganizationId = organization.Id,
+            DeviceId = employeeDevice.Id,
+            Severity = "Warning",
+            Message = "Device CPU usage exceeded 85% threshold during scheduled maintenance scan.",
+            IsOpen = true
+        };
         db.AddRange(
             organization,
             admin,
@@ -33,9 +42,12 @@ public static class DemoSeeder
             employee,
             employeeDevice,
             standardPolicy,
+            serverPolicy,
+            sampleAlert,
             new PolicyAssignment { OrganizationId = organization.Id, PolicyId = standardPolicy.Id, DeviceId = employeeDevice.Id });
         var token = getSetting("SENTINELLAN_ENROLLMENT_TOKEN") ?? "local-enroll-only";
         db.Add(new DeviceEnrollmentToken { OrganizationId = organization.Id, TokenHash = SecretHash.Create(token), ExpiresAt = DateTimeOffset.UtcNow.AddDays(7) });
         await db.SaveChangesAsync(cancellationToken);
+
     }
 }
