@@ -8,22 +8,22 @@ SentinelLAN là MVP quản lý endpoint trong mạng LAN dành cho doanh nghiệ
 
 > SentinelLAN chỉ thu thập telemetry kỹ thuật đã công bố. Hệ thống không ghi phím, chụp màn hình, đọc tệp cá nhân, lịch sử duyệt web, camera, microphone hoặc thông tin đăng nhập. Khóa máy và cô lập mạng trong MVP chỉ là mô phỏng an toàn.
 
-## Trạng thái dự án (Part 6 — Hoàn thành Toàn diện 6 Tuần)
+## Trạng thái hệ thống
 
 | Hạng mục | Trạng thái |
 |---|---|
-| Phiên đăng nhập, refresh token và đăng xuất an toàn | Hoàn thành (Part 1) |
-| Phân quyền Admin, Technician, Employee và Agent | Hoàn thành (Part 1) |
-| Cô lập dữ liệu theo tenant và thiết bị được gán | Hoàn thành (Part 1) |
-| Enrollment một lần, heartbeat và telemetry kỹ thuật | Hoàn thành (Part 2) |
-| Dashboard thiết bị và cập nhật SignalR thời gian thực | Hoàn thành (Part 2) |
-| Policy, signed commands (HMAC), alert và audit trail | Hoàn thành (Part 3 & 4) |
-| Giao diện song ngữ Việt - Anh (i18n) chuyển đổi tức thời | Hoàn thành (Part 4) |
-| Củng cố Agent: DPAPI bảo vệ danh tính, hàng đợi ngoại tuyến | Hoàn thành (Part 5) |
-| Tích hợp E2E, nghiệm thu toàn diện và kiểm thử 100% | Hoàn thành (Part 6) |
+| Phiên đăng nhập, refresh token và đăng xuất an toàn | Đã hoàn thành |
+| Phân quyền Admin, Technician, Employee và Agent | Đã hoàn thành |
+| Cô lập dữ liệu theo tenant và thiết bị được gán | Đã hoàn thành |
+| Enrollment một lần, heartbeat và telemetry kỹ thuật | Đã hoàn thành |
+| Dashboard thiết bị và cập nhật SignalR thời gian thực | Đã hoàn thành |
+| Policy, signed commands (HMAC), alert và audit trail | Đã hoàn thành |
+| Giao diện song ngữ Việt - Anh (i18n) chuyển đổi tức thời | Đã hoàn thành |
+| Củng cố Agent: DPAPI bảo vệ danh tính, hàng đợi ngoại tuyến | Đã hoàn thành |
+| Tích hợp E2E, nghiệm thu toàn diện và kiểm thử 100% | Đã hoàn thành |
 | Khóa/cô lập thiết bị thật | Tắt mặc định; hỗ trợ qua cờ lab ủy quyền |
 
-Phiên bản hiện tại: `1.0.0 (Part 6 Final Release)`. Tài liệu giới thiệu, mục tiêu và kiến trúc chi tiết: [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md).
+Phiên bản hiện tại: `1.0.0`. Hệ thống tuân thủ mô hình Clean Architecture, phân quyền Zero Trust và cam kết bảo vệ quyền riêng tư Privacy-First.
 
 ## Phạm vi và vai trò
 

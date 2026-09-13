@@ -28,13 +28,17 @@ playwright-report/
 *.dump
 agent-data/
 
-# Auxiliary and internal project files
+# Auxiliary, internal, and report files
 Takenote.md
 Takenote*
 VERIFICATION.md
 AGENTS.md
 CLAUDE.md
 LICENSE
+PROJECT_OVERVIEW.md
+BAO_CAO*
+*bao_cao*
+*BaoCao*
 docs/
 deploy/
 scripts/
@@ -46,3 +50,25 @@ aio/
 .agents/
 .claude/
 .codex/
+scratch/
+
+# Ignore all internal markdown files except public README.md
+*.md
+!README.md
+
+# Office, document, and report formats
+*.docx
+*.doc
+*.pdf
+*.xlsx
+*.xls
+*.csv
+*.pptx
+*.ppt
+
+# OS and temporary files
+Thumbs.db
+Desktop.ini
+*.tmp
+*.bak
+*.swp
