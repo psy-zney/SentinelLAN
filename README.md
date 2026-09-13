@@ -8,19 +8,22 @@ SentinelLAN là MVP quản lý endpoint trong mạng LAN dành cho doanh nghiệ
 
 > SentinelLAN chỉ thu thập telemetry kỹ thuật đã công bố. Hệ thống không ghi phím, chụp màn hình, đọc tệp cá nhân, lịch sử duyệt web, camera, microphone hoặc thông tin đăng nhập. Khóa máy và cô lập mạng trong MVP chỉ là mô phỏng an toàn.
 
-## Trạng thái dự án
+## Trạng thái dự án (Part 6 — Hoàn thành Toàn diện 6 Tuần)
 
 | Hạng mục | Trạng thái |
 |---|---|
-| Phiên đăng nhập, refresh token và đăng xuất | Hoàn thành trong Week 1 |
-| Phân quyền Admin, Technician, Employee và Agent | Hoàn thành trong Week 1 |
-| Cô lập dữ liệu theo tenant và thiết bị được gán | Hoàn thành trong Week 1 |
-| Enrollment, heartbeat và telemetry cơ bản | Đã kiểm chứng local; chờ gate PostgreSQL Week 2 |
-| Dashboard thiết bị và cập nhật SignalR | Đã kiểm chứng local; chờ gate PostgreSQL Week 2 |
-| Policy, alert và audit đầy đủ | Đang phát triển theo roadmap |
-| Khóa/cô lập thiết bị thật | Tắt mặc định; chỉ được phép trong lab có ủy quyền |
+| Phiên đăng nhập, refresh token và đăng xuất an toàn | Hoàn thành (Part 1) |
+| Phân quyền Admin, Technician, Employee và Agent | Hoàn thành (Part 1) |
+| Cô lập dữ liệu theo tenant và thiết bị được gán | Hoàn thành (Part 1) |
+| Enrollment một lần, heartbeat và telemetry kỹ thuật | Hoàn thành (Part 2) |
+| Dashboard thiết bị và cập nhật SignalR thời gian thực | Hoàn thành (Part 2) |
+| Policy, signed commands (HMAC), alert và audit trail | Hoàn thành (Part 3 & 4) |
+| Giao diện song ngữ Việt - Anh (i18n) chuyển đổi tức thời | Hoàn thành (Part 4) |
+| Củng cố Agent: DPAPI bảo vệ danh tính, hàng đợi ngoại tuyến | Hoàn thành (Part 5) |
+| Tích hợp E2E, nghiệm thu toàn diện và kiểm thử 100% | Hoàn thành (Part 6) |
+| Khóa/cô lập thiết bị thật | Tắt mặc định; hỗ trợ qua cờ lab ủy quyền |
 
-Phiên bản hiện tại: `0.1.0`. Kết quả kiểm tra ngày 06/09/2026 và điều kiện chuyển Week 3: [VERIFICATION.md](VERIFICATION.md).
+Phiên bản hiện tại: `1.0.0 (Part 6 Final Release)`. Tài liệu giới thiệu, mục tiêu và kiến trúc chi tiết: [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md).
 
 ## Phạm vi và vai trò
 

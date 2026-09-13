@@ -1,16 +1,37 @@
 namespace SentinelLAN.Agent.Core;
 
 public sealed class AgentCycle(DeviceIdentity identity, ITelemetryCollector telemetry, IAgentApi api,
-    CommandVerifier verifier, ICommandSignatureVerifier signatures, TimeProvider clock)
+    CommandVerifier verifier, ICommandSignatureVerifier signatures, TimeProvider clock,
+    ResilientOfflineQueue<TelemetrySnapshot>? offlineTelemetry = null)
 {
     private (TelemetrySnapshot Snapshot, string Key)? _heartbeat;
     private (RemoteCommand Command, ExecutionResult Result)? _result;
+    private readonly ResilientOfflineQueue<TelemetrySnapshot> _offlineQueue = offlineTelemetry ?? new(50);
+
+    public int OfflineQueueCount => _offlineQueue.Count;
 
     public async Task<string?> RunAsync(CancellationToken cancellationToken)
     {
         _heartbeat ??= (telemetry.Collect(), Guid.NewGuid().ToString("N"));
-        await api.SendHeartbeatAsync(identity, _heartbeat.Value.Snapshot, _heartbeat.Value.Key, cancellationToken);
-        _heartbeat = null;
+        try
+        {
+            await api.SendHeartbeatAsync(identity, _heartbeat.Value.Snapshot, _heartbeat.Value.Key, cancellationToken);
+            _heartbeat = null;
+
+            var pending = _offlineQueue.Drain(TimeSpan.FromHours(1));
+            foreach (var buffered in pending)
+            {
+                await api.SendHeartbeatAsync(identity, buffered, Guid.NewGuid().ToString("N"), cancellationToken);
+            }
+        }
+        catch (Exception)
+        {
+            if (_heartbeat is not null)
+            {
+                _offlineQueue.Enqueue(_heartbeat.Value.Snapshot);
+            }
+            throw;
+        }
 
         if (_result is not null)
         {

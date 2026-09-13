@@ -2,7 +2,7 @@ using SentinelLAN.Agent.Core;
 
 namespace SentinelLAN.Agent;
 
-public sealed class Worker(ILogger<Worker> logger, IDeviceIdentityStore identityStore, ITelemetryCollector telemetry, IAgentApi api, CommandVerifier verifier, ICommandSignatureVerifier signatureVerifier, IConfiguration configuration) : BackgroundService
+public sealed class Worker(ILogger<Worker> logger, IDeviceIdentityStore identityStore, ITelemetryCollector telemetry, IAgentApi api, CommandVerifier verifier, ICommandSignatureVerifier signatureVerifier, IConfiguration configuration, ResilientOfflineQueue<TelemetrySnapshot>? offlineQueue = null) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -17,7 +17,7 @@ public sealed class Worker(ILogger<Worker> logger, IDeviceIdentityStore identity
         }
 
         if (!signatureVerifier.IsConfigured) logger.LogWarning("Command polling is disabled until SENTINELLAN_SIGNING_KEY is configured. Telemetry remains active.");
-        var cycle = new AgentCycle(identity, telemetry, api, verifier, signatureVerifier, TimeProvider.System);
+        var cycle = new AgentCycle(identity, telemetry, api, verifier, signatureVerifier, TimeProvider.System, offlineQueue);
         var delay = TimeSpan.FromSeconds(5);
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -29,8 +29,10 @@ public sealed class Worker(ILogger<Worker> logger, IDeviceIdentityStore identity
             }
             catch (Exception exception) when (!stoppingToken.IsCancellationRequested && exception is HttpRequestException or TaskCanceledException or IOException or System.ComponentModel.Win32Exception)
             {
-                logger.LogWarning(exception, "Agent offline; retrying in {DelaySeconds}s", delay.TotalSeconds);
-                delay = TimeSpan.FromSeconds(Math.Min(delay.TotalSeconds * 2, 60));
+                var jitterMs = Random.Shared.Next(-500, 500);
+                var nextSeconds = Math.Clamp(delay.TotalSeconds * 2 + (jitterMs / 1000.0), 2, 60);
+                delay = TimeSpan.FromSeconds(nextSeconds);
+                logger.LogWarning(exception, "Agent offline (queue: {QueueCount}); retrying in {DelaySeconds:F1}s", cycle.OfflineQueueCount, delay.TotalSeconds);
             }
             await Task.Delay(delay, stoppingToken);
         }

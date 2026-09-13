@@ -101,19 +101,29 @@ public static class SafeCommandExecutor
 }
 
 
-public sealed class LocalQueueStore<T>(int capacity)
+public class ResilientOfflineQueue<T>(int capacity = 100)
 {
     private readonly ConcurrentQueue<(DateTimeOffset CreatedAt, T Value)> _items = new();
+    public int Count => _items.Count;
+
     public void Enqueue(T value)
     {
         _items.Enqueue((DateTimeOffset.UtcNow, value));
         while (_items.Count > capacity) _items.TryDequeue(out _);
     }
+
     public IReadOnlyList<T> Drain(TimeSpan retention)
     {
         var minimum = DateTimeOffset.UtcNow - retention;
         var values = new List<T>();
-        while (_items.TryDequeue(out var item)) if (item.CreatedAt >= minimum) values.Add(item.Value);
+        while (_items.TryDequeue(out var item))
+        {
+            if (item.CreatedAt >= minimum) values.Add(item.Value);
+        }
         return values;
     }
+}
+
+public sealed class LocalQueueStore<T>(int capacity) : ResilientOfflineQueue<T>(capacity)
+{
 }

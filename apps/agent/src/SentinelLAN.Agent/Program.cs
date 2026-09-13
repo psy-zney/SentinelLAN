@@ -9,7 +9,12 @@ if (OperatingSystem.IsWindows())
 }
 
 var baseUrl = builder.Configuration["SENTINELLAN_API_URL"] ?? "http://localhost:8080";
-builder.Services.AddSingleton<IDeviceIdentityStore>(new DevelopmentIdentityStore(Path.Combine(AppContext.BaseDirectory, "agent-data", "identity.json")));
+var dataDir = Path.Combine(AppContext.BaseDirectory, "agent-data");
+var identityStore = builder.Environment.IsProduction()
+    ? (IDeviceIdentityStore)new ProtectedDeviceIdentityStore(Path.Combine(dataDir, "identity.dat"))
+    : new DevelopmentIdentityStore(Path.Combine(dataDir, "identity.json"));
+builder.Services.AddSingleton<IDeviceIdentityStore>(identityStore);
+builder.Services.AddSingleton<ResilientOfflineQueue<TelemetrySnapshot>>();
 builder.Services.AddSingleton<ITelemetryCollector, SystemTelemetryCollector>();
 builder.Services.AddSingleton<CommandVerifier>();
 builder.Services.AddSingleton<ICommandSignatureVerifier>(new HmacCommandVerifier(builder.Configuration["SENTINELLAN_SIGNING_KEY"]));

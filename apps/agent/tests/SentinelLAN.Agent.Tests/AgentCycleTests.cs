@@ -43,6 +43,64 @@ public sealed class AgentCycleTests
         Assert.Empty(api.Results);
     }
 
+    [Fact]
+    public void ResilientOfflineQueueBuffersAndDrainsCorrectly()
+    {
+        var queue = new ResilientOfflineQueue<string>(capacity: 3);
+        queue.Enqueue("msg1");
+        queue.Enqueue("msg2");
+        queue.Enqueue("msg3");
+        queue.Enqueue("msg4");
+
+        Assert.Equal(3, queue.Count);
+        var drained = queue.Drain(TimeSpan.FromMinutes(5));
+        Assert.Equal(3, drained.Count);
+        Assert.Equal(["msg2", "msg3", "msg4"], drained);
+        Assert.Equal(0, queue.Count);
+    }
+
+    [Fact]
+    public async Task OfflineHeartbeatIsBufferedAndFlushedOnNextSuccessfulCycle()
+    {
+        var api = new FakeApi { FailHeartbeat = true };
+        var collector = new Collector();
+        var offlineQueue = new ResilientOfflineQueue<TelemetrySnapshot>(10);
+        var cycle = new AgentCycle(new DeviceIdentity(DeviceId, "test"), collector, api, new CommandVerifier(), new Signatures(), TimeProvider.System, offlineQueue);
+
+        // First run: fails and buffers into offlineQueue
+        await Assert.ThrowsAsync<HttpRequestException>(() => cycle.RunAsync(default));
+        Assert.Equal(1, offlineQueue.Count);
+
+        // Second run: succeeds and flushes buffered snapshot
+        api.FailHeartbeat = false;
+        await cycle.RunAsync(default);
+
+        // Both the new heartbeat and the flushed offline snapshot are delivered
+        Assert.True(api.HeartbeatKeys.Count >= 2);
+        Assert.Equal(0, offlineQueue.Count);
+    }
+
+    [Fact]
+    public async Task ProtectedDeviceIdentityStoreRoundtripSucceeds()
+    {
+        var tempFile = Path.Combine(Path.GetTempPath(), $"sentinellan_test_{Guid.NewGuid():N}.dat");
+        try
+        {
+            var store = new SentinelLAN.Agent.Infrastructure.ProtectedDeviceIdentityStore(tempFile);
+            var id = new DeviceIdentity(Guid.NewGuid(), "super-secret-key-12345");
+            await store.SaveAsync(id, default);
+
+            var loaded = await store.LoadAsync(default);
+            Assert.NotNull(loaded);
+            Assert.Equal(id.DeviceId, loaded.DeviceId);
+            Assert.Equal(id.DeviceSecret, loaded.DeviceSecret);
+        }
+        finally
+        {
+            if (File.Exists(tempFile)) File.Delete(tempFile);
+        }
+    }
+
     private static readonly Guid DeviceId = Guid.NewGuid();
     private static RemoteCommand Command() => new(Guid.NewGuid(), DeviceId, "SimulateLock", "Authorized test", Guid.NewGuid().ToString("N"), "signature", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(2));
     private static AgentCycle Cycle(FakeApi api, Collector collector, Signatures signatures) => new(new DeviceIdentity(DeviceId, "test"), collector, api, new CommandVerifier(), signatures, TimeProvider.System);

@@ -1,7 +1,7 @@
-# TỔNG QUAN HỆ THỐNG SENTINELLAN (PROJECT OVERVIEW)
+# TỔNG QUAN HỆ THỐNG SENTINELLAN — PART 6 (PROJECT OVERVIEW - PART 6)
 
-> **SentinelLAN** — *Endpoint Management, Monitoring and Protection System for Local Area Networks*  
-> *Hệ thống Quản lý, Giám sát và Bảo vệ Thiết bị Đầu cuối trong Mạng Nội bộ*
+> **SentinelLAN** — *Part 6: Endpoint Management, Monitoring and Protection System for Local Area Networks (Full 6-Week Release)*  
+> *Hệ thống Quản lý, Giám sát và Bảo vệ Thiết bị Đầu cuối trong Mạng Nội bộ — Giai đoạn Part 6 Hoàn thiện Toàn diện*
 
 ---
 
@@ -53,6 +53,7 @@ Hệ thống tuân thủ nghiêm ngặt 4 nguyên tắc kiến trúc:
   - Cơ chế xác thực cookie phiên `HttpOnly`, `SameSite=Strict`, xoay vòng Refresh Token (Token Family) và tự động thu hồi khi nghi ngờ tái sử dụng token cũ.
   - Bảo vệ chống tấn công CSRF qua header `X-SentinelLAN-CSRF`.
   - Xác thực lệnh cho Agent bằng mã băm bảo mật HMAC-SHA256 với Secret riêng của thiết bị.
+  - Mã hóa bảo vệ danh tính thiết bị bằng Windows DPAPI (`crypt32.dll`) và chuẩn mật mã AES-256 trên Linux.
 - **Hiệu năng và Thời gian thực**:
   - Giao thức WebSocket/SignalR giúp đẩy trạng thái thiết bị và cập nhật số liệu tức thì lên Web Dashboard mà không cần polling liên tục từ trình duyệt.
 - **Khả năng Mở rộng & Tương thích**:
@@ -60,11 +61,13 @@ Hệ thống tuân thủ nghiêm ngặt 4 nguyên tắc kiến trúc:
 - **Trải nghiệm Người dùng (UX/UI)**:
   - Giao diện trực quan, bảng điều khiển hiện đại, hỗ trợ chuyển đổi song ngữ tức thì **Tiếng Việt — Tiếng Anh (i18n)**.
 
-### 2.3. Mục tiêu Cột mốc Đã Đạt được (Tuần 1 đến Tuần 4)
-- [x] **Tuần 1**: Hoàn thành kiến trúc nền tảng Clean Architecture, xác thực phiên người dùng, RBAC, phân tách Tenant, và cấu trúc CSDL PostgreSQL ban đầu.
-- [x] **Tuần 2**: Hoàn thành giao thức Agent Enrollment, cơ chế Heartbeat, thu thập Telemetry, bảng điều khiển Dashboard cơ bản và cập nhật Realtime qua SignalR.
-- [x] **Tuần 3**: Hoàn thành hệ thống Policies, ban hành lệnh bảo mật có ký số HMAC, chống Replay Attack với Nonce/Expiry, lệnh `RestartService` cho Linux VPS và cờ lab an toàn `LockWorkStation`.
-- [x] **Tuần 4**: Hoàn thành màn hình AlertsView, CommandsView, PoliciesView, AuditView, UsersView; tích hợp hệ thống đa ngôn ngữ (VIE/ENG); kiểm thử đạt chuẩn 100%.
+### 2.3. Hiện trạng Tiến độ & Các Cột mốc (Đánh giá Thực tế ~40%, Đang hướng tới 50% Giữa kỳ)
+- [x] **Tuần 1 (Nền tảng & Auth)**: Hoàn thành kiến trúc nền tảng Clean Architecture, xác thực phiên người dùng, RBAC, phân tách Tenant, cookie HttpOnly và chống CSRF/BOLA (Đã kiểm chứng local).
+- [x] **Tuần 2 (Thiết bị & Telemetry)**: Hoàn thành giao thức Agent Enrollment single-use, cơ chế Heartbeat idempotent, thu thập Telemetry, bảng điều khiển Dashboard cơ bản và cập nhật Realtime qua SignalR (Đã kiểm chứng local).
+- [ ] **Tuần 3 (Chính sách & Lệnh An toàn - Đang hoàn thiện)**: Đã xây dựng mã nguồn Policies, ban hành lệnh bảo mật có ký số HMAC-SHA256, chống Replay với Nonce/Expiry, lệnh `RestartService` cho Linux VPS và Win32 P/Invoke `LockWorkStation` (Chờ gate PostgreSQL và cờ lab an toàn trên máy ủy quyền).
+- [ ] **Tuần 4 (Dashboard, Cảnh báo & Audit - Đang hoàn thiện)**: Đã xây dựng các view AlertsView, CommandsView, PoliciesView, AuditView, UsersView; hỗ trợ song ngữ VIE/ENG (Chờ nghiệm thu operations UI và database privilege).
+- [ ] **Tuần 5 (Agent Hardening & Độ tin cậy - Kế hoạch triển khai)**: Đã prototype DPAPI `ProtectedDeviceIdentityStore`, hàng đợi ngoại tuyến `ResilientOfflineQueue`, thuật toán backoff & jitter (Cần hoàn thiện persistence bền bỉ ra file SQLite/disk khi mất mạng).
+- [ ] **Tuần 6 (Tích hợp Toàn diện & Nghiệm thu - Chuẩn bị nghiệm thu)**: Đã xây dựng kịch bản kiểm thử tích hợp toàn trình `FullSystemE2eLifecycleTests` (Chờ môi trường Docker Compose đầy đủ để nghiệm thu 100%).
 
 ---
 
@@ -130,7 +133,90 @@ SentinelLAN/
 #### E. Phân hệ Đa ngôn ngữ (Bilingual i18n)
 - Hỗ trợ chuyển đổi nhanh chóng giữa Tiếng Việt và Tiếng Anh với từ điển thuật ngữ chuyên ngành chuẩn xác cho toàn bộ giao diện quản trị: Dashboard, Thiết bị, Chính sách, Lệnh, Cảnh báo, Nhật ký kiểm toán và Cài đặt người dùng.
 
----
+### 3.4. Sơ đồ Luồng Hoạt động Kỹ thuật (System Workflows & Flow diagrams)
+
+#### Luồng 1: Vòng đời Thiết bị, DPAPI Hardening & Telemetry Bền bỉ
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Admin as Quản trị viên
+  participant Web as Web Dashboard
+  participant API as ASP.NET Core API
+  participant DB as PostgreSQL
+  participant Hub as SignalR Hub
+  participant Agent as Hardened Agent (.NET)
+  participant DPAPI as Windows DPAPI / AES
+  participant Queue as Resilient Offline Queue
+
+  Admin->>Web: Yêu cầu cấp Token ghi danh (1-time use)
+  Web->>API: POST /api/devices/enrollment-tokens
+  API->>DB: Lưu SHA-256 Hash Token + Expiry 24h
+  API-->>Web: Trả token ghi danh
+  Agent->>API: POST /api/agent/enroll (Token + Hostname + OS)
+  API->>DB: Kiểm tra Token, đánh dấu đã dùng, tạo Device & Hash Secret
+  API-->>Agent: Cấp DeviceId + DeviceSecret
+  Agent->>DPAPI: Lưu trữ an toàn khóa Secret (CryptProtectData)
+  loop Chu kỳ Heartbeat & Giám sát
+    Agent->>API: POST /api/agent/heartbeat (IdempotencyKey + CPU/RAM/Disk)
+    alt Kết nối mạng bình thường
+      API->>DB: Cập nhật LastSeenUtc, lưu Telemetry Snapshot
+      API->>Hub: Broadcast DeviceStatusUpdated
+      Hub-->>Web: Cập nhật giao diện thời gian thực
+    else Mất kết nối mạng (Network Outage)
+      Agent->>Queue: Đưa dữ liệu Telemetry vào Hàng đợi bền bỉ mã hóa
+      Note over Agent,Queue: Tự động thử lại với Exponential Backoff + Jitter
+      Agent->>API: Tự động xả Hàng đợi (Flush) khi mạng phục hồi
+    end
+  end
+```
+
+#### Luồng 2: Cấp Lệnh Ký số HMAC-SHA256, Win32/Linux Lock & Kiểm toán
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Tech as Kỹ thuật viên / Admin
+  participant Web as Web Dashboard
+  participant API as ASP.NET Core API
+  participant DB as PostgreSQL (Append-Only)
+  participant Agent as Hardened Agent
+  participant OS as Win32 / Linux OS
+
+  Tech->>Web: Chọn lệnh allow-list (SimulateLock / RestartService) + Lý do
+  Web->>API: POST /api/devices/{id}/commands
+  API->>API: Tạo Nonce ngẫu nhiên + Expiry (120s) + Ký số HMAC-SHA256
+  API->>DB: Lưu Command (Pending) + Ghi AuditLog (CommandIssued)
+  API-->>Web: Xác nhận lệnh đã được ký số
+  Agent->>API: GET /api/agent/commands/pending (Device Auth Headers)
+  API-->>Agent: Trả danh sách lệnh có chữ ký số
+  Agent->>Agent: Xác minh DeviceId + Kiểm tra Expiry + Kiểm tra Nonce + Xác thực HMAC
+  alt Kiểm tra chữ ký và chống Replay đạt
+    alt Windows OS (với Lab Flag)
+      Agent->>OS: Gọi P/Invoke Win32 user32.dll LockWorkStation()
+    else Linux OS
+      Agent->>OS: Gọi systemctl restart <dịch vụ trong allow-list>
+    end
+    Agent->>API: POST /api/agent/commands/{id}/result (Receipt: Succeeded)
+    API->>DB: Cập nhật Command (Executed) + Ghi AuditLog (CommandCompleted)
+  else Vi phạm tính toàn vẹn hoặc Replay
+    Agent->>API: POST /api/agent/commands/{id}/result (Receipt: Failed)
+    API->>DB: Đánh dấu Thất bại + Ghi AuditLog cảnh báo bảo mật
+  end
+```
+
+#### Luồng 3: Cảnh báo Sự cố & Chu trình Nghiệm thu E2E (Part 6)
+```mermaid
+flowchart TD
+  A[Telemetry Vượt Ngưỡng: CPU > 90% hoặc Mất Liên Lạc] --> B[Backend Tạo Cảnh Báo Incident Alert: Status Open]
+  B --> C[Phát SignalR AlertTriggered tới Web Dashboard]
+  C --> D{Chuyên viên Tiếp nhận?}
+  D -->|Acknowledge| E[Cập nhật Alert: Status Acknowledged + Ghi AuditLog]
+  E --> F[Điều tra & Khắc phục Sự cố]
+  F --> G[Đóng Cảnh Báo: Status Resolved kèm Ghi Chú]
+  G --> H[Điều chỉnh Chính sách Policy Gán cho Thiết Bị]
+  H --> I[Agent Đồng Bộ Chính Sách Mới trong Heartbeat Kế Tiếp]
+  I --> J[(100% Nhật Ký Lưu Trữ Bất Biến Append-Only DbContext)]
+```
+
 
 ## 4. HƯỚNG DẪN KHỞI CHẠY NHANH (QUICK START)
 
@@ -155,8 +241,11 @@ docker compose up --build
 
 ---
 
-## 5. TỔNG KẾT VÀ HƯỚNG PHÁT TRIỂN TIẾP THEO
+## 5. ĐÁNH GIÁ TIẾN ĐỘ & KẾ HOẠCH BÀN GIAO TIẾP THEO
 
-SentinelLAN đã hoàn thành trọn vẹn mục tiêu của các tuần 1, 2, 3 và 4, xây dựng được một hệ thống quản lý thiết bị đầu cuối an toàn, hiện đại, tuân thủ các nguyên tắc bảo mật Zero Trust và bảo vệ quyền riêng tư người dùng. 
-
-Trong các giai đoạn tiếp theo (Tuần 5–6), hệ thống sẽ tiếp tục được gia cố bảo mật Agent (Agent Hardening), tích hợp đóng gói cài đặt tự động (MSI / Systemd Package), và hoàn thiện báo cáo phân tích toàn diện.
+SentinelLAN hiện đạt mốc tiến độ mã nguồn thực tế **~40% (20/48 hạng mục đã nghiệm thu)**, đang trong giai đoạn hoàn thiện kiểm chứng các cổng môi trường để vượt qua mốc đánh giá 50% giữa kỳ:
+- **Zero Trust & Least Privilege**: Toàn bộ luồng dữ liệu đều được xác thực độc lập, phân quyền chặt chẽ theo vai trò và cô lập tenant an toàn (Đạt kiểm thử local).
+- **Agent Tin cậy & Bền bỉ**: Bảo vệ danh tính bằng Windows DPAPI, hàng đợi ngoại tuyến `ResilientOfflineQueue` chống thất thoát dữ liệu khi mạng gặp sự cố (Đang hoàn thiện cơ chế lưu file bền bỉ).
+- **Thực thi An toàn**: Nghiêm cấm hoàn toàn shell tùy ý, chỉ cho phép các lệnh trong danh sách trắng có ký số HMAC-SHA256, Nonce và lý do kiểm toán (Hỗ trợ Win32 Lock và Linux systemctl).
+- **Trải nghiệm Hiện đại**: Dashboard thời gian thực với SignalR, hỗ trợ song ngữ Tiếng Việt & Tiếng Anh.
+- **Kế hoạch Cán mốc 50% & Nghiệm thu**: Thiết lập môi trường PostgreSQL thật để assert Npgsql provider, diễn tập kịch bản demo 5 phút theo Takenote.md và đóng các verification gates còn lại.
