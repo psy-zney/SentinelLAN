@@ -41,7 +41,6 @@ BAO_CAO*
 *BaoCao*
 deploy/
 scripts/
-.github/
 plan/
 plans/
 aio/

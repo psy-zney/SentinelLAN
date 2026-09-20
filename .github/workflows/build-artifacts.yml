@@ -1,0 +1,67 @@
+name: Build Cross-Platform Agent Binaries
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "apps/agent/**"
+      - ".github/workflows/build-artifacts.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build Windows Agent (.exe)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Publish Windows x64 Executable
+        run: |
+          dotnet publish apps/agent/src/SentinelLAN.Agent/SentinelLAN.Agent.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained false `
+            -p:PublishSingleFile=true `
+            -o dist/windows-x64
+
+      - name: Upload Windows Agent Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sentinellan-agent-windows-x64
+          path: dist/windows-x64/SentinelLAN.Agent.exe
+
+  build-linux:
+    name: Build Linux Agent (Daemon Binary)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Publish Linux x64 Binary
+        run: |
+          dotnet publish apps/agent/src/SentinelLAN.Agent/SentinelLAN.Agent.csproj \
+            -c Release \
+            -r linux-x64 \
+            --self-contained false \
+            -p:PublishSingleFile=true \
+            -o dist/linux-x64
+
+      - name: Upload Linux Agent Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sentinellan-agent-linux-x64
+          path: dist/linux-x64/SentinelLAN.Agent

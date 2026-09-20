@@ -1,0 +1,155 @@
+name: Release SentinelLAN
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version tag (e.g. v1.0.0)"
+        required: true
+        default: "v1.0.0"
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    name: Run Quality Gates & Tests
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore & Build Solution
+        run: dotnet build SentinelLAN.slnx -c Release
+
+      - name: Run Backend Tests
+        run: dotnet test SentinelLAN.slnx -c Release --no-build
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Web Dependencies
+        run: npm.cmd --prefix apps/web ci
+
+      - name: Web Lint & Typecheck
+        run: |
+          npm.cmd --prefix apps/web run lint
+          npm.cmd --prefix apps/web run typecheck
+
+      - name: Web Unit Tests
+        run: npm.cmd --prefix apps/web test
+
+  build-windows-agent:
+    name: Build Windows Agent (.exe)
+    needs: verify
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Publish Windows x64 Executable
+        run: |
+          dotnet publish apps/agent/src/SentinelLAN.Agent/SentinelLAN.Agent.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained false `
+            -p:PublishSingleFile=true `
+            -o dist/windows-x64
+
+      - name: Upload Windows Agent Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sentinellan-agent-windows-x64
+          path: dist/windows-x64/SentinelLAN.Agent.exe
+
+  build-linux-agent:
+    name: Build Linux Agent (Daemon Binary)
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Publish Linux x64 Binary
+        run: |
+          dotnet publish apps/agent/src/SentinelLAN.Agent/SentinelLAN.Agent.csproj \
+            -c Release \
+            -r linux-x64 \
+            --self-contained false \
+            -p:PublishSingleFile=true \
+            -o dist/linux-x64
+
+      - name: Upload Linux Agent Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sentinellan-agent-linux-x64
+          path: dist/linux-x64/SentinelLAN.Agent
+
+  create-release:
+    name: Create GitHub Release & Package Distribution
+    needs: [build-windows-agent, build-linux-agent]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download Windows Agent
+        uses: actions/download-artifact@v4
+        with:
+          name: sentinellan-agent-windows-x64
+          path: release-assets/
+
+      - name: Download Linux Agent
+        uses: actions/download-artifact@v4
+        with:
+          name: sentinellan-agent-linux-x64
+          path: release-assets/
+
+      - name: Package VPS Deployment Bundle
+        run: |
+          mkdir -p release-assets/vps-deployment
+          cp -r deploy/vps/* release-assets/vps-deployment/
+          cp -r deploy/agent/* release-assets/vps-deployment/
+          tar -czvf release-assets/sentinellan-vps-deployment.tar.gz -C release-assets/vps-deployment .
+          rm -rf release-assets/vps-deployment
+
+      - name: Generate SHA256 Checksums
+        working-directory: release-assets
+        run: |
+          sha256sum SentinelLAN.Agent.exe SentinelLAN.Agent sentinellan-vps-deployment.tar.gz > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        with:
+          name: "SentinelLAN Release ${{ github.ref_name || inputs.version }}"
+          tag_name: ${{ github.ref_name || inputs.version }}
+          draft: false
+          prerelease: false
+          files: |
+            release-assets/SentinelLAN.Agent.exe
+            release-assets/SentinelLAN.Agent
+            release-assets/sentinellan-vps-deployment.tar.gz
+            release-assets/SHA256SUMS.txt
+          generate_release_notes: true
