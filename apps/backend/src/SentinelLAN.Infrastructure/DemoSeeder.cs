@@ -26,7 +26,7 @@ public static class DemoSeeder
             LastSeenAt = DateTimeOffset.UtcNow
         };
         var standardPolicy = new Policy { OrganizationId = organization.Id, Name = "Standard Workstation", IdleTimeoutMinutes = 15, UsbMode = "ReadOnly" };
-        var serverPolicy = new Policy { OrganizationId = organization.Id, Name = "Cloud Server (VPS)", IdleTimeoutMinutes = 60, UsbMode = "Disabled" };
+        var serverPolicy = new Policy { OrganizationId = organization.Id, Name = "Cloud Server (VPS)", IdleTimeoutMinutes = 60, UsbMode = "Blocked" };
         var sampleAlert = new Alert
         {
             OrganizationId = organization.Id,

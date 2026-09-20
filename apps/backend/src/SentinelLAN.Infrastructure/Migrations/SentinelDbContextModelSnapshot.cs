@@ -28,6 +28,9 @@ namespace SentinelLAN.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTimeOffset?>("AcknowledgedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -42,6 +45,12 @@ namespace SentinelLAN.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ResolvedByUserId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Severity")
@@ -207,7 +216,9 @@ namespace SentinelLAN.Infrastructure.Migrations
 
                     b.HasIndex("OrganizationId");
 
-                    b.HasIndex("OrganizationId", "AssignedUserId");
+                    b.HasIndex("OrganizationId", "AssignedUserId")
+                        .IsUnique()
+                        .HasFilter("\"AssignedUserId\" IS NOT NULL AND \"IsRevoked\" = FALSE");
 
                     b.ToTable("Devices");
                 });
@@ -239,6 +250,9 @@ namespace SentinelLAN.Infrastructure.Migrations
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Parameter")
+                        .HasColumnType("text");
 
                     b.Property<string>("Reason")
                         .IsRequired()

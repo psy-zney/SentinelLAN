@@ -4,7 +4,7 @@ using SentinelLAN.Domain;
 
 namespace SentinelLAN.Infrastructure;
 
-public sealed class AlertStore(SentinelDbContext db) : IAlertStore
+public sealed class AlertStore(SentinelDbContext db, IAlertDeviceLookup deviceLookup) : IAlertStore
 {
     public async Task<IReadOnlyList<AlertDto>> GetAlertsAsync(Guid organizationId, bool? onlyOpen, CancellationToken cancellationToken)
     {
@@ -13,6 +13,7 @@ public sealed class AlertStore(SentinelDbContext db) : IAlertStore
             .Where(a => a.OrganizationId == organizationId);
 
         if (onlyOpen == true) query = query.Where(a => a.IsOpen);
+        else if (onlyOpen == false) query = query.Where(a => !a.IsOpen);
 
         var alerts = await query
             .OrderByDescending(a => a.CreatedAt)
@@ -20,10 +21,7 @@ public sealed class AlertStore(SentinelDbContext db) : IAlertStore
             .ToListAsync(cancellationToken);
 
         var deviceIds = alerts.Where(a => a.DeviceId.HasValue).Select(a => a.DeviceId!.Value).Distinct().ToList();
-        var deviceNames = await db.Devices
-            .AsNoTracking()
-            .Where(d => deviceIds.Contains(d.Id))
-            .ToDictionaryAsync(d => d.Id, d => d.Name, cancellationToken);
+        var deviceNames = await deviceLookup.GetDeviceNamesAsync(organizationId, deviceIds, cancellationToken);
 
         return alerts.Select(a => new AlertDto(
             a.Id,

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { LogoutButton } from "@/components/logout-button";
 import { ApiClient } from "@/lib/api-client";
 import { homePathForRole } from "@/lib/auth-routing";
@@ -11,6 +11,12 @@ import { useTranslation, type TranslationKey } from "@/lib/i18n";
 import type { CurrentSession, Role } from "@/types/api";
 
 const operatorRoles: readonly Role[] = ["Admin", "Technician"];
+
+const SessionContext = createContext<CurrentSession | null>(null);
+
+export function useCurrentSession() {
+  return useContext(SessionContext);
+}
 
 const linkDefs: Record<Exclude<Role, "Agent">, readonly (readonly [TranslationKey, string])[]> = {
   Admin: [
@@ -111,6 +117,7 @@ export function AppShell({
             : "Authorized endpoint management only. Technical telemetry is minimal and privacy-first by design."}
         </div>
       </aside>
+      <SessionContext.Provider value={session}>
       <main className="content">
         <header className="topbar">
           <div>
@@ -136,6 +143,7 @@ export function AppShell({
         </header>
         {children}
       </main>
+      </SessionContext.Provider>
     </div>
   );
 }

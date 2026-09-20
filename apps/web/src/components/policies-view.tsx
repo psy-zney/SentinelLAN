@@ -13,6 +13,7 @@ export function PoliciesView() {
   const { data: policies, error, refresh } = useLiveQuery(loadPolicies);
   const [isCreating, setIsCreating] = useState(false);
   const [assigningPolicy, setAssigningPolicy] = useState<Policy | null>(null);
+  const [editingPolicy, setEditingPolicy] = useState<Policy | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
   const [loadingDevices, setLoadingDevices] = useState(false);
@@ -62,6 +63,18 @@ export function PoliciesView() {
     }
   };
 
+  const handleUpdatePolicy = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPolicy || !name.trim() || submitting) return;
+    setSubmitting(true); setStatusMessage(null);
+    try {
+      await new ApiClient().updatePolicy(editingPolicy.id, { name: name.trim(), idleTimeoutMinutes: Number(idleTimeout), usbMode });
+      setStatusMessage({ text: lang === "vi" ? "Đã cập nhật chính sách." : "Policy updated successfully.", type: "success" });
+      setEditingPolicy(null); setName(""); refresh();
+    } catch { setStatusMessage({ text: lang === "vi" ? "Không thể cập nhật chính sách." : "Failed to update policy.", type: "error" }); }
+    finally { setSubmitting(false); }
+  };
+
   const handleAssignPolicy = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!assigningPolicy || !selectedDeviceId || submitting) return;
@@ -101,7 +114,7 @@ export function PoliciesView() {
         <div className="metric">
           <span>{lang === "vi" ? "Thiết bị đã áp dụng" : "Devices assigned"}</span>
           <strong style={{ color: "var(--accent)" }}>
-            {policies.reduce((acc, p) => acc + (p.assignedDevicesCount || 0), 0)}
+            {policies.reduce((acc, p) => acc + (p.assignedDeviceCount || 0), 0)}
           </strong>
         </div>
       </section>
@@ -160,11 +173,14 @@ export function PoliciesView() {
                     </td>
                     <td>
                       <span className="badge badge-neutral">
-                        {p.assignedDevicesCount || 0} {lang === "vi" ? "thiết bị" : "devices"}
+                        {p.assignedDeviceCount || 0} {lang === "vi" ? "thiết bị" : "devices"}
                       </span>
                     </td>
                     <td>{new Date(p.createdAt).toLocaleDateString()}</td>
                     <td>
+                      <button className="action-sm action-outline" onClick={() => { setEditingPolicy(p); setName(p.name); setIdleTimeout(p.idleTimeoutMinutes); setUsbMode(p.usbMode); }}>
+                        {lang === "vi" ? "Sửa" : "Edit"}
+                      </button>{" "}
                       <button className="action-sm action-outline" onClick={() => handleOpenAssign(p)}>
                         {t("assignPolicyBtn")}
                       </button>
@@ -175,6 +191,11 @@ export function PoliciesView() {
             </table>
           </div>
         )}
+      </div>
+
+      <div className="privacy" style={{ marginTop: 18 }} role="note">
+        <strong>{lang === "vi" ? "Minh bạch cấu hình:" : "Configuration disclosure:"}</strong>{" "}
+        {lang === "vi" ? "Chính sách trong MVP này lưu cấu hình và phát sự kiện mô phỏng. Giao diện chưa tuyên bố đã chặn USB hoặc tự khóa hệ điều hành trên thiết bị." : "MVP policies store configuration and publish simulated events. This interface does not claim to block USB or lock an operating system on the endpoint."}
       </div>
 
       {/* Create Policy Modal */}
@@ -209,7 +230,7 @@ export function PoliciesView() {
                   value={idleTimeout}
                   onChange={(e) => setIdleTimeout(Number(e.target.value))}
                 />
-                <small>{lang === "vi" ? "Tự động khóa màn hình sau thời gian không hoạt động này." : "Screen locks automatically after this period of inactivity."}</small>
+                <small>{lang === "vi" ? "Cấu hình được lưu; Agent MVP chưa áp dụng khóa máy tự động." : "Configuration is stored; the MVP Agent does not apply an automatic device lock."}</small>
               </div>
               <div className="form-group">
                 <label htmlFor="p-usb">{t("usbModeLabel")}</label>
@@ -219,9 +240,9 @@ export function PoliciesView() {
                   value={usbMode}
                   onChange={(e) => setUsbMode(e.target.value)}
                 >
-                  <option value="Blocked">{lang === "vi" ? "Bị chặn (Chặn hoàn toàn đọc/ghi)" : "Blocked (Full restriction)"}</option>
-                  <option value="ReadOnly">{lang === "vi" ? "Chỉ đọc (Ngăn chặn sao chép dữ liệu ra ngoài)" : "ReadOnly (Prevent data exfiltration)"}</option>
-                  <option value="FullAccess">{lang === "vi" ? "Toàn quyền (Dành riêng cho máy phòng Lab)" : "FullAccess (Authorized lab devices only)"}</option>
+                  <option value="Blocked">{lang === "vi" ? "Blocked (cấu hình mô phỏng)" : "Blocked (configuration only)"}</option>
+                  <option value="ReadOnly">{lang === "vi" ? "ReadOnly (cấu hình mô phỏng)" : "ReadOnly (configuration only)"}</option>
+                  <option value="FullAccess">{lang === "vi" ? "FullAccess (cấu hình mô phỏng)" : "FullAccess (configuration only)"}</option>
                 </select>
               </div>
               <div className="btn-row">
@@ -272,6 +293,13 @@ export function PoliciesView() {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+      {editingPolicy && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true">
+          <div className="modal"><div className="modal-header"><h3>{lang === "vi" ? "Sửa chính sách" : "Edit policy"}: {editingPolicy.name}</h3><button className="modal-close" onClick={() => setEditingPolicy(null)} aria-label={t("cancel")}>×</button></div>
+            <form onSubmit={handleUpdatePolicy}><div className="form-group"><label htmlFor="edit-p-name">{t("policyNameLabel")}</label><input id="edit-p-name" className="form-input" minLength={2} maxLength={100} required value={name} onChange={e => setName(e.target.value)} /></div><div className="form-group"><label htmlFor="edit-p-timeout">{t("idleTimeoutLabel")}</label><input id="edit-p-timeout" className="form-input" type="number" min="1" max="1440" required value={idleTimeout} onChange={e => setIdleTimeout(Number(e.target.value))} /></div><div className="form-group"><label htmlFor="edit-p-usb">{t("usbModeLabel")}</label><select id="edit-p-usb" className="form-select" value={usbMode} onChange={e => setUsbMode(e.target.value)}>{!(["Blocked", "ReadOnly", "FullAccess"] as string[]).includes(usbMode) && <option value={usbMode}>{usbMode} ({lang === "vi" ? "giá trị cũ; chọn lại" : "legacy value; choose again"})</option>}<option value="Blocked">Blocked</option><option value="ReadOnly">ReadOnly</option><option value="FullAccess">FullAccess</option></select></div><div className="btn-row"><button type="button" className="action-outline" onClick={() => setEditingPolicy(null)}>{t("cancel")}</button><button type="submit" className="action" disabled={submitting}>{submitting ? t("saving") : t("save")}</button></div></form>
           </div>
         </div>
       )}

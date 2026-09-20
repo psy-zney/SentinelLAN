@@ -1,4 +1,4 @@
-export type Device = { id: string; name: string; osVersion: string; agentVersion: string; lastSeenAt: string | null; isOnline: boolean };
+export type Device = { id: string; name: string; osVersion: string; agentVersion: string; lastSeenAt: string | null; isOnline: boolean; assignedUserId: string | null; isRevoked: boolean };
 export type Dashboard = { totalDevices: number; onlineDevices: number; offlineDevices: number; openAlerts: number; devices: Device[] };
 export type CommandType = "ShowNotification" | "CollectTelemetryNow" | "RefreshPolicy" | "SimulateLock" | "SimulateNetworkIsolation" | "RestartService";
 export type AuditEvent = { id: string; actorId?: string; actorName?: string; deviceId?: string | null; deviceName?: string | null; action: string; reason: string; outcome: string; createdAt: string };
@@ -13,7 +13,7 @@ export type Policy = {
   name: string;
   idleTimeoutMinutes: number;
   usbMode: string;
-  assignedDevicesCount: number;
+  assignedDeviceCount: number;
   createdAt: string;
 };
 
@@ -50,6 +50,8 @@ export type UserItem = {
   role: Role;
   createdAt: string;
 };
+
+export type EnrollmentToken = { token: string; expiresAt: string };
 
 export type OrganizationItem = {
   id: string;

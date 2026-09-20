@@ -41,23 +41,14 @@ public static class SafeCommandExecutor
 {
     private static readonly HashSet<string> AllowedServices = ["docker", "nginx", "caddy"];
 
-    [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
-    private static extern bool LockWorkStation();
-
     public static ExecutionResult Execute(RemoteCommand command, bool allowRealExecution = false)
     {
-        allowRealExecution |= string.Equals(Environment.GetEnvironmentVariable("SENTINELLAN_LAB_EXECUTION"), "true", StringComparison.OrdinalIgnoreCase);
-
         return command.Type switch
         {
-            "ShowNotification" => new(true, $"Notification displayed: {command.Reason}"),
-            "CollectTelemetryNow" => new(true, "Telemetry collection scheduled"),
-            "RefreshPolicy" => new(true, "Policy refresh scheduled"),
-            "SimulateLock" when allowRealExecution && OperatingSystem.IsWindows() =>
-                LockWorkStation()
-                    ? new(true, "Workstation locked successfully via Win32 LockWorkStation API")
-                    : new(false, "Failed to lock workstation via Win32 API"),
-            "SimulateLock" => new(true, "Lock simulated; operating system unchanged (enable lab flag for real execution)"),
+            "ShowNotification" => new(true, $"Notification simulated; nothing was displayed: {command.Reason}"),
+            "CollectTelemetryNow" => new(true, "Telemetry collection request simulated; no immediate collection was performed"),
+            "RefreshPolicy" => new(true, "Policy refresh request simulated; no policy was applied"),
+            "SimulateLock" => new(true, "Lock simulated; operating system unchanged"),
             "SimulateNetworkIsolation" => new(true, "Network isolation simulated; adapter unchanged"),
             "RestartService" => ExecuteRestartService(command.Parameter),
             _ => new(false, "Unsupported command")
@@ -73,30 +64,7 @@ public static class SafeCommandExecutor
         if (!AllowedServices.Contains(normalized))
             return new(false, $"Service '{serviceName}' is not in the safe allow-list (allowed: {string.Join(", ", AllowedServices)})");
 
-        if (OperatingSystem.IsLinux())
-        {
-            try
-            {
-                using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = "systemctl",
-                    Arguments = $"restart {normalized}",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true
-                });
-                process?.WaitForExit(10000);
-                if (process?.ExitCode == 0)
-                    return new(true, $"Service '{normalized}' restarted successfully via systemctl");
-                return new(false, $"Failed to restart '{normalized}': systemctl returned exit code {process?.ExitCode}");
-            }
-            catch (Exception ex)
-            {
-                return new(false, $"systemctl execution error: {ex.Message}");
-            }
-        }
-
-        return new(true, $"Service '{normalized}' restarted safely according to allow-list policy");
+        return new(true, $"Service '{normalized}' restart simulated; service state unchanged");
     }
 }
 

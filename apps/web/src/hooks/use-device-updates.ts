@@ -3,8 +3,9 @@
 import { HubConnectionBuilder } from "@microsoft/signalr";
 import { useEffect } from "react";
 
-export function useDeviceUpdates(onUpdate: () => void) {
+export function useDeviceUpdates(onUpdate: () => void, enabled = true) {
   useEffect(() => {
+    if (!enabled) return;
     const api = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
     const connection = new HubConnectionBuilder()
       .withUrl(`${api}/hubs/updates`, {
@@ -15,7 +16,11 @@ export function useDeviceUpdates(onUpdate: () => void) {
       .build();
     let disposed = false;
     let retry: ReturnType<typeof setTimeout> | undefined;
-    connection.on("device-status", onUpdate);
+    // These names are the backend hub contract. Any tenant-scoped event can
+    // invalidate a view, so the component reloads through the typed API.
+    ["device-status", "command-status", "policy-assigned", "alert-triggered", "alert-updated"].forEach(event => {
+      connection.on(event, onUpdate);
+    });
     connection.onreconnected(onUpdate);
     const start = async () => {
       try {
@@ -35,5 +40,5 @@ export function useDeviceUpdates(onUpdate: () => void) {
       clearTimeout(retry);
       void starting.finally(() => connection.stop());
     };
-  }, [onUpdate]);
+  }, [enabled, onUpdate]);
 }

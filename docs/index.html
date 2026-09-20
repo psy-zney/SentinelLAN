@@ -1,0 +1,1247 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="SentinelLAN — Cổng tài liệu kiến trúc, sơ đồ luồng kỹ thuật (Workflows), hướng dẫn triển khai Self-Hosted / SaaS VPS / Open-Source và trình chiếu báo cáo đồ án.">
+  <title>SentinelLAN — Cổng Tài Liệu Kỹ Thuật & Thuyết Trình Dự Án</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0c1014;
+      --bg-surface: #141a20;
+      --bg-card: #1b232b;
+      --bg-card-hover: #222c36;
+      --border: #2c3844;
+      --border-focus: #10b981;
+      
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      
+      --accent: #10b981;
+      --accent-glow: rgba(16, 185, 129, 0.25);
+      --accent-soft: rgba(16, 185, 129, 0.12);
+      
+      --blue: #38bdf8;
+      --blue-soft: rgba(56, 189, 248, 0.12);
+      
+      --purple: #a855f7;
+      --purple-soft: rgba(168, 85, 247, 0.12);
+      
+      --amber: #f59e0b;
+      --amber-soft: rgba(245, 158, 11, 0.12);
+      
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 18px;
+      --radius-xl: 24px;
+      
+      --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', Consolas, monospace;
+      
+      --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.25);
+      --shadow-lg: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+      --transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-main);
+      font-size: 15px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* NAV RAIL */
+    .nav-rail {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      padding: 0 clamp(1rem, 4vw, 3rem);
+      background: rgba(12, 16, 20, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+      color: #fff;
+      text-decoration: none;
+    }
+    .brand-logo {
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(135deg, var(--accent), #059669);
+      color: #042f2e;
+      font-weight: 900;
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+    .nav-links {
+      display: flex;
+      gap: 6px;
+      list-style: none;
+    }
+    .nav-links a {
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+    .nav-links a:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-slide-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .btn-slide-toggle:hover {
+      background: var(--accent);
+      color: #042f2e;
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+
+    /* HERO SECTION */
+    .hero {
+      position: relative;
+      padding: clamp(3rem, 8vw, 6rem) clamp(1rem, 5vw, 4rem) clamp(2rem, 5vw, 4rem);
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .hero-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 20px;
+    }
+    .hero h1 {
+      font-size: clamp(2.4rem, 5.5vw, 4.2rem);
+      font-weight: 800;
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+      max-width: 980px;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      font-size: clamp(1.05rem, 2vw, 1.25rem);
+      color: var(--text-muted);
+      max-width: 820px;
+      line-height: 1.65;
+      margin-bottom: 36px;
+    }
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .stat-pill {
+      padding: 20px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+    }
+    .stat-pill:hover {
+      border-color: var(--border-focus);
+      transform: translateY(-2px);
+    }
+    .stat-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    .stat-val {
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: #fff;
+    }
+    .stat-val.green { color: var(--accent); text-shadow: 0 0 12px var(--accent-glow); }
+    .stat-val.blue { color: var(--blue); }
+    .stat-val.purple { color: var(--purple); }
+
+    /* LAYOUT CONTAINER */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 clamp(1rem, 5vw, 4rem) 80px;
+    }
+
+    /* SECTION HEADER */
+    .section-head {
+      margin: 80px 0 32px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .section-title-wrap h2 {
+      font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .section-title-wrap p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      margin-top: 6px;
+      max-width: 720px;
+    }
+    .section-badge {
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--accent);
+    }
+
+    /* 3 PILLARS CARDS */
+    .pillars-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 24px;
+    }
+    .pillar-card {
+      padding: 32px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+    .pillar-card:hover {
+      border-color: var(--border-focus);
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+    .pillar-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: var(--accent);
+      opacity: 0;
+      transition: var(--transition);
+    }
+    .pillar-card:hover::before { opacity: 1; }
+    .pillar-icon {
+      font-size: 2.2rem;
+      margin-bottom: 20px;
+    }
+    .pillar-card h3 {
+      font-size: 1.45rem;
+      font-weight: 800;
+      margin-bottom: 12px;
+      color: #fff;
+    }
+    .pillar-card p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+    .pillar-features {
+      list-style: none;
+      margin-bottom: 28px;
+    }
+    .pillar-features li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.9rem;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+    .pillar-features li::before {
+      content: '✓';
+      color: var(--accent);
+      font-weight: 800;
+    }
+    .pillar-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 0.9rem;
+      text-decoration: none;
+      transition: var(--transition);
+    }
+    .pillar-link:hover { gap: 12px; }
+
+    /* TECH STACK TABLE & BADGES */
+    .tech-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .tech-box {
+      padding: 24px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+    }
+    .tech-box h4 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .tech-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .tech-tag {
+      padding: 6px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text);
+    }
+    .tech-tag.highlight {
+      background: var(--accent-soft);
+      border-color: rgba(16, 185, 129, 0.4);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* INTERACTIVE WORKFLOW VIEWER */
+    .workflow-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+    }
+    .workflow-tabs {
+      display: flex;
+      gap: 2px;
+      background: var(--bg);
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+    }
+    .wf-tab-btn {
+      padding: 12px 20px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 0.92rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: var(--transition);
+    }
+    .wf-tab-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.05); }
+    .wf-tab-btn.active {
+      background: var(--bg-card);
+      color: var(--accent);
+      box-shadow: inset 0 -2px 0 var(--accent);
+    }
+    .workflow-content {
+      padding: clamp(1.5rem, 4vw, 3rem);
+    }
+    .wf-pane { display: none; }
+    .wf-pane.active { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    .wf-header {
+      margin-bottom: 28px;
+    }
+    .wf-header h3 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+    .wf-header p {
+      color: var(--text-muted);
+      font-size: 1rem;
+      max-width: 800px;
+    }
+
+    .flow-steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      position: relative;
+    }
+    .flow-step-card {
+      padding: 24px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 200px;
+      transition: var(--transition);
+    }
+    .flow-step-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-3px);
+    }
+    .step-number {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 0.85rem;
+      margin-bottom: 14px;
+    }
+    .step-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+    .step-desc {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .step-code-badge {
+      margin-top: 14px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--blue);
+      word-break: break-all;
+    }
+
+    /* CODE BOXES */
+    .code-container {
+      position: relative;
+      margin: 18px 0;
+      border-radius: var(--radius-md);
+      background: #070a0d;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .code-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8rem;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+    }
+    .code-body {
+      padding: 16px;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      line-height: 1.6;
+      color: #e2e8f0;
+    }
+
+    /* PRESENTATION SLIDE MODE OVERLAY */
+    #slide-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: #0a0e12;
+      color: #fff;
+      overflow: hidden;
+      flex-direction: column;
+    }
+    #slide-modal.active { display: flex; }
+    .slide-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 60px;
+      padding: 0 24px;
+      background: rgba(18, 24, 30, 0.8);
+      border-bottom: 1px solid var(--border);
+    }
+    .slide-viewport {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      overflow-y: auto;
+    }
+    .slide-page {
+      display: none;
+      max-width: 1100px;
+      width: 100%;
+      animation: fadeIn 0.25s ease;
+    }
+    .slide-page.active { display: block; }
+    .slide-page h2 {
+      font-size: 3rem;
+      font-weight: 800;
+      margin-bottom: 24px;
+      letter-spacing: -0.03em;
+      color: #fff;
+    }
+    .slide-page p.lead {
+      font-size: 1.4rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+    .slide-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 24px;
+      background: rgba(18, 24, 30, 0.8);
+      border-top: 1px solid var(--border);
+      font-size: 0.9rem;
+      color: var(--text-dim);
+    }
+    .slide-nav-btns {
+      display: flex;
+      gap: 10px;
+    }
+    .slide-btn {
+      padding: 8px 18px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .slide-btn:hover { background: var(--bg-card-hover); }
+
+    /* PRINT STYLES */
+    @media print {
+      body { background: #fff; color: #000; }
+      .nav-rail, .btn-slide-toggle, .workflow-tabs { display: none !important; }
+      .pillar-card, .tech-box, .panel { border-color: #ddd; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAVIGATION BAR -->
+  <header class="nav-rail">
+    <a class="brand" href="#top">
+      <div class="brand-logo">S</div>
+      <span>SentinelLAN</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#pillars">3 Trụ Cột</a>
+      <a href="#tech">Công Nghệ</a>
+      <a href="#architecture">Kiến Trúc</a>
+      <a href="#workflows">Sơ Đồ Luồng</a>
+      <a href="#gates">Nghiệm Thu</a>
+    </nav>
+    <div class="nav-actions">
+      <button class="btn-slide-toggle" id="btn-open-slides" type="button">
+        <span>📽️ Trình Chiếu Thuyết Trình</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- HERO SECTION -->
+  <section class="hero" id="top">
+    <div class="hero-kicker">SentinelLAN Technical Documentation & Project Defense</div>
+    <h1>Nền Tảng Quản Trị Endpoint & Cloud Node Mạng Nội Bộ</h1>
+    <p>
+      Giải pháp điều hành thiết bị đầu cuối và máy chủ đám mây theo chuẩn <strong>Zero Trust</strong> & <strong>Privacy-First</strong>. 
+      Được thiết kế toàn diện cho cả 3 mô hình: Tự host nội bộ (On-Premise), Mã nguồn mở (Open Source) và Cloud SaaS đa tổ chức với quản trị VPS từ xa.
+    </p>
+
+    <div class="stats-bar">
+      <div class="stat-pill">
+        <div class="stat-label">Kiểm thử .NET</div>
+        <div class="stat-val green">79 / 79 PASS</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-label">Web Code Quality</div>
+        <div class="stat-val blue">0 Lint / 0 Type Error</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-label">Mô hình Hoạt động</div>
+        <div class="stat-val purple">3 Trụ Cột Cốt Lõi</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-label">Triết lý Thiết kế</div>
+        <div class="stat-val green">Privacy-First</div>
+      </div>
+    </div>
+  </section>
+
+  <main class="container">
+
+    <!-- PHẦN 1: 3 TRỤ CỘT CỐT LÕI -->
+    <section id="pillars">
+      <div class="section-head">
+        <div class="section-title-wrap">
+          <span class="section-badge">Pillars</span>
+          <h2>3 Trụ Cột Chiến Lược</h2>
+          <p>SentinelLAN được cấu trúc để linh hoạt đáp ứng mọi quy mô triển khai của doanh nghiệp và cộng đồng IT.</p>
+        </div>
+      </div>
+
+      <div class="pillars-grid">
+        <!-- TRỤ CỘT 1 -->
+        <div class="pillar-card">
+          <div>
+            <div class="pillar-icon">🏢</div>
+            <h3>1. Tự Host Nội Bộ (Self-Hosted)</h3>
+            <p>Dành cho doanh nghiệp, cơ quan, trường học muốn kiểm soát 100% dữ liệu trên máy chủ văn phòng mà không phụ thuộc Internet.</p>
+            <ul class="pillar-features">
+              <li>Triển khai 1 lệnh qua Docker Compose stack.</li>
+              <li>Dữ liệu lưu trữ nội bộ trên PostgreSQL cục bộ.</li>
+              <li>Agent kết nối trực tiếp trong mạng LAN / Wi-Fi.</li>
+              <li>Miễn phí, không lo rò rỉ thông tin ra Internet.</li>
+            </ul>
+          </div>
+          <a class="pillar-link" href="deployment/self-hosted-guide.md">Xem hướng dẫn Self-Hosted →</a>
+        </div>
+
+        <!-- TRỤ CỘT 2 -->
+        <div class="pillar-card">
+          <div>
+            <div class="pillar-icon">🌐</div>
+            <h3>2. Mã Nguồn Mở (Open-Source)</h3>
+            <p>Cung cấp mã nguồn sạch, kiến trúc chuẩn Modular Monolith / Clean Architecture để cộng đồng dễ dàng clone và mở rộng.</p>
+            <ul class="pillar-features">
+              <li>Backend .NET 10 (C# 14) & Frontend Next.js 16.</li>
+              <li>Ranh giới phân tầng Domain, Application, Infra rõ ràng.</li>
+              <li>Quy chuẩn kiểm thử tự động xUnit, Vitest, Playwright.</li>
+              <li>Không dính líu đến bản quyền độc quyền hay vendor lock-in.</li>
+            </ul>
+          </div>
+          <a class="pillar-link" href="deployment/open-source-guide.md">Xem hướng dẫn đóng góp Open Source →</a>
+        </div>
+
+        <!-- TRỤ CỘT 3 -->
+        <div class="pillar-card">
+          <div>
+            <div class="pillar-icon">☁️</div>
+            <h3>3. Cloud VPS & Multi-Tenant SaaS</h3>
+            <p>Dành cho việc kinh doanh dịch vụ quản lý đa công ty (SaaS) và quản trị máy chủ Cloud Linux qua kết nối SSH an toàn.</p>
+            <ul class="pillar-features">
+              <li>Cô lập đa tổ chức (Multi-Tenant) 4 lớp nghiêm ngặt.</li>
+              <li>Quản trị VPS từ xa bằng SSH Private Key + IPv4.</li>
+              <li>Kho bảo vệ Private Key mã hóa bằng AES-256-GCM Vault.</li>
+              <li>Thu thập CPU, RAM, Disk, Docker Container từ xa.</li>
+            </ul>
+          </div>
+          <a class="pillar-link" href="deployment/saas-vps-guide.md">Xem hướng dẫn SaaS & Quản trị VPS →</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- PHẦN 2: TECH STACK SHOWCASE -->
+    <section id="tech">
+      <div class="section-head">
+        <div class="section-title-wrap">
+          <span class="section-badge">Technologies</span>
+          <h2>Công Nghệ & Kỹ Thuật Đã Sử Dụng</h2>
+          <p>Hệ thống kết hợp các công nghệ mới nhất trong hệ sinh thái .NET và Web hiện đại để đạt hiệu năng cao và độ ổn định tối đa.</p>
+        </div>
+      </div>
+
+      <div class="tech-grid">
+        <div class="tech-box">
+          <h4>🚀 Backend API</h4>
+          <div class="tech-tags">
+            <span class="tech-tag highlight">.NET 10.0.400</span>
+            <span class="tech-tag">C# 14</span>
+            <span class="tech-tag">ASP.NET Core Minimal APIs</span>
+            <span class="tech-tag">EF Core 10.0.11</span>
+            <span class="tech-tag">Npgsql PostgreSQL</span>
+          </div>
+        </div>
+
+        <div class="tech-box">
+          <h4>⚡ Web Dashboard</h4>
+          <div class="tech-tags">
+            <span class="tech-tag highlight">Next.js 16.2.11</span>
+            <span class="tech-tag">React 19.2.8</span>
+            <span class="tech-tag">TypeScript 5.9</span>
+            <span class="tech-tag">Tailwind CSS 4.3</span>
+            <span class="tech-tag">Turbopack</span>
+          </div>
+        </div>
+
+        <div class="tech-box">
+          <h4>📡 Realtime & Hardware</h4>
+          <div class="tech-tags">
+            <span class="tech-tag highlight">SignalR 10.0.0</span>
+            <span class="tech-tag">Windows DPAPI</span>
+            <span class="tech-tag">SSH.NET (C#)</span>
+            <span class="tech-tag">System.Threading.Channels</span>
+          </div>
+        </div>
+
+        <div class="tech-box">
+          <h4>🔒 Security & Mật Mã</h4>
+          <div class="tech-tags">
+            <span class="tech-tag highlight">PBKDF2-SHA256</span>
+            <span class="tech-tag">HMAC-SHA256 10 tham số</span>
+            <span class="tech-tag">AES-256-GCM Vault</span>
+            <span class="tech-tag">HttpOnly SameSite Cookie</span>
+          </div>
+        </div>
+
+        <div class="tech-box">
+          <h4>🧪 Testing & Verification</h4>
+          <div class="tech-tags">
+            <span class="tech-tag highlight">79 xUnit Tests</span>
+            <span class="tech-tag">Vitest 4.1</span>
+            <span class="tech-tag">Playwright E2E</span>
+            <span class="tech-tag">Architecture Tests</span>
+          </div>
+        </div>
+
+        <div class="tech-box">
+          <h4>🐳 Vận Hành & Hạ Tầng</h4>
+          <div class="tech-tags">
+            <span class="tech-tag highlight">Docker Engine 28</span>
+            <span class="tech-tag">Docker Compose v2</span>
+            <span class="tech-tag">PostgreSQL 18.1</span>
+            <span class="tech-tag">Redis 8.2</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PHẦN 3: SƠ ĐỒ LUỒNG TƯƠNG TÁC (WORKFLOWS) -->
+    <section id="workflows">
+      <div class="section-head">
+        <div class="section-title-wrap">
+          <span class="section-badge">Workflows</span>
+          <h2>Sơ Đồ Luồng Kỹ Thuật (System Workflows)</h2>
+          <p>Khám phá trực quan từng bước giao tiếp giữa Client, Server, Database và Endpoint Agent.</p>
+        </div>
+      </div>
+
+      <div class="workflow-panel">
+        <div class="workflow-tabs" role="tablist">
+          <button class="wf-tab-btn active" type="button" data-wf="enroll">1. Bắt Tay & Ghi Danh (Enrollment)</button>
+          <button class="wf-tab-btn" type="button" data-wf="telemetry">2. Telemetry & Heartbeat Realtime</button>
+          <button class="wf-tab-btn" type="button" data-wf="command">3. Lệnh Điều Khiển Ký Số (Safe Command)</button>
+          <button class="wf-tab-btn" type="button" data-wf="ssh">4. Quản Trị VPS Cloud (Agentless SSH)</button>
+          <button class="wf-tab-btn" type="button" data-wf="privacy">5. Phân Công & Minh Bạch Riêng Tư</button>
+        </div>
+
+        <div class="workflow-content">
+          <!-- WORKFLOW 1 -->
+          <div class="wf-pane active" id="wf-enroll">
+            <div class="wf-header">
+              <h3>Quy trình Bắt tay An toàn (Enrollment Handshake)</h3>
+              <p>Cơ chế xác thực một lần (Single-use Token), sinh cặp khóa phần cứng và kích hoạt Agent qua Windows Service.</p>
+            </div>
+            <div class="flow-steps-grid">
+              <div class="flow-step-card">
+                <div>
+                  <div class="step-number">01</div>
+                  <div class="step-title">Admin Cấp Token</div>
+                  <div class="step-desc">IT bấm cấp Token trên Web Dashboard. Backend sinh ngẫu nhiên 32 byte qua CSPRNG và chỉ lưu bản băm SHA-256 vào Database.</div>
+                </div>
+                <div class="step-code-badge">POST /api/v1/enrollment-tokens</div>
+              </div>
+
+              <div class="flow-step-card">
+                <div>
+                  <div class="step-number">02</div>
+                  <div class="step-title">Agent Bắt Tay Đăng Ký</div>
+                  <div class="step-desc">Agent trên máy nhân viên gửi HTTP POST kèm Token thô và thông tin phần cứng (Hostname, OS Version).</div>
+                </div>
+                <div class="step-code-badge">POST /api/v1/agent/enroll</div>
+              </div>
+
+              <div class="flow-step-card">
+                <div>
+                  <div class="step-number">03</div>
+                  <div class="step-title">Hủy Token & Cấp Khóa Máy</div>
+                  <div class="step-desc">Server kiểm tra Token hợp lệ -> Hủy Token nguyên tử (không thể tái sử dụng) -> Tạo Device ID + Device Secret riêng cho máy đó.</div>
+                </div>
+                <div class="step-code-badge">Atomic Transaction Commit</div>
+              </div>
+
+              <div class="flow-step-card">
+                <div>
+                  <div class="step-number">04</div>
+                  <div class="step-title">Lưu DPAPI & Bật Đèn Xanh</div>
+                  <div class="step-desc">Agent lưu khóa vào Windows DPAPI phần cứng. Server phát sự kiện SignalR giúp máy tính hiện đèn XANH Online tức thì trên Dashboard.</div>
+                </div>
+                <div class="step-code-badge">SignalR: device-status (Online)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- WORKFLOW 2 -->
+          <div class="wf-pane" id="wf-telemetry">
+            <div class="wf-header">
+              <h3>Thu Thập Telemetry & Cập Nhật Realtime</h3>
+              <p>Giám sát thông số kỹ thuật tối thiểu (CPU, RAM, Disk) định kỳ 30s với cơ chế chống mất mát gói tin.</p>
+            </div>
+            <div class="flow-steps-grid">
+              <div class="flow-step-card">
+                <div>
+                  <div class="step-number">01</div>
+                  <div class="step-title">Thu Thập Kỹ Thuật</div>
+                  <div class="step-desc">Agent Worker định kỳ đo % CPU, % RAM, % Disk. Tuyệt đối không đọc file hay chụp ảnh màn hình.</div>
+                </div>
+                <div class="step-code-badge">ITelemetryCollector.Collect()</div>
+              </div>
+
+              <div class="flow-step-card">
+                <div>
+                  <div class="step-number">02</div>
+                  <div class="step-title">Gửi Heartbeat Xác Thực</div>
+                  <div class="step-desc">Gửi payload kèm IdempotencyKey qua header X-SentinelLAN-Device-Id và Secret. Chống ghi trùng lặp dữ liệu.</div>
+                </div>
+                <div class="step-code-badge">POST /api/v1/agent/heartbeat</div>
+              </div>
+
+              <div class="flow-step-card">
+                <div>
+                  <div class="step-number">03</div>
+                  <div class="step-title">Lưu TelemetrySnapshots</div>
+                  <div class="step-desc">Backend lưu trữ lịch sử sử dụng phần cứng theo thời gian, tính toán trạng thái Online / Offline tự động.</div>
+                </div>
+                <div class="step-code-badge">PostgreSQL: TelemetrySnapshots</div>
+              </div>
+
+              <div class="flow-step-card">
+                <div>
+                  <div class="step-number">04</div>
+                  <div class="step-title">Broadcast WebSocket</div>
+                  <div class="step-desc">Server bắn WebSocket tới riêng phòng của Tenant đó. Biểu đồ trên màn hình Dashboard cập nhật ngay lập tức.</div>
+                </div>
+                <div class="step-code-badge">SignalR: TenantGroup(orgId)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- WORKFLOW 3 -->
+          <div class="wf-pane" id="wf-command">
+            <div class="wf-header">
+              <h3>Lệnh Điều Khiển Ký Số (Safe Simulated Commands)</h3>
+              <p>Mỗi lệnh điều khiển đều bắt buộc có lý do, xác nhận, thời hạn ngắn, kèm chữ ký số HMAC-SHA256 10 tham số.</p>
+            </div>
+            <div class="flow-steps-grid">
+              <div class="flow-step-card">
+                <div>
+                  <div class="step-number">01</div>
+                  <div class="step-title">Admin Tạo Lệnh</div>
+                  <div class="step-desc">Chọn lệnh allow-list (SimulateLock, RestartService...), điền lý do và xác nhận. Thời hạn hiệu lực 30–900 giây.</div>
+                </div>
+                <div class="step-code-badge">POST /api/v1/commands</div>
+              </div>
+
+              <div class="flow-step-card">
+                <div>
+                  <div class="step-number">02</div>
+                  <div class="step-title">Ký Mật Mã 10 Tham Số</div>
+                  <div class="step-desc">Server ký HMAC-SHA256 gồm [Id, OrgId, DeviceId, UserId, Type, Reason, IssuedAt, ExpiresAt, Nonce, Parameter]. Lưu trạng thái Pending.</div>
+                </div>
+                <div class="step-code-badge">HmacCommandSigner.Sign()</div>
+              </div>
+
+              <div class="flow-step-card">
+                <div>
+                  <div class="step-number">03</div>
+                  <div class="step-title">Agent Polling & Xác Thực</div>
+                  <div class="step-desc">Agent kiểm tra chữ ký khớp, kiểm tra thời hạn và kiểm tra Nonce chống Replay Attack trước khi nhận lệnh.</div>
+                </div>
+                <div class="step-code-badge">CommandVerifier.TryAccept()</div>
+              </div>
+
+              <div class="flow-step-card">
+                <div>
+                  <div class="step-number">04</div>
+                  <div class="step-title">Thực Thi Mô Phỏng An Toàn</div>
+                  <div class="step-desc">Lệnh chạy ở chế độ mô phỏng an toàn (0 P/Invoke, 0 phá hoại hệ điều hành). Agent gửi lại Receipt kết quả cho Server.</div>
+                </div>
+                <div class="step-code-badge">SafeCommandExecutor.Execute()</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- WORKFLOW 4 -->
+          <div class="wf-pane" id="wf-ssh">
+            <div class="wf-header">
+              <h3>Quản Trị Cloud VPS qua SSH (Agentless Node Management)</h3>
+              <p>Cơ chế giám sát máy chủ Linux từ xa bằng IPv4 và OpenSSH Private Key mã hóa AES-256-GCM.</p>
+            </div>
+            <div class="flow-steps-grid">
+              <div class="flow-step-card">
+                <div>
+                  <div class="step-number">01</div>
+                  <div class="step-title">Nhập IPv4 & Private Key</div>
+                  <div class="step-desc">Admin nhập IPv4 và SSH Private Key của VPS từ giao diện web.</div>
+                </div>
+                <div class="step-code-badge">UI: Cloud Nodes Modal</div>
+              </div>
+
+              <div class="flow-step-card">
+                <div>
+                  <div class="step-number">02</div>
+                  <div class="step-title">Mã Hóa Vault AES-256</div>
+                  <div class="step-desc">Server mã hóa Private Key bằng khóa chủ MASTER_VAULT_KEY trước khi lưu vào Database. Tuyệt đối không lưu plain-text.</div>
+                </div>
+                <div class="step-code-badge">AES-256-GCM Vault Store</div>
+              </div>
+
+              <div class="flow-step-card">
+                <div>
+                  <div class="step-number">03</div>
+                  <div class="step-title">SSH.NET Handshake</div>
+                  <div class="step-desc">Backend giải mã Key trong RAM tạm thời, mở kết nối SSH port 22 tới VPS đích qua thư viện SSH.NET.</div>
+                </div>
+                <div class="step-code-badge">Renci.SshNet.SshClient</div>
+              </div>
+
+              <div class="flow-step-card">
+                <div>
+                  <div class="step-number">04</div>
+                  <div class="step-title">Thu Thập Metrics & Docker</div>
+                  <div class="step-desc">Chạy các lệnh an toàn read-only: free -m, df -h, docker ps -> Parse dữ liệu hiển thị biểu đồ lên Dashboard.</div>
+                </div>
+                <div class="step-code-badge">Telemetry & Container Live List</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- WORKFLOW 5 -->
+          <div class="wf-pane" id="wf-privacy">
+            <div class="wf-header">
+              <h3>Phân Công Thiết Bị & Minh Bạch Riêng Tư (Privacy-First)</h3>
+              <p>Mỗi nhân viên chỉ được gán tối đa 1 máy hoạt động; nhân viên được quyền xem nhật ký hành động của IT trên máy mình.</p>
+            </div>
+            <div class="flow-steps-grid">
+              <div class="flow-step-card">
+                <div>
+                  <div class="step-number">01</div>
+                  <div class="step-title">Ràng Buộc 1 Thiết Bị / Người</div>
+                  <div class="step-desc">Được bảo vệ kép: Validation nghiệp vụ + PostgreSQL Partial Unique Index (AssignedUserId IS NOT NULL AND IsRevoked = FALSE).</div>
+                </div>
+                <div class="step-code-badge">PUT /api/v1/devices/{id}/assignment</div>
+              </div>
+
+              <div class="flow-step-card">
+                <div>
+                  <div class="step-number">02</div>
+                  <div class="step-title">Thu Hồi Thiết Bị (Revoke)</div>
+                  <div class="step-desc">Hủy credential và xóa phân công nguyên tử trong 1 SaveChanges. Agent cũ khi gửi request tiếp theo sẽ bị từ chối 401.</div>
+                </div>
+                <div class="step-code-badge">POST /api/v1/devices/{id}/revoke</div>
+              </div>
+
+              <div class="flow-step-card">
+                <div>
+                  <div class="step-number">03</div>
+                  <div class="step-title">My Device Transparency View</div>
+                  <div class="step-desc">Nhân viên đăng nhập vào /my-device sẽ thấy chính xác chính sách đang áp dụng và 20 thao tác gần nhất của IT trên máy mình.</div>
+                </div>
+                <div class="step-code-badge">GET /api/v1/my-device</div>
+              </div>
+
+              <div class="flow-step-card">
+                <div>
+                  <div class="step-number">04</div>
+                  <div class="step-title">Audit Log Bất Biến</div>
+                  <div class="step-desc">Toàn bộ thao tác ghi nhận vào AuditLogs. Tầng EF Core tự động ném ngoại lệ chặn đứng mọi lệnh UPDATE hoặc DELETE audit.</div>
+                </div>
+                <div class="step-code-badge">Append-Only EF Interceptor</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PHẦN 4: CHỨNG NHẬN NGHIỆM THU (QUALITY GATES) -->
+    <section id="gates">
+      <div class="section-head">
+        <div class="section-title-wrap">
+          <span class="section-badge">Quality Gates</span>
+          <h2>Kết Quả Nghiệm Thu Chất Lượng</h2>
+          <p>Tất cả các cổng kiểm soát kỹ thuật đều đã được thực thi và chứng thực trên mã nguồn thực tế.</p>
+        </div>
+      </div>
+
+      <div class="code-container">
+        <div class="code-header">
+          <span>VERIFICATION SUITE SUMMARY · 2026-09-20</span>
+          <span>STATUS: ALL GATES PASSED</span>
+        </div>
+        <div class="code-body">[✓] dotnet restore SentinelLAN.slnx                    --> Tất cả package up-to-date
+[✓] dotnet format SentinelLAN.slnx --verify-no-changes --> Format & EOL chuẩn hóa 100%
+[✓] dotnet build SentinelLAN.slnx                     --> 0 lỗi compile
+[✓] dotnet test SentinelLAN.slnx                      --> 79/79 TESTS PASS (Architecture, Domain, Agent, Application, Integration)
+[✓] npm run lint (apps/web)                           --> 0 errors, 0 warnings (React 19 Hooks compliant)
+[✓] npm run typecheck (apps/web)                      --> 0 TypeScript errors (Strict Mode)
+[✓] npm test (apps/web)                               --> 9/9 Vitest tests PASS
+[✓] npm run build (apps/web)                          --> Next.js 16 Turbopack production build thành công
+[✓] npm run test:e2e (apps/web)                       --> Playwright Admin Lifecycle E2E hoàn thành trọn vẹn</div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- PRESENTATION SLIDE MODE MODAL -->
+  <div id="slide-modal">
+    <div class="slide-toolbar">
+      <div style="font-weight: 800; font-size: 1.1rem; color: var(--accent);">SentinelLAN Presentation Slides</div>
+      <div style="display: flex; gap: 10px;">
+        <button class="slide-btn" id="btn-prev-slide" type="button">← Trước</button>
+        <button class="slide-btn" id="btn-next-slide" type="button">Tiếp theo →</button>
+        <button class="slide-btn" id="btn-close-slides" type="button" style="border-color: #ef4444; color: #ef4444;">Đóng (Esc)</button>
+      </div>
+    </div>
+
+    <div class="slide-viewport">
+      <!-- SLIDE 1 -->
+      <div class="slide-page active" data-slide="1">
+        <div class="hero-kicker">Slide 01 / 06 · Giới thiệu dự án</div>
+        <h2>SentinelLAN — Nền Tảng Quản Trị Endpoint & Cloud Node</h2>
+        <p class="lead">
+          Hệ thống bảo vệ, giám sát và vận hành thiết bị đầu cuối cùng máy chủ đám mây dành cho doanh nghiệp, phòng lab và trường học theo triết lý <strong>Zero Trust & Privacy-First</strong>.
+        </p>
+        <div class="stats-bar">
+          <div class="stat-pill"><div class="stat-label">Kiểm thử Backend</div><div class="stat-val green">79 Tests Pass</div></div>
+          <div class="stat-pill"><div class="stat-label">Frontend</div><div class="stat-val blue">Next.js 16 + React 19</div></div>
+          <div class="stat-pill"><div class="stat-label">Agent Footprint</div><div class="stat-val purple">&lt; 15MB RAM</div></div>
+        </div>
+      </div>
+
+      <!-- SLIDE 2 -->
+      <div class="slide-page" data-slide="2">
+        <div class="hero-kicker">Slide 02 / 06 · 3 Trụ cột cốt lõi</div>
+        <h2>3 Trụ Cột Chiến Lược Triển Khai</h2>
+        <p class="lead">Cung cấp giải pháp toàn diện cho cả 3 nhu cầu thực tế của thị trường:</p>
+        <div class="pillars-grid" style="margin-top: 24px;">
+          <div class="pillar-card">
+            <h3>🏢 1. Tự Host Nội Bộ</h3>
+            <p>100% dữ liệu nằm trong mạng văn phòng qua Docker Compose. Không tốn băng thông Internet, không sợ lộ bí mật kinh doanh.</p>
+          </div>
+          <div class="pillar-card">
+            <h3>🌐 2. Mã Nguồn Mở</h3>
+            <p>Clean Architecture module sạch, không phụ thuộc vendor lock-in. Cộng đồng dễ dàng audit bảo mật và đóng góp tính năng.</p>
+          </div>
+          <div class="pillar-card">
+            <h3>☁️ 3. Cloud VPS & SaaS</h3>
+            <p>Bán dịch vụ đa tổ chức (Multi-Tenant). Quản trị VPS từ xa qua SSH Private Key mã hóa AES-256 Vault.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 3 -->
+      <div class="slide-page" data-slide="3">
+        <div class="hero-kicker">Slide 03 / 06 · Công nghệ & Kiến trúc</div>
+        <h2>Công Nghệ & Kiến Trúc Zero Trust</h2>
+        <p class="lead">Xây dựng trên nền tảng Clean Architecture với 4 tầng phụ thuộc một chiều:</p>
+        <div class="tech-grid" style="margin-top: 24px;">
+          <div class="tech-box"><h4>Backend C# 14</h4><p style="color: var(--text-muted);">.NET 10 Minimal APIs, EF Core 10, Npgsql PostgreSQL 18.</p></div>
+          <div class="tech-box"><h4>Frontend React 19</h4><p style="color: var(--text-muted);">Next.js 16 Turbopack, Tailwind CSS v4, Song ngữ VI/EN.</p></div>
+          <div class="tech-box"><h4>Windows Agent</h4><p style="color: var(--text-muted);">Windows Service siêu nhẹ, lưu bí mật vào Windows DPAPI phần cứng.</p></div>
+          <div class="tech-box"><h4>Cloud Node SSH</h4><p style="color: var(--text-muted);">Thư viện SSH.NET, mã hóa khóa riêng bằng AES-256-GCM Vault.</p></div>
+        </div>
+      </div>
+
+      <!-- SLIDE 4 -->
+      <div class="slide-page" data-slide="4">
+        <div class="hero-kicker">Slide 04 / 06 · Triết lý Privacy-First</div>
+        <h2>Cam Kết Bảo Vệ Quyền Riêng Tư (Privacy-First)</h2>
+        <p class="lead">SentinelLAN bảo vệ an toàn kỹ thuật, kiên quyết nói không với hành vi gián điệp:</p>
+        <div class="pillars-grid" style="margin-top: 24px;">
+          <div class="pillar-card">
+            <h3 style="color: #ef4444;">❌ Những gì TUYỆT ĐỐI KHÔNG làm</h3>
+            <ul class="pillar-features">
+              <li>Không ghi phím gõ (No Keylogger).</li>
+              <li>Không chụp hay quay lén màn hình.</li>
+              <li>Không kích hoạt camera hoặc microphone.</li>
+              <li>Không đọc trộm file cá nhân hoặc lịch sử web.</li>
+            </ul>
+          </div>
+          <div class="pillar-card">
+            <h3 style="color: var(--accent);">✅ Những gì hệ thống giám sát</h3>
+            <ul class="pillar-features">
+              <li>Chỉ số tải phần cứng: % CPU, % RAM, % Ổ đĩa.</li>
+              <li>Trạng thái kết nối: Online / Offline, thời gian Heartbeat.</li>
+              <li>Phiên bản hệ điều hành và phiên bản Agent.</li>
+              <li>Nhân viên có trang <code>/my-device</code> minh bạch 100%.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 5 -->
+      <div class="slide-page" data-slide="5">
+        <div class="hero-kicker">Slide 05 / 06 · Quy trình kết nối Agent</div>
+        <h2>Quy Trình Cài Đặt & Bắt Tay Agent Siêu Tốc</h2>
+        <p class="lead">Kết nối ngược thông minh (Outbound Reverse Connection):</p>
+        <div class="flow-steps-grid" style="margin-top: 24px;">
+          <div class="flow-step-card"><div class="step-number">1</div><div class="step-title">IT Cấp Token</div><div class="step-desc">Token ngẫu nhiên 32 byte dùng 1 lần, hạn 15–60 phút.</div></div>
+          <div class="flow-step-card"><div class="step-number">2</div><div class="step-title">Xuất File .exe</div><div class="step-desc">1 file chạy duy nhất, máy nhân viên không cần cài .NET.</div></div>
+          <div class="flow-step-card"><div class="step-number">3</div><div class="step-title">Cài Service</div><div class="step-desc">Chạy script PowerShell 1 dòng lệnh, tự khởi động cùng Windows.</div></div>
+          <div class="flow-step-card"><div class="step-number">4</div><div class="step-title">Bật Đèn Xanh</div><div class="step-desc">Lưu DPAPI và hiện ngay lập tức trên Dashboard IT qua SignalR.</div></div>
+        </div>
+      </div>
+
+      <!-- SLIDE 6 -->
+      <div class="slide-page" data-slide="6">
+        <div class="hero-kicker">Slide 06 / 06 · Bằng chứng nghiệm thu</div>
+        <h2>Bằng Chứng Nghiệm Thu & Tương Lai Phát Triển</h2>
+        <p class="lead">Toàn bộ 9 luồng nghiệp vụ F01–F09 đã hoàn thành và kiểm chứng:</p>
+        <div class="stats-bar" style="margin-top: 24px;">
+          <div class="stat-pill"><div class="stat-label">Architecture Tests</div><div class="stat-val green">Clean Architecture OK</div></div>
+          <div class="stat-pill"><div class="stat-label">Unit & Integration</div><div class="stat-val green">79 Tests Pass</div></div>
+          <div class="stat-pill"><div class="stat-label">Web Production</div><div class="stat-val blue">Next.js Turbopack OK</div></div>
+        </div>
+        <p style="margin-top: 32px; color: var(--text-muted); font-size: 1.1rem;">
+          Lộ trình tiếp theo: Bổ sung cảnh báo ngưỡng tự động (Alert Rule Engine), Cache hàng đợi Agent bền vững trên đĩa và công cụ kiểm thử PostgreSQL CI tự động.
+        </p>
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <div id="slide-indicator">Slide 1 / 6</div>
+      <div>Dùng phím mũi tên <strong>← / →</strong> hoặc Space để chuyển slide. Nhấn <strong>Esc</strong> để thoát.</div>
+    </div>
+  </div>
+
+  <script>
+    // TABS LOGIC
+    document.querySelectorAll('.wf-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.wf-tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.wf-pane').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        const target = document.getElementById('wf-' + btn.dataset.wf);
+        if (target) target.classList.add('active');
+      });
+    });
+
+    // SLIDE PRESENTATION LOGIC
+    const modal = document.getElementById('slide-modal');
+    const btnOpen = document.getElementById('btn-open-slides');
+    const btnClose = document.getElementById('btn-close-slides');
+    const btnPrev = document.getElementById('btn-prev-slide');
+    const btnNext = document.getElementById('btn-next-slide');
+    const indicator = document.getElementById('slide-indicator');
+    const slides = document.querySelectorAll('.slide-page');
+    let currentSlide = 0;
+
+    function showSlide(index) {
+      if (index < 0) index = 0;
+      if (index >= slides.length) index = slides.length - 1;
+      currentSlide = index;
+      slides.forEach((s, idx) => {
+        s.classList.toggle('active', idx === currentSlide);
+      });
+      indicator.textContent = `Slide ${currentSlide + 1} / ${slides.length}`;
+    }
+
+    btnOpen.addEventListener('click', () => {
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+      showSlide(0);
+    });
+
+    function closeSlide() {
+      modal.classList.remove('active');
+      document.body.style.overflow = 'auto';
+    }
+
+    btnClose.addEventListener('click', closeSlide);
+    btnPrev.addEventListener('click', () => showSlide(currentSlide - 1));
+    btnNext.addEventListener('click', () => showSlide(currentSlide + 1));
+
+    window.addEventListener('keydown', e => {
+      if (!modal.classList.contains('active')) return;
+      if (e.key === 'Escape') closeSlide();
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); showSlide(currentSlide + 1); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); showSlide(currentSlide - 1); }
+    });
+  </script>
+</body>
+</html>

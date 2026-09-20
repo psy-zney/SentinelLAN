@@ -1,36 +1,24 @@
 "use client";
-
+import { useState } from "react";
 import { DeviceTable } from "@/components/device-table";
 import { useLiveQuery } from "@/hooks/use-live-query";
-import { ApiClient } from "@/lib/api-client";
+import { ApiClient, ApiError } from "@/lib/api-client";
+import { useCurrentSession } from "@/components/app-shell";
 import { useTranslation } from "@/lib/i18n";
-
+import type { Device } from "@/types/api";
 const loadDevices = () => new ApiClient().devices();
-
 export function DevicesView() {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation(); const session = useCurrentSession();
   const { data: devices, error, refresh } = useLiveQuery(loadDevices);
-
-  if (error) {
-    return (
-      <div role="alert" className="panel">
-        <p>{t("error")}</p>
-        <button className="action" onClick={refresh}>
-          {t("retry")}
-        </button>
-      </div>
-    );
-  }
-
+  const [query, setQuery] = useState(""); const [filter, setFilter] = useState("all"); const [tokenOpen, setTokenOpen] = useState(false);
+  const [validForMinutes, setValidForMinutes] = useState(15); const [reason, setReason] = useState(""); const [confirmed, setConfirmed] = useState(false); const [token, setToken] = useState<{ token: string; expiresAt: string } | null>(null); const [saving, setSaving] = useState(false); const [message, setMessage] = useState("");
+  async function createToken(event: React.FormEvent) { event.preventDefault(); if (saving || !confirmed) return; setSaving(true); setMessage(""); try { const value = await new ApiClient().createEnrollmentToken({ validForMinutes, reason: reason.trim(), confirmed }); setToken(value); setReason(""); setConfirmed(false); } catch (cause) { setMessage(cause instanceof ApiError && cause.status === 403 ? (lang === "vi" ? "Chỉ quản trị viên có thể cấp token." : "Only administrators can issue enrollment tokens.") : (lang === "vi" ? "Không thể cấp token. Hãy thử lại." : "Enrollment token could not be issued. Try again.")); } finally { setSaving(false); } }
+  if (error) return <div role="alert" className="panel"><p>{t("error")}</p><button className="action" onClick={refresh}>{t("retry")}</button></div>;
   if (!devices) return <p role="status">{t("loading")}</p>;
-
-  if (!devices.length) {
-    return (
-      <div className="panel empty-state">
-        <p>{t("noTelemetry")}</p>
-      </div>
-    );
-  }
-
-  return <DeviceTable initialDevices={devices} />;
+  const visible = devices.filter((device: Device) => { const matches = `${device.name} ${device.osVersion}`.toLowerCase().includes(query.toLowerCase()); const status = filter === "all" || filter === (device.isRevoked ? "revoked" : device.isOnline ? "online" : "offline"); return matches && status; });
+  return <>
+    <div className="panel" style={{ marginBottom: 18 }}><div className="filter-bar"><label htmlFor="device-search" className="sr-only">{lang === "vi" ? "Tìm thiết bị" : "Search devices"}</label><input id="device-search" className="form-input" style={{ maxWidth: 340 }} placeholder={t("search")} value={query} onChange={e => setQuery(e.target.value)} /><label htmlFor="device-filter" className="sr-only">{t("filter")}</label><select id="device-filter" className="form-select" style={{ maxWidth: 180 }} value={filter} onChange={e => setFilter(e.target.value)}><option value="all">{t("all")}</option><option value="online">{t("online")}</option><option value="offline">{t("offline")}</option><option value="revoked">{lang === "vi" ? "Đã thu hồi" : "Revoked"}</option></select>{session?.role === "Admin" && <button className="action" onClick={() => { setTokenOpen(true); setToken(null); setMessage(""); }}>{lang === "vi" ? "+ Cấp token enrollment" : "+ Issue enrollment token"}</button>}</div></div>
+    {visible.length ? <DeviceTable initialDevices={visible} /> : <div className="panel empty-state"><p>{lang === "vi" ? "Không có thiết bị phù hợp bộ lọc." : "No devices match the current filter."}</p></div>}
+    {tokenOpen && <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="token-title"><div className="modal"><div className="modal-header"><h3 id="token-title">{lang === "vi" ? "Cấp token enrollment" : "Issue enrollment token"}</h3><button className="modal-close" onClick={() => { setTokenOpen(false); setToken(null); }} aria-label={t("cancel")}>×</button></div>{token ? <><p className="subtitle">{lang === "vi" ? "Token chỉ hiển thị trong phiên này. Hãy sao chép ngay; khi đóng hộp thoại sẽ mất." : "This token is held in memory for this session only. Copy it now; closing this dialog discards it."}</p><label className="form-group">{lang === "vi" ? "Token (bí mật một lần)" : "Token (one-time secret)"}<input className="form-input" readOnly value={token.token} aria-label="Enrollment token" /></label><p className="subtitle">{lang === "vi" ? "Hết hạn" : "Expires"}: {new Date(token.expiresAt).toLocaleString()}</p><button className="action" onClick={() => { setTokenOpen(false); setToken(null); }}>{t("cancel")}</button></> : <form onSubmit={createToken}><div className="form-group"><label htmlFor="token-validity">{lang === "vi" ? "Thời hạn (phút)" : "Validity (minutes)"}</label><input id="token-validity" className="form-input" type="number" min={1} max={60} required value={validForMinutes} onChange={e => setValidForMinutes(Number(e.target.value))} /></div><div className="form-group"><label htmlFor="token-reason">{lang === "vi" ? "Lý do" : "Reason"}</label><textarea id="token-reason" className="form-input" minLength={3} maxLength={1000} required value={reason} onChange={e => setReason(e.target.value)} /></div><label><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} /> {lang === "vi" ? "Tôi xác nhận cấp token và chịu trách nhiệm kiểm toán." : "I confirm this token issuance and accept audit accountability."}</label>{message && <p role="alert" className="subtitle">{message}</p>}<div className="btn-row"><button type="button" className="action-outline" onClick={() => setTokenOpen(false)}>{t("cancel")}</button><button type="submit" className="action" disabled={saving || !confirmed}>{saving ? t("saving") : t("save")}</button></div></form>}</div></div>}
+  </>;
 }

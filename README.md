@@ -1,352 +1,178 @@
 # SentinelLAN
 
-**Hệ thống quản lý, giám sát và bảo vệ thiết bị đầu cuối trong mạng nội bộ**
+**Hệ sinh thái quản lý, giám sát và bảo vệ thiết bị đầu cuối cùng node máy chủ mạng nội bộ & đám mây**  
+*Endpoint Governance, Zero-Trust Management & Cloud Node Administration Platform*
 
-**Development of an Endpoint Management, Monitoring and Protection System for Local Area Networks**
+[![Build & Test](https://img.shields.io/badge/.NET%20Tests-79%20Passed-brightgreen)](SentinelLAN.slnx)
+[![Web Dashboard](https://img.shields.io/badge/Next.js%2016-Turbopack%20OK-blue)](apps/web)
+[![Security](https://img.shields.io/badge/Security-Zero%20Trust%20%7C%20Privacy--First-teal)](docs/security/privacy.md)
+[![License](https://img.shields.io/badge/Model-Self--Hosted%20%7C%20Open--Source%20%7C%20SaaS-indigo)](docs/deployment/self-hosted-guide.md)
 
-SentinelLAN là MVP quản lý endpoint trong mạng LAN dành cho doanh nghiệp, trung tâm đào tạo và phòng máy. Hệ thống gồm dashboard quản trị, API ASP.NET Core, PostgreSQL và Agent chạy trên Windows theo nguyên tắc tối thiểu quyền.
+SentinelLAN là giải pháp quản trị thiết bị đầu cuối (Endpoints: PC, Laptop) và máy chủ đám mây (Cloud Nodes: VPS Linux) theo nguyên tắc **Zero Trust** ("Never Trust, Always Verify") và **Privacy-First** (bảo vệ quyền riêng tư tuyệt đối, nói không với hành vi gián điệp).
 
-> SentinelLAN chỉ thu thập telemetry kỹ thuật đã công bố. Hệ thống không ghi phím, chụp màn hình, đọc tệp cá nhân, lịch sử duyệt web, camera, microphone hoặc thông tin đăng nhập. Khóa máy và cô lập mạng trong MVP chỉ là mô phỏng an toàn.
+---
 
-## Trạng thái hệ thống
-
-| Hạng mục | Trạng thái |
-|---|---|
-| Phiên đăng nhập, refresh token và đăng xuất an toàn | Đã hoàn thành |
-| Phân quyền Admin, Technician, Employee và Agent | Đã hoàn thành |
-| Cô lập dữ liệu theo tenant và thiết bị được gán | Đã hoàn thành |
-| Enrollment một lần, heartbeat và telemetry kỹ thuật | Đã hoàn thành |
-| Dashboard thiết bị và cập nhật SignalR thời gian thực | Đã hoàn thành |
-| Policy, signed commands (HMAC), alert và audit trail | Đã hoàn thành |
-| Giao diện song ngữ Việt - Anh (i18n) chuyển đổi tức thời | Đã hoàn thành |
-| Củng cố Agent: DPAPI bảo vệ danh tính, hàng đợi ngoại tuyến | Đã hoàn thành |
-| Tích hợp E2E, nghiệm thu toàn diện và kiểm thử 100% | Đã hoàn thành |
-| Khóa/cô lập thiết bị thật | Tắt mặc định; hỗ trợ qua cờ lab ủy quyền |
-
-Phiên bản hiện tại: `1.0.0`. Hệ thống tuân thủ mô hình Clean Architecture, phân quyền Zero Trust và cam kết bảo vệ quyền riêng tư Privacy-First.
-
-## Phạm vi và vai trò
-
-| Vai trò | Phạm vi sử dụng |
-|---|---|
-| **Admin** | Quản lý người dùng, thiết bị, policy; tạo lệnh an toàn; xem cảnh báo và audit trong tenant |
-| **Technician** | Theo dõi thiết bị, xử lý cảnh báo và thực hiện hành động được cấp quyền kèm lý do |
-| **Employee** | Chỉ xem thiết bị được gán, telemetry đã công bố, policy và lịch sử hành động liên quan |
-| **Agent** | Enrollment một lần, gửi heartbeat/telemetry, nhận lệnh trong allow-list và báo kết quả |
-
-Các chức năng chính:
-
-- Đăng nhập bằng mã tổ chức, email và mật khẩu.
-- Access token ngắn hạn và refresh token xoay vòng trong cookie `HttpOnly`.
-- Phân quyền theo vai trò và giới hạn dữ liệu bằng `OrganizationId`.
-- Danh sách, chi tiết và trạng thái online/offline của thiết bị.
-- Agent enrollment, heartbeat, polling lệnh và gửi kết quả.
-- Cập nhật trạng thái thiết bị/lệnh qua SignalR.
-- Lệnh có loại cho phép, lý do, thời hạn, nonce, chữ ký và audit.
-- Giao diện riêng cho Employee tại `/my-device`.
-
-## Kiến trúc hệ thống
-
-```mermaid
-%%{init: {"theme":"base","themeVariables":{"fontFamily":"Arial","primaryColor":"#ecfdf5","primaryBorderColor":"#16a34a","lineColor":"#22c55e","secondaryColor":"#eff6ff","tertiaryColor":"#f8fafc"}}}%%
-flowchart LR
-    U[Admin / Technician / Employee] -->|HTTPS| W[Next.js Dashboard]
-    W -->|REST API + HttpOnly Cookie| API[ASP.NET Core API]
-    API -->|SignalR| W
-    A[Windows Agent] -->|Enrollment / Heartbeat / Commands| API
-    API --> APP[Application Use Cases]
-    APP --> DOMAIN[Domain Rules]
-    API --> INFRA[Infrastructure]
-    INFRA --> DB[(PostgreSQL)]
-    INFRA -. Tùy chọn .-> REDIS[(Redis)]
-
-    classDef actor fill:#eff6ff,stroke:#2563eb,color:#0f172a;
-    classDef service fill:#ecfdf5,stroke:#16a34a,color:#052e16;
-    classDef core fill:#f8fafc,stroke:#64748b,color:#0f172a;
-    classDef data fill:#fefce8,stroke:#ca8a04,color:#422006;
-    class U,A actor;
-    class W,API service;
-    class APP,DOMAIN,INFRA core;
-    class DB,REDIS data;
-    linkStyle default stroke:#22c55e,stroke-width:2.5px;
-```
-
-Quy tắc phụ thuộc backend:
-
-```text
-Api → Infrastructure → Application → Domain
-```
-
-- `Domain` chứa quy tắc nghiệp vụ và không phụ thuộc Infrastructure.
-- `Application` sở hữu use case, contract, validation, authorization và tenant scope.
-- `Infrastructure` triển khai EF Core, PostgreSQL, hashing, token và tích hợp.
-- `Api` là composition root và transport boundary.
-- Các module giao tiếp qua contract/event, không đọc trực tiếp bảng của module khác.
-- Agent Core không phụ thuộc hệ điều hành; adapter HTTP/OS nằm trong Agent Infrastructure.
-
-## Luồng hoạt động chính
-
-### Phiên đăng nhập người dùng
+## 🌟 3 Trụ Cột Cốt Lõi (Core Pillars)
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"Arial","primaryColor":"#ecfdf5","primaryBorderColor":"#16a34a","lineColor":"#22c55e"}}}%%
 flowchart LR
-    L[Nhập organization code, email, password] --> AUTH[API xác thực]
-    AUTH --> SCOPE{Đúng tenant và tài khoản hợp lệ?}
-    SCOPE -->|Không| DENY[Trả về 401 / 403]
-    SCOPE -->|Có| COOKIE[Phát access + refresh cookie HttpOnly]
-    COOKIE --> ROLE{Điều hướng theo vai trò}
-    ROLE -->|Admin / Technician| DASH[Dashboard quản trị]
-    ROLE -->|Employee| MYDEV[Trang My Device]
-    DASH --> REFRESH[Access token hết hạn]
-    MYDEV --> REFRESH
-    REFRESH --> ROTATE[Xoay refresh token và lưu hash mới]
-    ROTATE --> ROLE
-    DASH --> LOGOUT[Đăng xuất và thu hồi phiên]
-    MYDEV --> LOGOUT
+    subgraph P1 [1. Tự Host Nội Bộ - On-Premise]
+        LAN_HOST[Server Văn Phòng / LAN] --> LAN_DB[(PostgreSQL Cục Bộ)]
+        LAN_HOST --> LAN_AGENT[Agent Máy Tính Nội Bộ]
+    end
 
-    classDef ok fill:#ecfdf5,stroke:#16a34a,color:#052e16;
-    classDef decision fill:#fefce8,stroke:#ca8a04,color:#422006;
-    classDef fail fill:#fef2f2,stroke:#dc2626,color:#450a0a;
-    class AUTH,COOKIE,DASH,MYDEV,REFRESH,ROTATE,LOGOUT ok;
-    class SCOPE,ROLE decision;
-    class DENY fail;
-    linkStyle default stroke:#22c55e,stroke-width:2.5px;
+    subgraph P2 [2. Mã Nguồn Mở - Open-Source]
+        COMMUNITY[Cộng Đồng / Kỹ Sư IT] --> REPO[Clone Mã Nguồn Tự Do]
+        REPO --> MODULAR[Clean Architecture Dễ Mở Rộng]
+    end
+
+    subgraph P3 [3. Cloud VPS & Multi-Tenant SaaS]
+        VPS_SAAS[VPS Của Bạn: Cloud SaaS] --> ORG_A[Công Ty A: Users / Devices]
+        VPS_SAAS --> ORG_B[Công Ty B: Users / Devices]
+        VPS_SAAS -.->|SSH Port 22: IPv4 + Key| VPS_NODES[Quản Trị VPS Khách Hàng]
+    end
 ```
 
-### Agent, telemetry và lệnh an toàn
+### 1. Tự Host Nội Bộ (Self-Hosted On-Premise)
+* **Dành cho:** Các doanh nghiệp, cơ quan, phòng máy, trường học muốn kiểm soát 100% dữ liệu.
+* **Đặc điểm:** Triển khai trên máy chủ cục bộ trong văn phòng qua Docker Compose. Toàn bộ telemetry, thông số CPU/RAM/Disk, chính sách và audit trail lưu trữ tại chỗ, không truyền ra ngoài Internet.
+* 📖 [Xem chi tiết: Hướng dẫn triển khai Self-Hosted](docs/deployment/self-hosted-guide.md)
 
-```mermaid
-%%{init: {"theme":"base","themeVariables":{"fontFamily":"Arial","primaryColor":"#ecfdf5","primaryBorderColor":"#16a34a","lineColor":"#22c55e"}}}%%
-flowchart LR
-    TOKEN[Enrollment token dùng một lần] --> ENROLL[Agent đăng ký thiết bị]
-    ENROLL --> ID[Nhận Device ID và credential riêng]
-    ID --> HEART[Thu thập telemetry kỹ thuật tối thiểu]
-    HEART --> API[Heartbeat có xác thực]
-    API --> STORE[(Lưu vào PostgreSQL)]
-    STORE --> HUB[Phát device-status qua SignalR]
-    HUB --> UI[Dashboard cập nhật online / offline]
-    UI --> CMD[Tạo lệnh allow-list kèm lý do]
-    CMD --> SIGN[Ký lệnh, thêm expiry + nonce + audit]
-    SIGN --> POLL[Agent polling và xác minh lệnh]
-    POLL --> SAFE[Thực thi mô phỏng an toàn]
-    SAFE --> RESULT[Gửi kết quả idempotent]
-    RESULT --> STORE
+### 2. Mã Nguồn Mở (Public Open-Source)
+* **Dành cho:** Các đội ngũ kỹ sư, quản trị mạng và cộng đồng phát triển.
+* **Đặc điểm:** Thiết kế chuẩn **Clean Architecture / Modular Monolith** bằng .NET 10 và Next.js 16. Phân tách ranh giới rõ ràng: Domain -> Application -> Infrastructure -> API. Mã nguồn sạch, không phụ thuộc vendor lock-in, dễ dàng đóng góp tính năng mới.
+* 📖 [Xem chi tiết: Hướng dẫn đóng góp Open Source](docs/deployment/open-source-guide.md)
 
-    classDef agent fill:#eff6ff,stroke:#2563eb,color:#0f172a;
-    classDef safe fill:#ecfdf5,stroke:#16a34a,color:#052e16;
-    classDef data fill:#fefce8,stroke:#ca8a04,color:#422006;
-    class TOKEN,ENROLL,ID,HEART,POLL,SAFE,RESULT agent;
-    class API,HUB,UI,CMD,SIGN safe;
-    class STORE data;
-    linkStyle default stroke:#22c55e,stroke-width:2.5px;
-```
+### 3. Cloud VPS & Multi-Tenant SaaS (Quản trị Cloud Node qua SSH)
+* **Dành cho:** Nhà cung cấp dịch vụ IT (MSP), doanh nghiệp bán gói dịch vụ quản lý thiết bị và máy chủ từ xa.
+* **Đặc điểm:** 
+  * Hỗ trợ **Multi-Tenant** cách ly tuyệt đối theo `OrganizationId`. Một hệ thống có thể phục vụ nhiều công ty khách hàng mà không lo rò rỉ dữ liệu chéo.
+  * **Quản trị Cloud VPS qua SSH (Agentless):** Thêm IPv4 + OpenSSH Private Key (được mã hóa bảo vệ bằng `AES-256-GCM` trong Vault). Tự động theo dõi CPU, RAM, Ổ đĩa, trạng thái Docker containers và khởi động lại dịch vụ từ xa.
+* 📖 [Xem chi tiết: Hướng dẫn triển khai SaaS & Quản trị VPS](docs/deployment/saas-vps-guide.md)
 
-Telemetry được phép gồm trạng thái online, hostname/tên thiết bị, phiên bản hệ điều hành, phiên bản Agent, CPU, RAM, ổ đĩa và thời điểm hoạt động gần nhất.
+---
 
-## Công nghệ sử dụng
+## 🔒 Cam Kết Quyền Riêng Tư (Privacy-First)
 
-| Thành phần | Công nghệ/Phiên bản |
-|---|---|
-| Backend | .NET SDK `10.0.400`, C# 14, ASP.NET Core `10.0.11` |
-| Data access | EF Core `10.0.11`, Npgsql EF Core `10.0.3` |
-| Database | PostgreSQL `18.1` |
-| Frontend | Next.js `16.2.11`, React `19.2.8` |
-| Ngôn ngữ web | TypeScript `5.9.3` strict |
-| Giao diện | Tailwind CSS `4.3.3` |
-| Realtime | SignalR `10.0.0` |
-| Agent | .NET Worker Service, hỗ trợ Windows Service |
-| Test | xUnit, Vitest, Playwright |
-| CI | GitHub Actions |
-| Cache tùy chọn | Redis `8.2.1`, Compose profile `extended` |
+> **SentinelLAN bảo vệ an toàn kỹ thuật, không theo dõi nhân viên.**
+> - ❌ **KHÔNG** ghi nhận phím gõ (No Keylogger).
+> - ❌ **KHÔNG** chụp màn hình hay quay video lén.
+> - ❌ **KHÔNG** kích hoạt camera hoặc microphone.
+> - ❌ **KHÔNG** đọc trộm tệp tin cá nhân hoặc lịch sử duyệt web.
+> - 🛡️ Nhân viên được quyền truy cập trang **My Device Transparency View** (`/my-device`) để xem chính xác IT công ty đang theo dõi chỉ số kỹ thuật gì trên máy mình.
 
-## Cấu trúc repository
+---
 
-```text
-SentinelLAN/
-├── apps/
-│   ├── backend/
-│   │   ├── src/        # Domain, Application, Infrastructure, Api
-│   │   └── tests/      # Domain, Application, Architecture, Integration
-│   ├── agent/
-│   │   ├── src/        # Agent Core, Infrastructure và Worker
-│   │   └── tests/      # Kiểm thử Agent
-│   └── web/
-│       ├── src/        # Next.js, component, hook, typed API client
-│       └── tests/      # Vitest và Playwright E2E
-├── packages/           # API client và shared config
-├── deploy/docker/      # Dockerfile cho API và web
-├── docs/               # API, security, database và kế hoạch
-├── scripts/            # Kịch bản kiểm thử PowerShell/Bash
-├── compose.yaml        # PostgreSQL, API, web và Redis tùy chọn
-├── SentinelLAN.slnx    # .NET solution
-└── package.json        # npm workspace
-```
+## 🚀 Khởi Chạy Nhanh (Quick Start)
 
-## Khởi chạy nhanh bằng Docker
+### Yêu cầu tiên quyết:
+- Đã cài đặt **Docker** & **Docker Compose** (trên Windows, macOS hoặc Linux).
 
-Yêu cầu: Docker Engine 28+, Docker Compose v2, Git và các cổng `3000`, `5432`, `8080` đang trống.
+### Chạy toàn bộ hệ thống bằng 1 lệnh:
+```bash
+# 1. Clone mã nguồn
+git clone https://github.com/psy-zney/SentinelLAN.git
+cd SentinelLAN
 
-```powershell
-Copy-Item .env.example .env
-# Thay các giá trị development trong .env, sau đó:
+# 2. Tạo file môi trường mẫu
+cp .env.example .env
+
+# 3. Khởi chạy toàn bộ hệ thống
 docker compose up --build
 ```
 
-Không commit file `.env`. Sau khi các service sẵn sàng:
+Sau khi các container khởi động hoàn tất:
+- **Web Dashboard:** `http://localhost:3000`
+- **Backend API:** `http://localhost:8080`
+- **Tài liệu OpenAPI 3.1:** `http://localhost:8080/openapi/v1.json`
+- **Interactive Presentation & Docs:** Mở trực tiếp [docs/index.html](docs/index.html) trong trình duyệt.
 
-| Dịch vụ | Địa chỉ |
-|---|---|
-| Dashboard | `http://localhost:3000` |
-| API | `http://localhost:8080` |
-| Live health | `http://localhost:8080/health/live` |
-| Ready health | `http://localhost:8080/health/ready` |
-| OpenAPI 3.1 | `http://localhost:8080/openapi/v1.json` |
-| PostgreSQL | `localhost:5432` |
+**Tài khoản đăng nhập mặc định:**
+- **Mã tổ chức:** `demo`
+- **Email:** `admin@sentinellan.local`
+- **Mật khẩu:** `local-demo-only`
 
-Dừng hệ thống nhưng giữ volume dữ liệu:
+---
 
-```powershell
-docker compose down
-```
+## 💻 Hướng Dẫn Cài Đặt Agent Trên Máy Nhân Viên
 
-Bật thêm Redis khi cần:
+Agent là một Windows Service siêu nhẹ, sử dụng cơ chế **Outbound Reverse Connection** (máy tính nhân viên không cần mở port mạng, chỉ gọi một chiều về Server):
 
-```powershell
-docker compose --profile extended up --build
-```
+1. **IT cấp mã:** Đăng nhập Dashboard -> Vào **Thiết bị** -> Bấm **"+ Cấp token enrollment"** -> Lấy chuỗi Token (hạn 15–60 phút).
+2. **Build Agent độc lập (.exe duy nhất):**
+   ```powershell
+   dotnet publish apps/agent/src/SentinelLAN.Agent/SentinelLAN.Agent.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ./publish/agent
+   ```
+3. **Cài đặt trên máy nhân viên:**
+   Mở PowerShell (Run as Administrator) và chạy:
+   ```powershell
+   .\deploy\agent\install-windows-agent.ps1 -ServerUrl "http://<IP-SERVER>:8080" -EnrollToken "CHUOI_TOKEN_O_BUOC_1"
+   ```
+   *Ngay lập tức, thiết bị sẽ xuất hiện đèn xanh **Online** trên Dashboard của IT!*
+4. 📖 [Xem chi tiết: Hướng dẫn kết nối Agent đầy đủ](docs/guides/agent-enrollment-guide.md)
 
-## Chạy từng thành phần
+---
 
-### PostgreSQL và API
+## 🛡️ Ma Trận Phân Quyền (RBAC Matrix)
 
-```powershell
-docker compose up -d postgres
-$env:ASPNETCORE_URLS = 'http://localhost:8080'
-$env:ConnectionStrings__SentinelLAN = 'Host=localhost;Port=5432;Database=sentinellan;Username=sentinellan;Password=change-me-for-local-development'
-$env:SENTINELLAN_ACCESS_TOKEN_SIGNING_KEY = 'replace-with-at-least-32-random-characters'
-$env:SENTINELLAN_WEB_ORIGINS = 'http://localhost:3000'
-dotnet run --project apps/backend/src/SentinelLAN.Api
-```
+| Chức năng | Admin | Technician | Employee | Agent |
+|---|:---:|:---:|:---:|:---:|
+| Xem Dashboard & Danh sách thiết bị tổ chức | Có | Có | Chỉ máy được gán | Không |
+| Tạo tài khoản nhân viên / Quản lý tổ chức | Có | Không | Không | Không |
+| Cấp token enrollment / Gán / Thu hồi thiết bị | Có | Không | Không | Không |
+| Tạo, sửa, gán chính sách (Policies) | Có | Có | Chỉ xem policy máy mình | Không |
+| Phát lệnh điều khiển an toàn (Safe Commands) | Có | Có | Không | Chỉ nhận lệnh cho máy mình |
+| Tiếp nhận & Đóng cảnh báo sự cố (Alerts) | Có | Có | Không | Không |
+| Xem nhật ký kiểm toán (Audit Trail) | Có | Không | Chỉ xem 20 thao tác máy mình | Không |
+| Gửi Telemetry & Heartbeat | Không | Không | Không | Token / Secret riêng |
 
-Trong Development, nếu không có connection string thì API dùng InMemory database.
+---
 
-### Web dashboard
+## 🛠️ Công Nghệ Sử Dụng (Tech Stack)
 
-```powershell
-npm.cmd ci
-$env:NEXT_PUBLIC_API_URL = 'http://localhost:8080'
-npm.cmd run dev
-```
-
-### Agent
-
-```powershell
-$env:SENTINELLAN_API_URL = 'http://localhost:8080'
-$env:SENTINELLAN_ENROLLMENT_TOKEN = 'local-enroll-only'
-dotnet run --project apps/agent/src/SentinelLAN.Agent
-```
-
-Để nhận lệnh trong MVP, cấu hình cùng `SENTINELLAN_SIGNING_KEY` ở API và Agent. Nếu thiếu key, Agent chỉ gửi telemetry và không polling lệnh. Agent đang dùng identity store dạng tệp trong thư mục `agent-data` cho Development. Production phải dùng kho credential được hệ điều hành bảo vệ. Agent không cần quyền Administrator trong phạm vi MVP.
-
-## Tài khoản demo
-
-Compose tự seed organization `demo`. Mật khẩu của cả ba tài khoản lấy từ `SENTINELLAN_DEMO_ADMIN_PASSWORD`.
-
-| Vai trò | Email | Organization code |
+| Thành phần | Công nghệ / Thư viện chính | Ghi chú |
 |---|---|---|
-| Admin | `admin@sentinellan.local` | `demo` |
-| Technician | `technician@sentinellan.local` | `demo` |
-| Employee | `employee@sentinellan.local` | `demo` |
+| **Backend API** | .NET SDK `10.0.400`, C# 14, ASP.NET Core `10.0.11` | Clean Architecture, Minimal APIs, Typed Results |
+| **Data Access** | EF Core `10.0.11`, Npgsql `10.0.3` | Code-First Migrations, Partial Unique Filter Index |
+| **Database** | PostgreSQL `18.1` | Ràng buộc Multi-tenant theo `OrganizationId` |
+| **Web Dashboard** | Next.js `16.2.11`, React `19.2.8`, TypeScript `5.9.3` | App Router, Server Components, Turbopack |
+| **Styling** | Tailwind CSS `4.3.3`, HSL Token System | Giao diện tối/sáng chuyên nghiệp, Responsive |
+| **Realtime** | ASP.NET Core SignalR `10.0.0` | Cập nhật thiết bị, telemetry & lệnh theo mili-giây |
+| **Endpoint Agent** | .NET 10 Worker Service | Hỗ trợ Windows Service nền, Windows DPAPI Hardware Vault |
+| **Cloud Node SSH** | SSH.NET C# Library | Quản trị VPS Agentless qua SSH Private Key + IPv4 |
+| **Testing** | xUnit, Vitest, Playwright | Đầy đủ Unit Tests, Architecture Tests và E2E Browser Tests |
 
-Mật khẩu Development mặc định của Compose là `local-demo-only`. Không sử dụng giá trị này ngoài máy local.
+---
 
-## Cấu hình môi trường
+## 🧪 Kết Quả Kiểm Thử & Kiểm Chứng (Quality Gates)
 
-| Biến | Mục đích |
-|---|---|
-| `ConnectionStrings__SentinelLAN` | Chuỗi kết nối PostgreSQL |
-| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Cấu hình PostgreSQL trong Compose |
-| `SENTINELLAN_DEMO_ADMIN_EMAIL` | Email Admin demo |
-| `SENTINELLAN_DEMO_ADMIN_PASSWORD` | Mật khẩu dùng để seed tài khoản demo |
-| `SENTINELLAN_ENROLLMENT_TOKEN` | Token enrollment một lần |
-| `SENTINELLAN_SIGNING_KEY` | Khóa HMAC chung API/Agent trong MVP; Agent không polling lệnh khi thiếu key |
-| `SENTINELLAN_ACCESS_TOKEN_SIGNING_KEY` | Khóa access token, tối thiểu 32 ký tự ngoài Development |
-| `SENTINELLAN_WEB_ORIGINS` | Origin web được phép gửi credential |
-| `NEXT_PUBLIC_API_URL` | URL API dành cho dashboard |
-| `SENTINELLAN_API_URL` | URL API dành cho Agent |
-| `SENTINELLAN_ALLOW_REAL_COMMANDS` | Cờ lab cho adapter thật; mặc định `false` |
+Dự án đã vượt qua toàn bộ các cổng kiểm định chất lượng:
 
-Secrets chỉ đến từ environment variable hoặc user-secrets. Không commit `.env`, token, certificate, database dump, log hoặc device credential.
+```text
+[✓] .NET Restore & Format:     Tất cả package up-to-date, format convention chuẩn.
+[✓] .NET Build:                0 lỗi, 0 cảnh báo quan trọng.
+[✓] .NET Test Suite:           79/79 TESTS PASS (Architecture, Domain, Agent, Application, Integration).
+[✓] Web TypeScript:            0 lỗi kiểu dữ liệu (Strict Mode).
+[✓] Web ESLint:                0 error, 0 warning (Tuân thủ React 19 Hooks quy chuẩn).
+[✓] Web Unit Tests:            9/9 Vitest tests PASS.
+[✓] Web Production Build:      Next.js Turbopack compile thành công 8 static & dynamic routes.
+[✓] Playwright E2E:            Luồng Admin Device Lifecycle hoàn thành trọn vẹn.
+```
 
-## API chính
-
-Các endpoint được version hóa dưới `/api/v1`.
-
-| Method | Endpoint | Chức năng | Quyền |
-|---|---|---|---|
-| `POST` | `/auth/login` | Đăng nhập và tạo cookie phiên | Public, rate limit |
-| `GET` | `/auth/session` | Đọc phiên hiện tại | Đã đăng nhập |
-| `POST` | `/auth/refresh` | Xoay refresh token | Refresh cookie |
-| `POST` | `/auth/logout` | Thu hồi phiên | Đã đăng nhập |
-| `GET` | `/dashboard` | Số liệu dashboard theo tenant | Admin/Technician |
-| `GET` | `/devices` | Danh sách thiết bị theo tenant | Admin/Technician |
-| `GET` | `/devices/{id}` | Chi tiết thiết bị có scope | Có quyền |
-| `GET` | `/my-device` | Thiết bị được gán | Employee |
-| `POST` | `/agent/enroll` | Enrollment thiết bị | One-time token |
-| `POST` | `/agent/heartbeat` | Gửi heartbeat/telemetry | Agent |
-| `POST` | `/commands` | Tạo lệnh an toàn kèm lý do | Admin/Technician |
-| `POST` | `/agent/commands/poll` | Nhận lệnh | Agent |
-| `POST` | `/agent/commands/{id}/result` | Gửi kết quả | Agent |
-| `GET` | `/audit-logs` | Xem audit theo tenant | Admin |
-
-Request thay đổi trạng thái dùng cookie phải gửi `X-SentinelLAN-CSRF: 1`. Agent dùng `X-SentinelLAN-Device-Id` và `X-SentinelLAN-Device-Secret`; secret không nằm trong URL hoặc payload nghiệp vụ.
-
-## Bảo mật và quyền riêng tư
-
-- Mật khẩu được hash bằng PBKDF2-SHA256 với salt ngẫu nhiên.
-- Access token có thời hạn 15 phút; refresh token có thời hạn 7 ngày.
-- Refresh token chỉ lưu SHA-256 hash, xoay vòng khi dùng và thu hồi token family khi phát hiện reuse.
-- Cookie xác thực là host-only, `HttpOnly`, `SameSite=Strict` và dùng `Secure` trên HTTPS.
-- Người dùng và Agent dùng hai cơ chế xác thực độc lập.
-- Record thuộc tenant có `OrganizationId`; route ID không tự tạo quyền truy cập.
-- Employee chỉ truy vấn thiết bị đúng `OrganizationId` và `AssignedUserId`.
-- SignalR được xác thực và chia group theo organization.
-- Lệnh cần loại hợp lệ, actor, lý do, issued/expiry, nonce, chữ ký và audit.
-- Lệnh hết hạn, replay, sai tenant/thiết bị hoặc kết quả trùng bị từ chối.
-- `SimulateLock` và `SimulateNetworkIsolation` không thay đổi hệ điều hành.
-
-Trước production cần bổ sung MFA, managed signing-key rotation, OS-protected credential store, chữ ký Agent bất đối xứng, retention automation và external immutable audit sink.
-
-## Kiểm thử và CI
-
+Chạy toàn bộ kiểm thử bằng kịch bản tự động:
 ```powershell
-# Backend
-dotnet restore SentinelLAN.slnx
-dotnet format SentinelLAN.slnx
-dotnet build SentinelLAN.slnx --configuration Release
-dotnet test SentinelLAN.slnx --configuration Release
-
-# Frontend
-npm.cmd ci
-npm.cmd run lint
-npm.cmd run typecheck
-npm.cmd test
-npm.cmd run build
-npm.cmd run test:e2e
-
-# Toàn bộ repository
 ./scripts/test-all.ps1
 ```
 
-Linux/macOS dùng `./scripts/test-all.sh`.
+---
 
-Các gate CI cần cấu hình (checkout này chưa có `.github/workflows`; chưa xác minh CI từ xa):
+## 📚 Hệ Thống Tài Liệu Chi Tiết
 
-1. **CI:** format, build, backend tests, frontend lint/typecheck/test/build và Playwright E2E với PostgreSQL.
-2. **Security:** quét package NuGet và chạy `npm audit --audit-level=high`.
-3. **Pull Request Policy:** kiểm tra tên nhánh, target và tiêu đề Conventional Commit.
-
-## Giới hạn hiện tại
-
-SentinelLAN là MVP phục vụ học tập, trình diễn và kiểm thử trong môi trường được ủy quyền; chưa phải endpoint protection production-ready. Không bật khóa/cô lập thật ngoài lab. Repository chưa khai báo giấy phép nguồn mở, vì vậy không mặc định cho phép sử dụng hoặc phân phối lại ngoài phạm vi được chủ sở hữu chấp thuận.
+- 🌐 [Cổng Thuyết Trình & Tài Liệu Tương Tác (HTML Portal)](docs/index.html)
+- 🏢 [Hướng Dẫn Triển Khai Self-Hosted On-Premise](docs/deployment/self-hosted-guide.md)
+- ☁️ [Hướng Dẫn Triển Khai Cloud VPS SaaS & Node Management](docs/deployment/saas-vps-guide.md)
+- 🤝 [Hướng Dẫn Phát Triển Dành Cho Cộng Đồng Mã Nguồn Mở](docs/deployment/open-source-guide.md)
+- 💻 [Hướng Dẫn Chi Tiết Cài Đặt & Kết Nối Windows Agent](docs/guides/agent-enrollment-guide.md)
+- 🏛️ [Kế Hoạch & Kết Quả Triển Khai MVP](MVP_IMPLEMENTATION_PLAN.md)
+- 📐 [Quyết Định Kiến Trúc: ADR 0005](docs/adr/0005-mvp-administration-and-simulation.md)

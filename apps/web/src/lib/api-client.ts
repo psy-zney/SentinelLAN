@@ -7,6 +7,7 @@ import type {
   Dashboard,
   Device,
   EmployeeDevice,
+  EnrollmentToken,
   OrganizationItem,
   Policy,
   Role,
@@ -26,7 +27,14 @@ export class ApiClient {
       const refreshed = await this.refreshSession();
       if (refreshed) response = await this.send(path, init);
     }
-    if (!response.ok) throw new Error(`SentinelLAN API ${response.status}`);
+    if (!response.ok) {
+      let detail: string | undefined;
+      try {
+        const body = await response.json() as { detail?: string; title?: string; message?: string };
+        detail = body.detail ?? body.message ?? body.title;
+      } catch { /* response may not contain JSON */ }
+      throw new ApiError(response.status, detail);
+    }
     if (response.status === 204) return undefined as T;
     return response.json() as Promise<T>;
   }
@@ -73,6 +81,28 @@ export class ApiClient {
 
   devices() {
     return this.request<Device[]>("/api/v1/devices");
+  }
+
+  createUser(data: { email: string; displayName: string; role: Exclude<Role, "Agent">; password: string; reason: string; confirmed: boolean }) {
+    return this.request<UserItem>("/api/v1/users", { method: "POST", body: JSON.stringify(data) });
+  }
+
+  createEnrollmentToken(data: { validForMinutes: number; reason: string; confirmed: boolean }) {
+    return this.request<EnrollmentToken>("/api/v1/enrollment-tokens", { method: "POST", body: JSON.stringify(data) });
+  }
+
+  assignDevice(id: string, assignedUserId: string | null, reason: string, confirmed: boolean) {
+    return this.request<Device>(`/api/v1/devices/${id}/assignment`, {
+      method: "PUT",
+      body: JSON.stringify({ assignedUserId, reason, confirmed })
+    });
+  }
+
+  revokeDevice(id: string, reason: string, confirmed: boolean) {
+    return this.request<Device>(`/api/v1/devices/${id}/revoke`, {
+      method: "POST",
+      body: JSON.stringify({ reason, confirmed })
+    });
   }
 
   device(id: string) {
@@ -161,14 +191,21 @@ export class ApiClient {
 
 export type AuthSession = { expiresIn: number; role: Role; displayName: string };
 
+export class ApiError extends Error {
+  constructor(readonly status: number, message?: string) {
+    super(message ?? `SentinelLAN API ${status}`);
+    this.name = "ApiError";
+  }
+}
+
 export const demoDashboard: Dashboard = {
   totalDevices: 3,
   onlineDevices: 2,
   offlineDevices: 1,
   openAlerts: 1,
   devices: [
-    { id: "demo-01", name: "TRAINING-PC-01", osVersion: "Windows 11 24H2", agentVersion: "0.1.0", lastSeenAt: new Date().toISOString(), isOnline: true },
-    { id: "demo-02", name: "FINANCE-LAPTOP", osVersion: "Windows 11 24H2", agentVersion: "0.1.0", lastSeenAt: new Date(Date.now() - 45_000).toISOString(), isOnline: true },
-    { id: "demo-03", name: "LAB-PC-07", osVersion: "Windows 10 22H2", agentVersion: "0.1.0", lastSeenAt: new Date(Date.now() - 600_000).toISOString(), isOnline: false }
+    { id: "demo-01", name: "TRAINING-PC-01", osVersion: "Windows 11 24H2", agentVersion: "0.1.0", lastSeenAt: new Date().toISOString(), isOnline: true, assignedUserId: null, isRevoked: false },
+    { id: "demo-02", name: "FINANCE-LAPTOP", osVersion: "Windows 11 24H2", agentVersion: "0.1.0", lastSeenAt: new Date(Date.now() - 45_000).toISOString(), isOnline: true, assignedUserId: null, isRevoked: false },
+    { id: "demo-03", name: "LAB-PC-07", osVersion: "Windows 10 22H2", agentVersion: "0.1.0", lastSeenAt: new Date(Date.now() - 600_000).toISOString(), isOnline: false, assignedUserId: null, isRevoked: false }
   ]
 };

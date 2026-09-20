@@ -4,6 +4,9 @@ namespace SentinelLAN.Application;
 
 public static class Permissions
 {
+    public const string ManageUsers = "users:manage";
+    public const string ManageEnrollment = "enrollment:manage";
+    public const string ManageDevices = "devices:manage";
     public const string ViewDevices = "devices:view";
     public const string ViewAssignedDevice = "devices:view-assigned";
     public const string ManageCommands = "commands:manage";
@@ -55,7 +58,7 @@ public static class DeviceScope
     public static IQueryable<Device> ForActor(IQueryable<Device> devices, ActorContext actor) =>
         devices.Where(device =>
             device.OrganizationId == actor.OrganizationId &&
-            (actor.Role != Roles.Employee || device.AssignedUserId == actor.UserId));
+            (actor.Role != Roles.Employee || (device.AssignedUserId == actor.UserId && !device.IsRevoked)));
 }
 
 public record LoginRequest(string OrganizationCode, string Email, string Password);
@@ -67,7 +70,7 @@ public record HeartbeatRequest(string IdempotencyKey, double CpuPercent, double 
 public record CreateCommandRequest(Guid DeviceId, string Type, string Reason, int ValidForSeconds = 120, bool Confirmed = false, string? Parameter = null);
 public record CommandResultRequest(bool Succeeded, string Message);
 public record CommandDto(Guid Id, Guid DeviceId, string DeviceName, string Type, string Reason, string? Parameter, string Status, DateTimeOffset IssuedAt, DateTimeOffset ExpiresAt, bool? Succeeded, string? ResultMessage);
-public record DeviceDto(Guid Id, string Name, string OsVersion, string AgentVersion, DateTimeOffset? LastSeenAt, bool IsOnline);
+public record DeviceDto(Guid Id, string Name, string OsVersion, string AgentVersion, DateTimeOffset? LastSeenAt, bool IsOnline, Guid? AssignedUserId, bool IsRevoked);
 public record DashboardDto(int TotalDevices, int OnlineDevices, int OfflineDevices, int OpenAlerts, IReadOnlyList<DeviceDto> Devices);
 public record EmployeeDeviceActionDto(string Action, string Reason, string Outcome, DateTimeOffset CreatedAt);
 public record EmployeeDeviceDto(DeviceDto Device, string? AppliedPolicy, IReadOnlyList<EmployeeDeviceActionDto> RecentActions);
@@ -84,10 +87,14 @@ public record CreateAlertRequest(Guid? DeviceId, string Severity, string Message
 public record AuditLogDto(Guid Id, Guid ActorId, string? ActorName, Guid? DeviceId, string? DeviceName, string Action, string Reason, string Outcome, DateTimeOffset CreatedAt);
 public record UserSummaryDto(Guid Id, string Email, string DisplayName, string Role, DateTimeOffset CreatedAt);
 public record OrganizationSummaryDto(Guid Id, string Code, string Name, DateTimeOffset CreatedAt);
+public record CreateUserRequest(string Email, string DisplayName, string Role, string Password, string Reason, bool Confirmed);
+public record EnrollmentTokenRequest(int ValidForMinutes, string Reason, bool Confirmed);
+public record EnrollmentTokenResponse(string Token, DateTimeOffset ExpiresAt);
+public record DeviceAssignmentRequest(Guid? AssignedUserId, string Reason, bool Confirmed);
+public enum ManagementResultStatus { Succeeded, Invalid, NotFound, Forbidden, Conflict }
 
 public interface ICommandSigner
 {
     string Sign(DeviceCommand command);
     bool Verify(DeviceCommand command);
 }
-

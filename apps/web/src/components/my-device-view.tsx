@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ApiClient } from "@/lib/api-client";
+import { ApiClient, ApiError } from "@/lib/api-client";
 import { useTranslation } from "@/lib/i18n";
 import type { EmployeeDevice } from "@/types/api";
 
@@ -9,26 +9,53 @@ export function MyDeviceView() {
   const { t, lang } = useTranslation();
   const [data, setData] = useState<EmployeeDevice | null>(null);
   const [error, setError] = useState("");
+  const [empty, setEmpty] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
     new ApiClient().myDevice()
-      .then(value => { if (active) setData(value); })
-      .catch(() => {
-        if (active) setError(lang === "vi"
+      .then(value => {
+        if (active) {
+          setData(value);
+          setError("");
+          setEmpty(false);
+        }
+      })
+      .catch((cause) => {
+        if (!active) return;
+        if (cause instanceof ApiError && cause.status === 404) {
+          setData(null);
+          setError("");
+          setEmpty(true);
+          return;
+        }
+        setData(null);
+        setEmpty(false);
+        setError(lang === "vi"
           ? "Chưa thể tải thiết bị được gán. Hãy liên hệ với Quản trị viên IT của bạn."
           : "No assigned device could be loaded. Contact your SentinelLAN administrator.");
       });
     return () => { active = false; };
-  }, [lang]);
+  }, [lang, reloadKey]);
 
   if (error) {
     return (
       <div className="panel" role="alert">
         <h2>{t("devices")}</h2>
         <p className="subtitle">{error}</p>
+        <button className="action" type="button" onClick={() => {
+          setData(null);
+          setError("");
+          setEmpty(false);
+          setReloadKey(key => key + 1);
+        }}>{t("retry")}</button>
       </div>
     );
+  }
+
+  if (empty) {
+    return <div className="panel empty-state" role="status"><h2>{lang === "vi" ? "Chưa có thiết bị được gán" : "No assigned device"}</h2><p>{lang === "vi" ? "Quản trị viên chưa gán thiết bị cho tài khoản của bạn. Không có dữ liệu thiết bị nào được hiển thị." : "An administrator has not assigned a device to your account yet. No device data is shown."}</p><button className="action" type="button" onClick={() => setReloadKey(key => key + 1)}>{t("refresh")}</button></div>;
   }
 
   if (!data) return <p className="subtitle" role="status">{t("loading")}</p>;

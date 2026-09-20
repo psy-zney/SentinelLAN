@@ -39,7 +39,6 @@ PROJECT_OVERVIEW.md
 BAO_CAO*
 *bao_cao*
 *BaoCao*
-docs/
 deploy/
 scripts/
 .github/
@@ -52,9 +51,9 @@ aio/
 .codex/
 scratch/
 
-# Ignore all internal markdown files except public README.md
-*.md
-!README.md
+# Ignore internal markdown files in root except public README.md
+/*.md
+!/README.md
 
 # Office, document, and report formats
 *.docx

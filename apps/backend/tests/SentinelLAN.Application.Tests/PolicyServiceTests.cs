@@ -37,6 +37,19 @@ public sealed class PolicyServiceTests
         Assert.Null(result);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("AllowAll")]
+    public async Task CreatePolicyRejectsUnknownUsbModes(string usbMode)
+    {
+        var store = new FakePolicyStore();
+        var service = new PolicyService(store);
+
+        var result = await service.CreatePolicyAsync(Actor, new CreatePolicyRequest("USB policy", 15, usbMode), CancellationToken.None);
+
+        Assert.Null(result);
+    }
+
     [Fact]
     public async Task UpdatePolicyUpdatesPropertiesAndLogsAudit()
     {

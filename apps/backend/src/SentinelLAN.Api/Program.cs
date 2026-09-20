@@ -49,9 +49,16 @@ builder.Services.AddSingleton(new AuthenticationSettings(TimeSpan.FromMinutes(15
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IAuthenticationStore, AuthenticationStore>();
 builder.Services.AddScoped<SentinelLAN.Application.AuthenticationService>();
+builder.Services.AddScoped<IManagementStore, ManagementStore>();
+builder.Services.AddSingleton<IEnrollmentSecretGenerator, EnrollmentSecretGenerator>();
+builder.Services.AddSingleton<ISecretHasher, SecretHasher>();
+builder.Services.AddScoped<UserManagementService>();
+builder.Services.AddScoped<EnrollmentTokenService>();
+builder.Services.AddScoped<DeviceManagementService>();
 builder.Services.AddScoped<IPolicyStore, PolicyStore>();
 builder.Services.AddScoped<PolicyService>();
 builder.Services.AddScoped<IAlertStore, AlertStore>();
+builder.Services.AddScoped<IAlertDeviceLookup, AlertDeviceLookup>();
 builder.Services.AddScoped<AlertService>();
 builder.Services.AddSingleton<AuthCookieManager>();
 builder.Services
@@ -150,18 +157,99 @@ v1.MapGet("/auth/session", async (HttpContext http, SentinelDbContext db, Cancel
     return Results.Ok(new CurrentSessionResponse(user.Role, user.DisplayName));
 }).RequireAuthorization();
 
+v1.MapPost("/users", async (CreateUserRequest request, HttpContext http, SentinelDbContext db, UserManagementService users, IPasswordHasher passwordHasher, CancellationToken ct) =>
+{
+    using var developmentWrite = db.Database.IsRelational() ? null : await DevelopmentWriteGate.EnterAsync(ct);
+    var actor = http.User.ToActorContext()!.Value;
+    var result = await users.CreateAsync(actor, request, passwordHasher, ct);
+    return result.Status switch
+    {
+        ManagementResultStatus.Succeeded => Results.Created($"/api/v1/users/{result.User!.Id}", result.User),
+        ManagementResultStatus.Forbidden => Results.StatusCode(StatusCodes.Status403Forbidden),
+        ManagementResultStatus.Conflict => Results.Conflict(new ProblemDetails { Title = "A user with that email already exists", Status = 409 }),
+        _ => Results.BadRequest(new ProblemDetails { Title = "Invalid user details", Status = 400 })
+    };
+})
+    .WithName("CreateUser")
+    .Produces<UserSummaryDto>(StatusCodes.Status201Created)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status409Conflict)
+    .RequireAuthorization(AuthorizationPolicies.Admin);
+
+v1.MapPost("/enrollment-tokens", async (EnrollmentTokenRequest request, HttpContext http, SentinelDbContext db, EnrollmentTokenService tokens, CancellationToken ct) =>
+{
+    using var developmentWrite = db.Database.IsRelational() ? null : await DevelopmentWriteGate.EnterAsync(ct);
+    var actor = http.User.ToActorContext()!.Value;
+    var result = await tokens.CreateAsync(actor, request, ct);
+    if (result.Status == ManagementResultStatus.Forbidden) return Results.StatusCode(StatusCodes.Status403Forbidden);
+    if (result.Status != ManagementResultStatus.Succeeded) return Results.BadRequest(new ProblemDetails { Title = "Invalid enrollment token details", Status = 400 });
+    http.Response.Headers.CacheControl = "no-store";
+    return Results.Created("/api/v1/enrollment-tokens", result.Token);
+})
+    .WithName("CreateEnrollmentToken")
+    .Produces<EnrollmentTokenResponse>(StatusCodes.Status201Created)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .RequireAuthorization(AuthorizationPolicies.Admin)
+    .RequireRateLimiting("sensitive");
+
+v1.MapPut("/devices/{id:guid}/assignment", async (Guid id, DeviceAssignmentRequest request, HttpContext http, SentinelDbContext db, DeviceManagementService devices, IHubContext<UpdatesHub> hub, CancellationToken ct) =>
+{
+    using var developmentWrite = db.Database.IsRelational() ? null : await DevelopmentWriteGate.EnterAsync(ct);
+    var actor = http.User.ToActorContext()!.Value;
+    var result = await devices.AssignAsync(actor, id, request, ct);
+    return result.Status switch
+    {
+        ManagementResultStatus.Succeeded => await PublishDeviceUpdateAsync(result.Device!, hub, http, ct),
+        ManagementResultStatus.Forbidden => Results.StatusCode(StatusCodes.Status403Forbidden),
+        ManagementResultStatus.NotFound => Results.NotFound(),
+        ManagementResultStatus.Conflict => Results.Conflict(new ProblemDetails { Title = "Device assignment conflicts with an existing active assignment", Status = 409 }),
+        _ => Results.BadRequest(new ProblemDetails { Title = "Invalid assignment details", Status = 400 })
+    };
+})
+    .WithName("AssignDevice")
+    .Produces<DeviceDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict)
+    .RequireAuthorization(AuthorizationPolicies.Admin);
+
+v1.MapPost("/devices/{id:guid}/revoke", async (Guid id, RevokeDeviceRequest request, HttpContext http, SentinelDbContext db, DeviceManagementService devices, IHubContext<UpdatesHub> hub, CancellationToken ct) =>
+{
+    using var developmentWrite = db.Database.IsRelational() ? null : await DevelopmentWriteGate.EnterAsync(ct);
+    var actor = http.User.ToActorContext()!.Value;
+    var result = await devices.RevokeAsync(actor, id, request, ct);
+    return result.Status switch
+    {
+        ManagementResultStatus.Succeeded => await PublishDeviceUpdateAsync(result.Device!, hub, http, ct),
+        ManagementResultStatus.Forbidden => Results.StatusCode(StatusCodes.Status403Forbidden),
+        ManagementResultStatus.NotFound => Results.NotFound(),
+        ManagementResultStatus.Conflict => Results.Conflict(new ProblemDetails { Title = "Device could not be revoked", Status = 409 }),
+        _ => Results.BadRequest(new ProblemDetails { Title = "Confirmation and a valid reason are required", Status = 400 })
+    };
+})
+    .WithName("RevokeDevice")
+    .Produces<DeviceDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict)
+    .RequireAuthorization(AuthorizationPolicies.Admin);
+
 v1.MapGet("/devices", async (HttpContext http, SentinelDbContext db, CancellationToken ct) =>
 {
     var actor = http.User.ToActorContext()!.Value;
     var now = DateTimeOffset.UtcNow;
     var devices = await DeviceScope.ForActor(db.Devices, actor).ToListAsync(ct);
-    return Results.Ok(devices.Select(x => new DeviceDto(x.Id, x.Name, x.OsVersion, x.AgentVersion, x.LastSeenAt, x.IsOnline(now))));
+    return Results.Ok(devices.Select(x => new DeviceDto(x.Id, x.Name, x.OsVersion, x.AgentVersion, x.LastSeenAt, x.IsOnline(now), x.AssignedUserId, x.IsRevoked)));
 }).RequireAuthorization(AuthorizationPolicies.ViewDevices);
 v1.MapGet("/devices/{id:guid}", async (Guid id, HttpContext http, SentinelDbContext db, CancellationToken ct) =>
 {
     var actor = http.User.ToActorContext()!.Value;
     var device = await DeviceScope.ForActor(db.Devices, actor).SingleOrDefaultAsync(x => x.Id == id, ct);
-    return device is null ? Results.NotFound() : Results.Ok(new DeviceDto(device.Id, device.Name, device.OsVersion, device.AgentVersion, device.LastSeenAt, device.IsOnline(DateTimeOffset.UtcNow)));
+    return device is null ? Results.NotFound() : Results.Ok(new DeviceDto(device.Id, device.Name, device.OsVersion, device.AgentVersion, device.LastSeenAt, device.IsOnline(DateTimeOffset.UtcNow), device.AssignedUserId, device.IsRevoked));
 }).RequireAuthorization();
 v1.MapGet("/devices/{id:guid}/telemetry", async (Guid id, HttpContext http, SentinelDbContext db, CancellationToken ct) =>
 {
@@ -181,14 +269,14 @@ v1.MapGet("/dashboard", async (HttpContext http, SentinelDbContext db, Cancellat
     var actor = http.User.ToActorContext()!.Value;
     var now = DateTimeOffset.UtcNow;
     var devices = await DeviceScope.ForActor(db.Devices, actor).ToListAsync(ct);
-    var dto = devices.Select(x => new DeviceDto(x.Id, x.Name, x.OsVersion, x.AgentVersion, x.LastSeenAt, x.IsOnline(now))).ToList();
+    var dto = devices.Select(x => new DeviceDto(x.Id, x.Name, x.OsVersion, x.AgentVersion, x.LastSeenAt, x.IsOnline(now), x.AssignedUserId, x.IsRevoked)).ToList();
     return Results.Ok(new DashboardDto(dto.Count, dto.Count(x => x.IsOnline), dto.Count(x => !x.IsOnline), await db.Alerts.CountAsync(x => x.OrganizationId == actor.OrganizationId && x.IsOpen, ct), dto));
 }).RequireAuthorization(AuthorizationPolicies.ViewDevices);
 
 v1.MapGet("/my-device", async (HttpContext http, SentinelDbContext db, CancellationToken ct) =>
 {
     var actor = http.User.ToActorContext()!.Value;
-    var device = await DeviceScope.ForActor(db.Devices.AsNoTracking(), actor).SingleOrDefaultAsync(ct);
+    var device = await DeviceScope.ForActor(db.Devices.AsNoTracking(), actor).Where(x => !x.IsRevoked).SingleOrDefaultAsync(ct);
     if (device is null) return Results.NotFound();
 
     var policyName = await (
@@ -206,7 +294,7 @@ v1.MapGet("/my-device", async (HttpContext http, SentinelDbContext db, Cancellat
         .Take(20)
         .Select(item => new EmployeeDeviceActionDto(item.Action, item.Reason, item.Outcome, item.CreatedAt))
         .ToListAsync(ct);
-    var dto = new DeviceDto(device.Id, device.Name, device.OsVersion, device.AgentVersion, device.LastSeenAt, device.IsOnline(DateTimeOffset.UtcNow));
+    var dto = new DeviceDto(device.Id, device.Name, device.OsVersion, device.AgentVersion, device.LastSeenAt, device.IsOnline(DateTimeOffset.UtcNow), device.AssignedUserId, device.IsRevoked);
     return Results.Ok(new EmployeeDeviceDto(dto, policyName, actions));
 }).RequireAuthorization(AuthorizationPolicies.ViewAssignedDevice);
 
@@ -461,7 +549,7 @@ v1.MapGet("/alerts", async (HttpContext http, AlertService alertService, [FromQu
 v1.MapPost("/alerts", async (CreateAlertRequest request, HttpContext http, AlertService alertService, IHubContext<UpdatesHub> hub, CancellationToken ct) =>
 {
     var actor = http.User.ToActorContext()!.Value;
-    var alert = await alertService.TriggerAlertAsync(actor.OrganizationId, request.DeviceId, request.Severity, request.Message, ct);
+    var alert = await alertService.TriggerAlertAsync(actor, request.DeviceId, request.Severity, request.Message, ct);
     if (alert is null) return Results.BadRequest();
     await hub.Clients.Group(TenantGroup.Name(actor.OrganizationId)).SendAsync("alert-triggered", alert, ct);
     return Results.Created($"/api/v1/alerts/{alert.Id}", alert);
@@ -498,8 +586,8 @@ v1.MapGet("/audit-logs", async (HttpContext http, SentinelDbContext db, [FromQue
     var actorIds = logs.Select(x => x.ActorId).Distinct().ToList();
     var devIds = logs.Where(x => x.DeviceId.HasValue).Select(x => x.DeviceId!.Value).Distinct().ToList();
 
-    var userNames = await db.Users.AsNoTracking().Where(u => actorIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.DisplayName, ct);
-    var deviceNames = await db.Devices.AsNoTracking().Where(d => devIds.Contains(d.Id) || actorIds.Contains(d.Id)).ToDictionaryAsync(d => d.Id, d => d.Name, ct);
+    var userNames = await db.Users.AsNoTracking().Where(u => u.OrganizationId == actor.OrganizationId && actorIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.DisplayName, ct);
+    var deviceNames = await db.Devices.AsNoTracking().Where(d => d.OrganizationId == actor.OrganizationId && (devIds.Contains(d.Id) || actorIds.Contains(d.Id))).ToDictionaryAsync(d => d.Id, d => d.Name, ct);
 
     return Results.Ok(logs.Select(x => new AuditLogDto(
         x.Id,
@@ -532,5 +620,12 @@ v1.MapGet("/organizations", async (HttpContext http, SentinelDbContext db, Cance
 
 app.MapHub<UpdatesHub>("/hubs/updates").RequireAuthorization(AuthorizationPolicies.ViewDevices);
 app.Run();
+
+static async Task<IResult> PublishDeviceUpdateAsync(DeviceDto device, IHubContext<UpdatesHub> hub, HttpContext http, CancellationToken cancellationToken)
+{
+    var actor = http.User.ToActorContext()!.Value;
+    await hub.Clients.Group(TenantGroup.Name(actor.OrganizationId)).SendAsync("device-status", device, cancellationToken);
+    return Results.Ok(device);
+}
 
 public partial class Program;

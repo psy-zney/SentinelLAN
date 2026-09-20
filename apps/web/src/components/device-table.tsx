@@ -21,6 +21,7 @@ export function DeviceTable({ initialDevices }: { initialDevices: Device[] }) {
           <tr>
             <th>{t("deviceName")}</th>
             <th>{t("status")}</th>
+            <th>{lang === "vi" ? "Phân công" : "Assignment"}</th>
             <th>{t("osVersion")}</th>
             <th>{t("agentVersion")}</th>
             <th>{t("lastSeen")}</th>
@@ -40,6 +41,7 @@ export function DeviceTable({ initialDevices }: { initialDevices: Device[] }) {
                   {device.isOnline ? t("online") : t("offline")}
                 </span>
               </td>
+              <td>{device.isRevoked ? <span className="badge badge-danger">{lang === "vi" ? "Đã thu hồi" : "Revoked"}</span> : device.assignedUserId ? <span className="badge badge-info">{lang === "vi" ? "Đã gán" : "Assigned"}</span> : <span className="badge badge-neutral">{lang === "vi" ? "Chưa gán" : "Unassigned"}</span>}</td>
               <td>{device.osVersion}</td>
               <td><code>{device.agentVersion}</code></td>
               <td>

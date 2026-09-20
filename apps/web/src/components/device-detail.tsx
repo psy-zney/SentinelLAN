@@ -1,118 +1,40 @@
 "use client";
-
 import { useCallback, useState } from "react";
 import { useLiveQuery } from "@/hooks/use-live-query";
-import { ApiClient } from "@/lib/api-client";
-
+import { ApiClient, ApiError } from "@/lib/api-client";
+import { useCurrentSession } from "@/components/app-shell";
+import { useTranslation } from "@/lib/i18n";
+import type { UserItem } from "@/types/api";
 export function DeviceDetail({ id }: { id: string }) {
-  const [message, setMessage] = useState("");
-  const [reason, setReason] = useState("");
-  const [confirmed, setConfirmed] = useState(false);
-  const [sending, setSending] = useState(false);
-  const load = useCallback(async () => {
-    const client = new ApiClient();
-    const [device, telemetry] = await Promise.all([client.device(id), client.deviceTelemetry(id)]);
-    return { device, telemetry };
-  }, [id]);
-  const { data, error, refresh } = useLiveQuery(load);
-  const device = data?.device;
-  const telemetry = data?.telemetry ?? [];
-
-  async function simulateLock() {
-    if (!device || !reason.trim() || !confirmed || sending) return;
-    setSending(true);
-    try {
-      await new ApiClient().createCommand(device.id, "SimulateLock", reason.trim(), confirmed);
-      setMessage("Simulated lock command queued and audited.");
-      setConfirmed(false);
-    } catch {
-      setMessage("Command could not be created. Check permission and API availability.");
-    } finally { setSending(false); }
-  }
-
-  if (!data && !error) {
-    return <p className="subtitle" role="status">Loading device details and telemetry...</p>;
-  }
-
-  if (error || !device) {
-    return (
-      <div className="panel" role="alert">
-        <div className="panel-head"><h2>Device unavailable</h2></div>
-        <p className="subtitle" style={{ padding: "0.5rem 0" }}>Unable to load device or telemetry. Check your permissions and API connection.</p>
-        <button className="action" onClick={refresh}>Retry</button>
-      </div>
-    );
-  }
-
-  const latestTelemetry = telemetry.length > 0 ? telemetry[0] : null;
-
-  return (
-    <>
-      <p className="subtitle">
-        {device.name} · {device.osVersion} · Agent {device.agentVersion}
-      </p>
-
-      <section className="metrics" aria-label="Device health metrics">
-        <div className="metric">
-          <span>Status</span>
-          <strong style={{ color: device.isOnline ? "var(--accent)" : "var(--danger)" }}>
-            {device.isOnline ? "Online" : "Offline"}
-          </strong>
-        </div>
-        <div className="metric">
-          <span>CPU utilization</span>
-          <strong>{latestTelemetry ? `${latestTelemetry.cpuPercent.toFixed(1)}%` : "N/A"}</strong>
-        </div>
-        <div className="metric">
-          <span>RAM utilization</span>
-          <strong>{latestTelemetry ? `${latestTelemetry.ramPercent.toFixed(1)}%` : "N/A"}</strong>
-        </div>
-        <div className="metric">
-          <span>Disk utilization</span>
-          <strong>{latestTelemetry ? `${latestTelemetry.diskPercent.toFixed(1)}%` : "N/A"}</strong>
-        </div>
-      </section>
-
-      <section className="device-facts" style={{ margin: "20px 0" }}>
-        <div>
-          <dt>Operating system</dt>
-          <dd>{device.osVersion}</dd>
-        </div>
-        <div>
-          <dt>Agent version</dt>
-          <dd>{device.agentVersion}</dd>
-        </div>
-        <div>
-          <dt>Last heartbeat</dt>
-          <dd>{device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString() : "Never seen"}</dd>
-        </div>
-        <div>
-          <dt>Telemetry collection</dt>
-          <dd>Minimal technical health metrics only</dd>
-        </div>
-      </section>
-
-      <div className="panel" style={{ marginTop: "24px" }}>
-        <div className="panel-head">
-          <h2>Safe operations</h2>
-        </div>
-        <p className="subtitle">
-          Commands require authorization, an explicit reason, short validity, and are signed and audited.
-          Device locking and network isolation remain simulations.
-        </p>
-        <label>Command reason<input value={reason} onChange={event => setReason(event.target.value)} maxLength={1000} required /></label>
-        <label><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} />I confirm this simulated action on {device.name}</label>
-        <button className="action" onClick={simulateLock} type="button" disabled={sending || !confirmed || !reason.trim()}>
-          Queue simulated lock
-        </button>
-        {message && <p role="status" className="subtitle" style={{ marginTop: "12px" }}>{message}</p>}
-      </div>
-
-      <div className="privacy" style={{ marginTop: "24px" }}>
-        <strong>Privacy disclosure:</strong> SentinelLAN collects only hardware utilization, operating system metadata,
-        and agent availability. No screen contents, keystrokes, personal files, browsing activity, camera/microphone,
-        or device credentials are ever collected.
-      </div>
-    </>
-  );
+  const { lang } = useTranslation(); const session = useCurrentSession(); const isAdmin = session?.role === "Admin";
+  const [message, setMessage] = useState(""); const [assignmentReason, setAssignmentReason] = useState(""); const [assignmentConfirmed, setAssignmentConfirmed] = useState(false); const [revokeReason, setRevokeReason] = useState(""); const [revokeConfirmed, setRevokeConfirmed] = useState(false); const [commandReason, setCommandReason] = useState(""); const [commandConfirmed, setCommandConfirmed] = useState(false); const [sending, setSending] = useState(false); const [assignedUserId, setAssignedUserId] = useState<string | undefined>(undefined); const [users, setUsers] = useState<UserItem[]>([]);
+  const load = useCallback(async () => { const client = new ApiClient(); const [device, telemetry] = await Promise.all([client.device(id), client.deviceTelemetry(id)]); if (isAdmin) { const directory = await client.users(); setUsers(directory); } return { device, telemetry }; }, [id, isAdmin]);
+  const { data, error, refresh } = useLiveQuery(load); const device = data?.device; const telemetry = data?.telemetry ?? [];
+  async function run(action: () => Promise<unknown>, success: string, clear: () => void) { if (sending) return; setSending(true); setMessage(""); try { await action(); setMessage(success); clear(); refresh(); } catch (cause) { setMessage(cause instanceof ApiError && cause.status === 409 ? (lang === "vi" ? "Thao tác xung đột. Hãy tải lại và thử lại." : "This change conflicts with another update. Reload and try again.") : cause instanceof ApiError && cause.status === 403 ? (lang === "vi" ? "Bạn không có quyền thực hiện thao tác này." : "You are not allowed to perform this action.") : (lang === "vi" ? "Thao tác thất bại. Kiểm tra quyền và kết nối API." : "The operation failed. Check your permissions and API connection.")); } finally { setSending(false); } }
+  if (!data && !error) return <p className="subtitle" role="status">{lang === "vi" ? "Đang tải chi tiết thiết bị..." : "Loading device details and telemetry..."}</p>;
+  if (error || !device) return <div className="panel" role="alert"><div className="panel-head"><h2>{lang === "vi" ? "Không thể tải thiết bị" : "Device unavailable"}</h2></div><p className="subtitle">{lang === "vi" ? "Không thể tải thiết bị hoặc telemetry. Kiểm tra quyền và kết nối API." : "Unable to load device or telemetry. Check your permissions and API connection."}</p><button className="action" onClick={refresh}>{lang === "vi" ? "Thử lại" : "Retry"}</button></div>;
+  const latest = telemetry[0] ?? null; const assigned = users.find(user => user.id === device.assignedUserId); const canCommand = !device.isRevoked && (session?.role === "Admin" || session?.role === "Technician");
+  return <>
+    <p className="subtitle">{device.name} · {device.osVersion} · Agent {device.agentVersion}</p>
+    {device.isRevoked && <div className="privacy" role="status"><strong>{lang === "vi" ? "Thiết bị đã thu hồi" : "Device revoked"}</strong><br />{lang === "vi" ? "Credential đã bị thu hồi; lệnh mới và phân công bị khóa." : "Its credential is revoked; new commands and assignments are disabled."}</div>}
+    <section className="metrics" aria-label="Device health metrics"><div className="metric"><span>{lang === "vi" ? "Trạng thái" : "Status"}</span><strong style={{ color: device.isRevoked ? "var(--danger)" : device.isOnline ? "var(--accent)" : "var(--danger)" }}>{device.isRevoked ? (lang === "vi" ? "Đã thu hồi" : "Revoked") : device.isOnline ? "Online" : "Offline"}</strong></div><div className="metric"><span>CPU</span><strong>{latest ? `${latest.cpuPercent.toFixed(1)}%` : "N/A"}</strong></div><div className="metric"><span>RAM</span><strong>{latest ? `${latest.ramPercent.toFixed(1)}%` : "N/A"}</strong></div><div className="metric"><span>Disk</span><strong>{latest ? `${latest.diskPercent.toFixed(1)}%` : "N/A"}</strong></div></section>
+    <section className="device-facts" style={{ margin: "20px 0" }}><div><dt>{lang === "vi" ? "Hệ điều hành" : "Operating system"}</dt><dd>{device.osVersion}</dd></div><div><dt>Agent</dt><dd>{device.agentVersion}</dd></div><div><dt>{lang === "vi" ? "Heartbeat gần nhất" : "Last heartbeat"}</dt><dd>{device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString() : (lang === "vi" ? "Chưa ghi nhận" : "Never seen")}</dd></div><div><dt>{lang === "vi" ? "Người được gán" : "Assigned user"}</dt><dd>{assigned?.displayName ?? device.assignedUserId ?? (lang === "vi" ? "Chưa gán" : "Unassigned")}</dd></div></section>
+    {isAdmin && <div className="panel" style={{ marginTop: 24 }}>
+      <div className="panel-head"><h2>{lang === "vi" ? "Phân công thiết bị" : "Device assignment"}</h2></div>
+      <p className="subtitle">{lang === "vi" ? "Chỉ Employee cùng tổ chức có thể được gán. Để bỏ gán, chọn Chưa gán." : "Only an Employee in this organization can be assigned. Choose Unassigned to remove the assignment."}</p>
+      <label className="form-group" htmlFor="assigned-user">Employee<select id="assigned-user" className="form-select" disabled={device.isRevoked || sending} value={assignedUserId === undefined ? device.assignedUserId ?? "" : assignedUserId} onChange={e => setAssignedUserId(e.target.value)}><option value="">{lang === "vi" ? "Chưa gán" : "Unassigned"}</option>{users.filter(user => user.role === "Employee").map(user => <option key={user.id} value={user.id}>{user.displayName} · {user.email}</option>)}</select></label>
+      <label className="form-group" htmlFor="assignment-reason">{lang === "vi" ? "Lý do" : "Reason"}<textarea id="assignment-reason" className="form-input" minLength={3} maxLength={1000} value={assignmentReason} disabled={device.isRevoked || sending} onChange={e => setAssignmentReason(e.target.value)} /></label>
+      <label><input type="checkbox" checked={assignmentConfirmed} disabled={device.isRevoked || sending} onChange={e => setAssignmentConfirmed(e.target.checked)} /> {lang === "vi" ? "Tôi xác nhận thay đổi phân công." : "I confirm this assignment change."}</label>
+      <div className="btn-row"><button className="action" disabled={sending || device.isRevoked || !assignmentConfirmed || !assignmentReason.trim()} onClick={() => void run(() => new ApiClient().assignDevice(device.id, assignedUserId === undefined ? device.assignedUserId : assignedUserId || null, assignmentReason.trim(), assignmentConfirmed), lang === "vi" ? "Đã cập nhật phân công." : "Assignment updated.", () => { setAssignmentReason(""); setAssignmentConfirmed(false); setAssignedUserId(undefined); })}>{sending ? (lang === "vi" ? "Đang lưu..." : "Saving...") : (lang === "vi" ? "Lưu phân công" : "Save assignment")}</button></div>
+    </div>}
+    {isAdmin && !device.isRevoked && <div className="panel" style={{ marginTop: 24 }}>
+      <div className="panel-head"><h2>{lang === "vi" ? "Thu hồi thiết bị" : "Revoke device"}</h2></div>
+      <p className="subtitle">{lang === "vi" ? "Thu hồi credential và xóa phân công. Thiết bị không thể nhận lệnh hoặc được gán lại." : "Revocation removes the credential and assignment. The device cannot receive commands or be assigned again."}</p>
+      <label className="form-group" htmlFor="revoke-reason">{lang === "vi" ? "Lý do thu hồi" : "Revocation reason"}<textarea id="revoke-reason" className="form-input" minLength={3} maxLength={1000} value={revokeReason} disabled={sending} onChange={e => setRevokeReason(e.target.value)} /></label>
+      <label><input type="checkbox" checked={revokeConfirmed} disabled={sending} onChange={e => setRevokeConfirmed(e.target.checked)} /> {lang === "vi" ? "Tôi hiểu rằng credential sẽ bị thu hồi vĩnh viễn." : "I understand that the credential will be permanently revoked."}</label>
+      <div className="btn-row"><button className="action-danger" disabled={sending || !revokeConfirmed || !revokeReason.trim()} onClick={() => void run(() => new ApiClient().revokeDevice(device.id, revokeReason.trim(), revokeConfirmed), lang === "vi" ? "Đã thu hồi thiết bị." : "Device revoked.", () => { setRevokeReason(""); setRevokeConfirmed(false); })}>{sending ? (lang === "vi" ? "Đang thu hồi..." : "Revoking...") : (lang === "vi" ? "Xác nhận thu hồi" : "Confirm revocation")}</button></div>
+    </div>}
+    {canCommand && <div className="panel" style={{ marginTop: 24 }}><div className="panel-head"><h2>{lang === "vi" ? "Thao tác an toàn" : "Safe operations"}</h2></div><p className="subtitle">{lang === "vi" ? "Lệnh yêu cầu lý do, xác nhận, thời hạn ngắn và được kiểm toán. Khóa thiết bị và cô lập mạng luôn là mô phỏng." : "Commands require a reason, confirmation, short validity, and audit. Locking and network isolation remain simulations."}</p><label className="form-group" htmlFor="command-reason">{lang === "vi" ? "Lý do lệnh" : "Command reason"}<input id="command-reason" className="form-input" value={commandReason} disabled={sending || device.isRevoked} onChange={e => setCommandReason(e.target.value)} maxLength={1000} required /></label><label><input type="checkbox" checked={commandConfirmed} disabled={sending || device.isRevoked} onChange={e => setCommandConfirmed(e.target.checked)} /> {lang === "vi" ? `Tôi xác nhận mô phỏng trên ${device.name}` : `I confirm this simulated action on ${device.name}`}</label><div className="btn-row"><button className="action" onClick={() => void run(() => new ApiClient().createCommand(device.id, "SimulateLock", commandReason.trim(), commandConfirmed), lang === "vi" ? "Đã xếp hàng lệnh mô phỏng." : "Simulated lock command queued and audited.", () => { setCommandReason(""); setCommandConfirmed(false); })} disabled={sending || !commandConfirmed || !commandReason.trim() || device.isRevoked}>{lang === "vi" ? "Xếp hàng khóa mô phỏng" : "Queue simulated lock"}</button></div>{message && <p role="status" className="subtitle">{message}</p>}</div>}
+    <div className="privacy" style={{ marginTop: 24 }}><strong>{lang === "vi" ? "Minh bạch dữ liệu:" : "Privacy disclosure:"}</strong> {lang === "vi" ? "Chỉ thu thập thông số kỹ thuật tối thiểu; không đọc màn hình, phím gõ, tệp cá nhân, camera, microphone hoặc thông tin đăng nhập." : "Only minimal technical health metrics are collected; no screen contents, keystrokes, personal files, camera, microphone, or credentials."}</div>
+  </>;
 }

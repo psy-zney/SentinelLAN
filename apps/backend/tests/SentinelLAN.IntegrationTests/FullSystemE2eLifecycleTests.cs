@@ -127,7 +127,7 @@ public sealed class FullSystemE2eLifecycleTests(SentinelApiFactory factory) : IC
         // 10. Incident Alert Workflow: Create, Acknowledge & Resolve
         using var createAlertReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/alerts")
         {
-            Content = JsonContent.Create(new CreateAlertRequest(enrollment.DeviceId, "High", "E2E test simulated alert"))
+            Content = JsonContent.Create(new CreateAlertRequest(enrollment.DeviceId, "Warning", "E2E test simulated alert"))
         };
         createAlertReq.Headers.Add("X-SentinelLAN-CSRF", "1");
         var createAlertResp = await adminClient.SendAsync(createAlertReq);

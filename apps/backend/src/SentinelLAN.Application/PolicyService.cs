@@ -18,14 +18,16 @@ public interface IPolicyStore
 
 public sealed class PolicyService(IPolicyStore store)
 {
+    private static readonly HashSet<string> AllowedUsbModes = ["Blocked", "ReadOnly", "FullAccess"];
+
     public Task<IReadOnlyList<PolicyDto>> GetPoliciesAsync(ActorContext actor, CancellationToken cancellationToken) =>
         store.GetPoliciesAsync(actor.OrganizationId, cancellationToken);
 
     public async Task<PolicyDto?> CreatePolicyAsync(ActorContext actor, CreatePolicyRequest request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length is < 2 or > 100) return null;
+        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length is < 2 or > 100) return null;
         if (request.IdleTimeoutMinutes is < 1 or > 1440) return null;
-        if (string.IsNullOrWhiteSpace(request.UsbMode) || request.UsbMode.Length > 50) return null;
+        if (string.IsNullOrWhiteSpace(request.UsbMode) || !AllowedUsbModes.Contains(request.UsbMode.Trim(), StringComparer.Ordinal)) return null;
 
         var name = request.Name.Trim();
         if (await store.ExistsNameAsync(actor.OrganizationId, name, null, cancellationToken)) return null;
@@ -55,9 +57,9 @@ public sealed class PolicyService(IPolicyStore store)
 
     public async Task<PolicyDto?> UpdatePolicyAsync(ActorContext actor, Guid id, UpdatePolicyRequest request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length is < 2 or > 100) return null;
+        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length is < 2 or > 100) return null;
         if (request.IdleTimeoutMinutes is < 1 or > 1440) return null;
-        if (string.IsNullOrWhiteSpace(request.UsbMode) || request.UsbMode.Length > 50) return null;
+        if (string.IsNullOrWhiteSpace(request.UsbMode) || !AllowedUsbModes.Contains(request.UsbMode.Trim(), StringComparer.Ordinal)) return null;
 
         var policy = await store.FindPolicyAsync(actor.OrganizationId, id, cancellationToken);
         if (policy is null) return null;

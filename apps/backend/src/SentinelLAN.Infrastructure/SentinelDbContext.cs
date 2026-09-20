@@ -32,7 +32,10 @@ public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> option
         modelBuilder.Entity<RefreshSession>().HasIndex(x => x.TokenHash).IsUnique();
         modelBuilder.Entity<RefreshSession>().HasIndex(x => new { x.FamilyId, x.ExpiresAt });
         modelBuilder.Entity<RefreshSession>().Property(x => x.Version).IsConcurrencyToken();
-        modelBuilder.Entity<Device>().HasIndex(x => new { x.OrganizationId, x.AssignedUserId });
+        modelBuilder.Entity<Device>()
+            .HasIndex(x => new { x.OrganizationId, x.AssignedUserId })
+            .HasFilter("\"AssignedUserId\" IS NOT NULL AND \"IsRevoked\" = FALSE")
+            .IsUnique();
         modelBuilder.Entity<DeviceHeartbeat>().HasIndex(x => new { x.DeviceId, x.IdempotencyKey }).IsUnique();
         modelBuilder.Entity<DeviceEnrollmentToken>().HasIndex(x => x.TokenHash).IsUnique();
         modelBuilder.Entity<DeviceEnrollmentToken>().Property(x => x.UsedAt).IsConcurrencyToken();
