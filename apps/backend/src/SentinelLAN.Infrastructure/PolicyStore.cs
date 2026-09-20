@@ -35,7 +35,7 @@ public sealed class PolicyStore(SentinelDbContext db) : IPolicyStore
         db.Policies.SingleOrDefaultAsync(p => p.OrganizationId == organizationId && p.Id == policyId, cancellationToken);
 
     public Task<bool> ExistsNameAsync(Guid organizationId, string name, Guid? excludePolicyId, CancellationToken cancellationToken) =>
-        db.Policies.AnyAsync(p => p.OrganizationId == organizationId && p.Name.ToUpper() == name.ToUpper() && (!excludePolicyId.HasValue || p.Id != excludePolicyId.Value), cancellationToken);
+        db.Policies.AnyAsync(p => p.OrganizationId == organizationId && string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase) && (!excludePolicyId.HasValue || p.Id != excludePolicyId.Value), cancellationToken);
 
     public Task<bool> DeviceExistsAsync(Guid organizationId, Guid deviceId, CancellationToken cancellationToken) =>
         db.Devices.AnyAsync(d => d.OrganizationId == organizationId && d.Id == deviceId && !d.IsRevoked, cancellationToken);

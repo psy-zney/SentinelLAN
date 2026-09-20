@@ -1,0 +1,22 @@
+[Unit]
+Description=SentinelLAN Endpoint Management & Governance Agent
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/sentinellan-agent
+ExecStart=/opt/sentinellan-agent/sentinellan-agent
+Restart=always
+RestartSec=10
+EnvironmentFile=/etc/sentinellan/agent.env
+LimitNOFILE=65535
+
+# Security hardening
+ProtectSystem=full
+ProtectHome=read-only
+NoNewPrivileges=false
+
+[Install]
+WantedBy=multi-user.target

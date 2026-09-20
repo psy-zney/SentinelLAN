@@ -57,8 +57,7 @@ public sealed class VpsNodeStore(SentinelDbContext dbContext) : IVpsNodeStore
             query = query.Where(x => x.Id != excludeId.Value);
         }
 
-        var normalized = name.ToUpperInvariant();
-        return await query.AnyAsync(x => x.Name.ToUpper(System.Globalization.CultureInfo.InvariantCulture) == normalized, cancellationToken);
+        return await query.AnyAsync(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase), cancellationToken);
     }
 
     public async Task RecordAuditAsync(AuditLog auditLog, CancellationToken cancellationToken = default)
