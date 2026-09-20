@@ -107,4 +107,52 @@ describe("cookie session client", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ detail: "Conflict" }), { status: 409 })));
     await expect(new ApiClient().revokeDevice("d1", "Retirement", true)).rejects.toEqual(expect.objectContaining({ status: 409 } satisfies Partial<ApiError>));
   });
+
+  it("manages Cloud VPS nodes and issues allow-listed service restarts", async () => {
+    const mockNode = {
+      id: "vps-1",
+      organizationId: "org-1",
+      name: "Hanoi-Node-01",
+      host: "103.14.20.1",
+      port: 22,
+      username: "root",
+      status: "Online",
+      cpuPercent: 14.5,
+      ramPercent: 42.0,
+      diskPercent: 35.0,
+      dockerContainersCount: 3,
+      uptime: "up 12 days",
+      osInfo: "Linux 6.8.0-generic",
+      createdAt: "2026-09-20T00:00:00Z",
+      updatedAt: "2026-09-20T00:00:00Z"
+    };
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify([mockNode]), { status: 200, headers: { "Content-Type": "application/json" } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(mockNode), { status: 201, headers: { "Content-Type": "application/json" } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, message: "Restarted" }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new ApiClient();
+    const list = await client.vpsNodes();
+    expect(list).toHaveLength(1);
+    expect(list[0].name).toBe("Hanoi-Node-01");
+
+    const created = await client.createVpsNode({
+      name: "Hanoi-Node-01",
+      host: "103.14.20.1",
+      port: 22,
+      username: "root",
+      privateKey: "-----BEGIN OPENSSH PRIVATE KEY-----\ntest\n-----END OPENSSH PRIVATE KEY-----"
+    });
+    expect(created.status).toBe("Online");
+
+    const restartRes = await client.restartVpsService("vps-1", "nginx", "Crash recovery");
+    expect(restartRes.success).toBe(true);
+    expect(fetchMock.mock.calls.map(call => String(call[0]))).toEqual([
+      expect.stringContaining("/api/v1/vps-nodes"),
+      expect.stringContaining("/api/v1/vps-nodes"),
+      expect.stringContaining("/api/v1/vps-nodes/vps-1/restart-service")
+    ]);
+  });
 });

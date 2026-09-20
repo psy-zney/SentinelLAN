@@ -12,7 +12,10 @@ import type {
   Policy,
   Role,
   TelemetrySnapshot,
-  UserItem
+  UserItem,
+  VpsNode,
+  CreateVpsNodeRequest,
+  VpsConnectionTestResult
 } from "@/types/api";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
@@ -186,6 +189,45 @@ export class ApiClient {
 
   organization() {
     return this.request<OrganizationItem>("/api/v1/organizations");
+  }
+
+  // CLOUD VPS NODES (AGENTLESS SSH)
+  vpsNodes() {
+    return this.request<VpsNode[]>("/api/v1/vps-nodes");
+  }
+
+  vpsNode(id: string) {
+    return this.request<VpsNode>(`/api/v1/vps-nodes/${id}`);
+  }
+
+  createVpsNode(data: CreateVpsNodeRequest) {
+    return this.request<VpsNode>("/api/v1/vps-nodes", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+  }
+
+  deleteVpsNode(id: string) {
+    return this.request<void>(`/api/v1/vps-nodes/${id}`, { method: "DELETE" });
+  }
+
+  testVpsConnection(id: string) {
+    return this.request<VpsConnectionTestResult>(`/api/v1/vps-nodes/${id}/test-connection`, {
+      method: "POST"
+    });
+  }
+
+  refreshVpsMetrics(id: string) {
+    return this.request<VpsNode>(`/api/v1/vps-nodes/${id}/refresh-metrics`, {
+      method: "POST"
+    });
+  }
+
+  restartVpsService(id: string, serviceName: string, reason: string) {
+    return this.request<{ success: boolean; message: string; output?: string }>(`/api/v1/vps-nodes/${id}/restart-service`, {
+      method: "POST",
+      body: JSON.stringify({ serviceName, reason })
+    });
   }
 }
 

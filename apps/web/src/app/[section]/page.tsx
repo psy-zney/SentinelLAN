@@ -5,6 +5,7 @@ import { CommandsView } from "@/components/commands-view";
 import { AlertsView } from "@/components/alerts-view";
 import { AuditView } from "@/components/audit-view";
 import { UsersView } from "@/components/users-view";
+import { VpsNodesView } from "@/components/vps-nodes-view";
 import type { Role } from "@/types/api";
 
 type SectionConfig = {
@@ -16,6 +17,13 @@ type SectionConfig = {
 };
 
 const sections: Record<string, SectionConfig> = {
+  "vps-nodes": {
+    title: "Cloud VPS",
+    eyebrow: "Cloud Infrastructure",
+    subtitle: "Remote Linux Cloud VPS management via AES-256 Vault encrypted SSH private keys.",
+    allowedRoles: ["Admin", "Technician"],
+    render: () => <VpsNodesView />
+  },
   policies: {
     title: "Policies",
     eyebrow: "Governance",

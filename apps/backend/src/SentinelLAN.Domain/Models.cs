@@ -89,3 +89,28 @@ public sealed class Alert : Entity, ITenantOwned
 public sealed class SecurityEvent : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public Guid? DeviceId { get; init; } public required string Type { get; init; } public required string Summary { get; init; } }
 public sealed class AuditLog : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public required Guid ActorId { get; init; } public Guid? DeviceId { get; init; } public required string Action { get; init; } public required string Reason { get; init; } public required string Outcome { get; set; } }
 
+public sealed class VpsNode : Entity, ITenantOwned
+{
+    private static readonly HashSet<string> AllowedServices = ["nginx", "docker", "sentinellan-agent", "cron", "systemd-resolved"];
+
+    public Guid OrganizationId { get; init; }
+    public required string Name { get; set; }
+    public required string Host { get; set; }
+    public int Port { get; set; } = 22;
+    public required string Username { get; set; }
+    public required string EncryptedPrivateKey { get; set; }
+    public string Status { get; set; } = "Offline";
+    public double? CpuPercent { get; set; }
+    public double? RamPercent { get; set; }
+    public double? DiskPercent { get; set; }
+    public int? DockerContainersCount { get; set; }
+    public string? Uptime { get; set; }
+    public string? OsInfo { get; set; }
+    public DateTimeOffset? LastCheckedAt { get; set; }
+    public string? ErrorMessage { get; set; }
+
+    public static bool IsAllowedService(string serviceName) =>
+        !string.IsNullOrWhiteSpace(serviceName) && AllowedServices.Contains(serviceName.Trim().ToLowerInvariant());
+
+    public static IReadOnlyCollection<string> GetAllowedServices() => AllowedServices;
+}

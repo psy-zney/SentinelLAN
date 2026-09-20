@@ -60,6 +60,11 @@ builder.Services.AddScoped<PolicyService>();
 builder.Services.AddScoped<IAlertStore, AlertStore>();
 builder.Services.AddScoped<IAlertDeviceLookup, AlertDeviceLookup>();
 builder.Services.AddScoped<AlertService>();
+var serverVaultKey = builder.Configuration["SENTINELLAN_SERVER_VAULT_KEY"] ?? "development-server-vault-key-32-bytes-long!";
+builder.Services.AddSingleton<IVpsVaultService>(new VpsVaultService(serverVaultKey));
+builder.Services.AddSingleton<IVpsSshService, SshNetVpsSshService>();
+builder.Services.AddScoped<IVpsNodeStore, VpsNodeStore>();
+builder.Services.AddScoped<VpsNodeService>();
 builder.Services.AddSingleton<AuthCookieManager>();
 builder.Services
     .AddAuthentication(SentinelAuthenticationDefaults.Scheme)
@@ -617,6 +622,57 @@ v1.MapGet("/organizations", async (HttpContext http, SentinelDbContext db, Cance
     return org is null ? Results.NotFound() : Results.Ok(new OrganizationSummaryDto(org.Id, org.Code, org.Name, org.CreatedAt));
 }).RequireAuthorization(AuthorizationPolicies.Admin);
 
+// CLOUD VPS NODES (AGENTLESS SSH)
+v1.MapGet("/vps-nodes", async (HttpContext http, VpsNodeService vpsService, CancellationToken ct) =>
+{
+    var actor = http.User.ToActorContext()!.Value;
+    var nodes = await vpsService.GetNodesAsync(actor, ct);
+    return Results.Ok(nodes);
+}).RequireAuthorization(AuthorizationPolicies.Technician);
+
+v1.MapGet("/vps-nodes/{id:guid}", async (Guid id, HttpContext http, VpsNodeService vpsService, CancellationToken ct) =>
+{
+    var actor = http.User.ToActorContext()!.Value;
+    var node = await vpsService.GetNodeByIdAsync(actor, id, ct);
+    return node is null ? Results.NotFound() : Results.Ok(node);
+}).RequireAuthorization(AuthorizationPolicies.Technician);
+
+v1.MapPost("/vps-nodes", async (CreateVpsNodeRequest req, HttpContext http, VpsNodeService vpsService, CancellationToken ct) =>
+{
+    var actor = http.User.ToActorContext()!.Value;
+    var created = await vpsService.CreateNodeAsync(actor, req, ct);
+    return created is null
+        ? Results.BadRequest(new ProblemDetails { Title = "Invalid VPS node data", Detail = "Name, host, port, username, and a valid OpenSSH private key are required." })
+        : Results.Created($"/api/v1/vps-nodes/{created.Id}", created);
+}).RequireAuthorization(AuthorizationPolicies.Admin);
+
+v1.MapDelete("/vps-nodes/{id:guid}", async (Guid id, HttpContext http, VpsNodeService vpsService, CancellationToken ct) =>
+{
+    var actor = http.User.ToActorContext()!.Value;
+    var deleted = await vpsService.DeleteNodeAsync(actor, id, ct);
+    return deleted ? Results.NoContent() : Results.NotFound();
+}).RequireAuthorization(AuthorizationPolicies.Admin);
+
+v1.MapPost("/vps-nodes/{id:guid}/test-connection", async (Guid id, HttpContext http, VpsNodeService vpsService, CancellationToken ct) =>
+{
+    var actor = http.User.ToActorContext()!.Value;
+    var result = await vpsService.TestConnectionAsync(actor, id, ct);
+    return Results.Ok(result);
+}).RequireAuthorization(AuthorizationPolicies.Technician);
+
+v1.MapPost("/vps-nodes/{id:guid}/refresh-metrics", async (Guid id, HttpContext http, VpsNodeService vpsService, CancellationToken ct) =>
+{
+    var actor = http.User.ToActorContext()!.Value;
+    var node = await vpsService.RefreshMetricsAsync(actor, id, ct);
+    return node is null ? Results.NotFound() : Results.Ok(node);
+}).RequireAuthorization(AuthorizationPolicies.Technician);
+
+v1.MapPost("/vps-nodes/{id:guid}/restart-service", async (Guid id, RestartVpsServiceRequest req, HttpContext http, VpsNodeService vpsService, CancellationToken ct) =>
+{
+    var actor = http.User.ToActorContext()!.Value;
+    var result = await vpsService.RestartServiceAsync(actor, id, req, ct);
+    return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+}).RequireAuthorization(AuthorizationPolicies.Technician);
 
 app.MapHub<UpdatesHub>("/hubs/updates").RequireAuthorization(AuthorizationPolicies.ViewDevices);
 app.Run();

@@ -59,3 +59,49 @@ export type OrganizationItem = {
   name: string;
   createdAt: string;
 };
+
+export type VpsNodeStatus = "Online" | "Offline" | "Error" | "Connecting";
+
+export type VpsNode = {
+  id: string;
+  organizationId: string;
+  name: string;
+  host: string;
+  port: number;
+  username: string;
+  status: VpsNodeStatus;
+  cpuPercent?: number | null;
+  ramPercent?: number | null;
+  diskPercent?: number | null;
+  dockerContainersCount?: number | null;
+  uptime?: string | null;
+  osInfo?: string | null;
+  lastCheckedAt?: string | null;
+  errorMessage?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateVpsNodeRequest = {
+  name: string;
+  host: string;
+  port: number;
+  username: string;
+  privateKey: string;
+};
+
+export type VpsConnectionTestResult = {
+  success: boolean;
+  message: string;
+  osInfo?: string | null;
+  uptime?: string | null;
+  cpuPercent?: number | null;
+  ramPercent?: number | null;
+  diskPercent?: number | null;
+  dockerContainersCount?: number | null;
+};
+
+export type RestartVpsServiceRequest = {
+  serviceName: string;
+  reason: string;
+};

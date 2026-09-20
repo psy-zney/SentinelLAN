@@ -22,6 +22,7 @@ const linkDefs: Record<Exclude<Role, "Agent">, readonly (readonly [TranslationKe
   Admin: [
     ["dashboard", "/dashboard"],
     ["devices", "/devices"],
+    ["vpsNodes", "/vps-nodes"],
     ["policies", "/policies"],
     ["commands", "/commands"],
     ["alerts", "/alerts"],
@@ -31,6 +32,7 @@ const linkDefs: Record<Exclude<Role, "Agent">, readonly (readonly [TranslationKe
   Technician: [
     ["dashboard", "/dashboard"],
     ["devices", "/devices"],
+    ["vpsNodes", "/vps-nodes"],
     ["policies", "/policies"],
     ["commands", "/commands"],
     ["alerts", "/alerts"]
@@ -41,6 +43,7 @@ const linkDefs: Record<Exclude<Role, "Agent">, readonly (readonly [TranslationKe
 };
 
 const sectionMetaMap: Record<string, { titleKey: TranslationKey; eyebrowKey: TranslationKey }> = {
+  "Cloud VPS": { titleKey: "vpsNodes", eyebrowKey: "eyebrowCloud" },
   "Policies": { titleKey: "policies", eyebrowKey: "eyebrowGovernance" },
   "Command Center": { titleKey: "commands", eyebrowKey: "eyebrowOperations" },
   "Alerts & Incidents": { titleKey: "alerts", eyebrowKey: "eyebrowMonitoring" },

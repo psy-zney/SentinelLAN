@@ -23,6 +23,7 @@ public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> option
     public DbSet<Alert> Alerts => Set<Alert>();
     public DbSet<SecurityEvent> SecurityEvents => Set<SecurityEvent>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<VpsNode> VpsNodes => Set<VpsNode>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -48,6 +49,8 @@ public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> option
             .IsRequired()
             .IsConcurrencyToken()
             .ValueGeneratedNever();
+        modelBuilder.Entity<VpsNode>().HasIndex(x => new { x.OrganizationId, x.Name });
+        modelBuilder.Entity<VpsNode>().HasIndex(x => new { x.OrganizationId, x.Host });
         foreach (var type in modelBuilder.Model.GetEntityTypes().Where(x => typeof(ITenantOwned).IsAssignableFrom(x.ClrType)))
             modelBuilder.Entity(type.ClrType).HasIndex(nameof(ITenantOwned.OrganizationId));
     }
