@@ -482,23 +482,24 @@ export function VpsNodesView() {
       {/* Modal: + Thêm VPS Node */}
       {showAddModal && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal-card" style={{ maxWidth: "560px" }}>
+          <div className="modal" style={{ maxWidth: "560px", background: "#ffffff", color: "var(--ink)" }}>
             <div className="modal-header">
-              <h3>{t("addVpsNodeBtn")}</h3>
-              <button type="button" className="close-btn" onClick={() => setShowAddModal(false)}>✕</button>
+              <h3 style={{ margin: 0, fontWeight: 700 }}>{t("addVpsNodeBtn")}</h3>
+              <button type="button" className="modal-close" onClick={() => setShowAddModal(false)} aria-label={t("cancel")}>✕</button>
             </div>
 
-            <div className="notice" style={{ marginBottom: "1rem" }}>
-              <p style={{ margin: 0, fontSize: "0.82rem" }}>
+            <div className="privacy" style={{ marginBottom: "1.25rem", padding: "12px 14px" }}>
+              <p style={{ margin: 0, fontSize: "0.82rem", lineHeight: 1.5 }}>
                 🔒 <strong>Zero-Knowledge Vault:</strong> {t("vpsVaultNotice")}
               </p>
             </div>
 
             <form onSubmit={handleCreateNode}>
-              <div className="form-group" style={{ marginBottom: "0.85rem" }}>
+              <div className="form-group">
                 <label htmlFor="vps-name">{t("vpsNameLabel")} *</label>
                 <input
                   id="vps-name"
+                  className="form-input"
                   type="text"
                   required
                   placeholder={t("vpsNamePlaceholder")}
@@ -507,11 +508,12 @@ export function VpsNodesView() {
                 />
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "0.75rem", marginBottom: "0.85rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "0.75rem" }}>
                 <div className="form-group">
                   <label htmlFor="vps-host">{t("vpsHostLabel")} *</label>
                   <input
                     id="vps-host"
+                    className="form-input"
                     type="text"
                     required
                     placeholder={t("vpsHostPlaceholder")}
@@ -523,6 +525,7 @@ export function VpsNodesView() {
                   <label htmlFor="vps-port">{t("vpsPortLabel")} *</label>
                   <input
                     id="vps-port"
+                    className="form-input"
                     type="number"
                     min={1}
                     max={65535}
@@ -533,10 +536,11 @@ export function VpsNodesView() {
                 </div>
               </div>
 
-              <div className="form-group" style={{ marginBottom: "0.85rem" }}>
+              <div className="form-group">
                 <label htmlFor="vps-username">{t("vpsUsernameLabel")} *</label>
                 <input
                   id="vps-username"
+                  className="form-input"
                   type="text"
                   required
                   placeholder={t("vpsUsernamePlaceholder")}
@@ -545,40 +549,49 @@ export function VpsNodesView() {
                 />
               </div>
 
-              <div className="form-group" style={{ marginBottom: "0.85rem" }}>
+              <div className="form-group">
                 <label htmlFor="vps-key">{t("vpsPrivateKeyLabel")} *</label>
                 <textarea
                   id="vps-key"
+                  className="form-input"
                   required
                   rows={5}
                   placeholder={t("vpsPrivateKeyPlaceholder")}
                   value={privateKey}
                   onChange={e => setPrivateKey(e.target.value)}
-                  style={{ fontFamily: "monospace", fontSize: "0.8rem" }}
+                  style={{ fontFamily: "monospace", fontSize: "0.8rem", resize: "vertical" }}
                 />
               </div>
 
               {testConnMessage && (
-                <div style={{ padding: "0.5rem 0.75rem", background: "rgba(0,0,0,0.04)", borderRadius: "4px", fontSize: "0.82rem", marginBottom: "0.85rem" }}>
+                <div style={{
+                  padding: "0.65rem 0.85rem",
+                  background: isTestingConn ? "var(--accent-soft)" : "rgba(12, 38, 38, 0.05)",
+                  borderRadius: "8px",
+                  fontSize: "0.82rem",
+                  marginBottom: "1rem",
+                  color: "var(--ink)",
+                  border: "1px solid #cad9d4"
+                }}>
                   {testConnMessage}
                 </div>
               )}
 
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1.25rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1.5rem" }}>
                 <button
                   type="button"
-                  className="action"
+                  className="action-outline"
                   disabled={isTestingConn}
                   onClick={handleTestConnection}
                 >
                   {isTestingConn ? t("testingConnection") : `🔌 ${t("testConnectionBtn")}`}
                 </button>
 
-                <div style={{ display: "flex", gap: "0.5rem" }}>
-                  <button type="button" className="action" onClick={() => setShowAddModal(false)}>
+                <div style={{ display: "flex", gap: "0.6rem" }}>
+                  <button type="button" className="action-outline" onClick={() => setShowAddModal(false)}>
                     {t("cancel")}
                   </button>
-                  <button type="submit" className="action primary" disabled={submittingAdd}>
+                  <button type="submit" className="action" disabled={submittingAdd}>
                     {submittingAdd ? t("saving") : t("save")}
                   </button>
                 </div>
@@ -591,10 +604,10 @@ export function VpsNodesView() {
       {/* Modal: Khởi động lại dịch vụ */}
       {showRestartModal && selectedNodeForRestart && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal-card" style={{ maxWidth: "480px" }}>
+          <div className="modal" style={{ maxWidth: "480px", background: "#ffffff", color: "var(--ink)" }}>
             <div className="modal-header">
-              <h3>⚡ {t("vpsServiceRestartTitle")}</h3>
-              <button type="button" className="close-btn" onClick={() => setShowRestartModal(false)}>✕</button>
+              <h3 style={{ margin: 0, fontWeight: 700 }}>⚡ {t("vpsServiceRestartTitle")}</h3>
+              <button type="button" className="modal-close" onClick={() => setShowRestartModal(false)} aria-label={t("cancel")}>✕</button>
             </div>
 
             <p style={{ margin: "0 0 1rem", fontSize: "0.85rem", color: "var(--muted)" }}>
@@ -602,10 +615,11 @@ export function VpsNodesView() {
             </p>
 
             <form onSubmit={handleRestartService}>
-              <div className="form-group" style={{ marginBottom: "0.85rem" }}>
+              <div className="form-group">
                 <label htmlFor="service-select">{t("vpsServiceNameLabel")}</label>
                 <select
                   id="service-select"
+                  className="form-select"
                   value={serviceName}
                   onChange={e => setServiceName(e.target.value)}
                 >
@@ -615,37 +629,39 @@ export function VpsNodesView() {
                 </select>
               </div>
 
-              <div className="form-group" style={{ marginBottom: "0.85rem" }}>
+              <div className="form-group">
                 <label htmlFor="service-reason">{t("vpsServiceReasonLabel")} *</label>
                 <textarea
                   id="service-reason"
+                  className="form-input"
                   required
                   rows={3}
                   placeholder={t("vpsServiceReasonPlaceholder")}
                   value={restartReason}
                   onChange={e => setRestartReason(e.target.value)}
+                  style={{ resize: "vertical" }}
                 />
               </div>
 
               {restartResult && (
                 <div style={{
-                  padding: "0.5rem 0.75rem",
+                  padding: "0.65rem 0.85rem",
                   background: restartResult.success ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
-                  borderLeft: `3px solid ${restartResult.success ? "#10b981" : "#ef4444"}`,
-                  borderRadius: "4px",
+                  borderLeft: `4px solid ${restartResult.success ? "#10b981" : "#ef4444"}`,
+                  borderRadius: "6px",
                   fontSize: "0.82rem",
-                  marginBottom: "0.85rem",
+                  marginBottom: "1rem",
                   color: restartResult.success ? "#047857" : "#b91c1c"
                 }}>
                   {restartResult.message}
                 </div>
               )}
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "1.25rem" }}>
-                <button type="button" className="action" onClick={() => setShowRestartModal(false)}>
+              <div className="btn-row" style={{ marginTop: "1.5rem" }}>
+                <button type="button" className="action-outline" onClick={() => setShowRestartModal(false)}>
                   {t("cancel")}
                 </button>
-                <button type="submit" className="action primary" disabled={submittingRestart || !restartReason.trim()}>
+                <button type="submit" className="action" disabled={submittingRestart || !restartReason.trim()}>
                   {submittingRestart ? "Executing..." : t("vpsRestartConfirmBtn")}
                 </button>
               </div>

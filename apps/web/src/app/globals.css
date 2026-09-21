@@ -63,12 +63,13 @@ th { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-s
 .action-outline { border: 1px solid #cad9d4; border-radius: 8px; background: white; color: var(--ink); padding: 7px 12px; font-size: .8rem; font-weight: 600; cursor: pointer; }
 .action-outline:hover { background: #f4f7f5; }
 .action-danger { border: 0; border-radius: 8px; background: var(--danger); color: white; padding: 7px 12px; font-size: .8rem; font-weight: 700; cursor: pointer; }
-.modal-backdrop { position: fixed; inset: 0; background: rgba(12, 38, 38, .5); backdrop-filter: blur(4px); display: grid; place-items: center; padding: 20px; z-index: 50; }
-.modal { background: white; border: 1px solid #dce6e2; border-radius: 18px; width: min(540px, 100%); padding: 28px; box-shadow: 0 25px 50px -12px rgba(12, 38, 38, .25); animation: modal-in .15s ease-out; }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(12, 38, 38, .6); backdrop-filter: blur(4px); display: grid; place-items: center; padding: 20px; z-index: 50; }
+.modal, .modal-card { background: #ffffff; border: 1px solid #dce6e2; border-radius: 18px; width: min(560px, 100%); padding: 28px; box-shadow: 0 25px 50px -12px rgba(12, 38, 38, .35); animation: modal-in .15s ease-out; color: var(--ink); }
 @keyframes modal-in { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: scale(1); } }
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .modal-header h3 { margin: 0; font-size: 1.2rem; }
-.modal-close { background: none; border: 0; font-size: 1.3rem; color: var(--muted); cursor: pointer; }
+.modal-close, .close-btn { background: none; border: 0; font-size: 1.3rem; color: var(--muted); cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+.modal-close:hover, .close-btn:hover { background: var(--accent-soft); color: var(--accent); }
 .tabs-bar { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid #e7eeeb; padding-bottom: 8px; }
 .tab-btn { background: none; border: 0; padding: 8px 16px; border-radius: 8px; font-weight: 600; color: var(--muted); cursor: pointer; }
 .tab-btn.active { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
