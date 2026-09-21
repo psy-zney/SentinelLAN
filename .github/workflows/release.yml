@@ -33,21 +33,25 @@ jobs:
       - name: Run Backend Tests
         run: dotnet test SentinelLAN.slnx -c Release --no-build
 
-      - name: Setup Node.js 22
+      - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "24.x"
+          cache: npm
 
       - name: Install Web Dependencies
-        run: npm.cmd --prefix apps/web ci
+        run: npm.cmd ci
 
       - name: Web Lint & Typecheck
         run: |
-          npm.cmd --prefix apps/web run lint
-          npm.cmd --prefix apps/web run typecheck
+          npm.cmd run lint
+          npm.cmd run typecheck
 
       - name: Web Unit Tests
-        run: npm.cmd --prefix apps/web test
+        run: npm.cmd test
+
+      - name: Build Web Production
+        run: npm.cmd run build
 
   build-windows-agent:
     name: Build Windows Agent (.exe)

@@ -57,7 +57,10 @@ public sealed class VpsNodeStore(SentinelDbContext dbContext) : IVpsNodeStore
             query = query.Where(x => x.Id != excludeId.Value);
         }
 
-        return await query.AnyAsync(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase), cancellationToken);
+#pragma warning disable CA1862, CA1304, CA1311 // Required for EF Core LINQ translation across PostgreSQL and InMemory
+        var normalized = name.ToUpper();
+        return await query.AnyAsync(x => x.Name.ToUpper() == normalized, cancellationToken);
+#pragma warning restore CA1862, CA1304, CA1311
     }
 
     public async Task RecordAuditAsync(AuditLog auditLog, CancellationToken cancellationToken = default)
