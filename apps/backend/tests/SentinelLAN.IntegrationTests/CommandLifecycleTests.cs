@@ -60,6 +60,82 @@ public sealed class CommandLifecycleTests(SentinelApiFactory factory) : IClassFi
     }
 
     [Fact]
+    public async Task LostPollResponseRedeliversTheSameSignedCommandAfterLeaseWithoutCreatingAReplay()
+    {
+        var device = await SeedDeviceAsync();
+        using var admin = await OperatorAsync();
+        using var agent = AgentClient(device.Id);
+        var command = await CreateAsync(admin, device.Id, "SimulateLock");
+
+        // The server commits the delivery, but the caller drops the response as if the connection failed.
+        var firstDelivery = await agent.PostAsync("/api/v1/agent/commands/poll", null);
+        Assert.Equal(HttpStatusCode.OK, firstDelivery.StatusCode);
+        var originalEnvelope = await firstDelivery.Content.ReadFromJsonAsync<DeviceCommand>();
+        Assert.NotNull(originalEnvelope);
+        Assert.Equal(HttpStatusCode.NoContent, (await agent.PostAsync("/api/v1/agent/commands/poll", null)).StatusCode);
+
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<SentinelDbContext>();
+            var stored = await db.Commands.SingleAsync(item => item.Id == command.Id);
+            stored.DeliveryLeaseExpiresAt = DateTimeOffset.UtcNow.AddSeconds(-1);
+            await db.SaveChangesAsync();
+        }
+
+        var redeliveryResponses = await Task.WhenAll(Enumerable.Range(0, 3)
+            .Select(_ => agent.PostAsync("/api/v1/agent/commands/poll", null)));
+        var redelivery = Assert.Single(redeliveryResponses, response => response.StatusCode == HttpStatusCode.OK);
+        Assert.Equal(2, redeliveryResponses.Count(response => response.StatusCode == HttpStatusCode.NoContent));
+        var redeliveredEnvelope = await redelivery.Content.ReadFromJsonAsync<DeviceCommand>();
+        Assert.NotNull(redeliveredEnvelope);
+        Assert.Equal(originalEnvelope.Id, redeliveredEnvelope.Id);
+        Assert.Equal(originalEnvelope.Nonce, redeliveredEnvelope.Nonce);
+        Assert.Equal(originalEnvelope.Signature, redeliveredEnvelope.Signature);
+        Assert.True(redeliveredEnvelope.DeliveryLeaseExpiresAt > DateTimeOffset.UtcNow);
+        Assert.Equal(HttpStatusCode.Accepted, (await agent.PostAsJsonAsync(
+            $"/api/v1/agent/commands/{command.Id}/result",
+            new CommandResultRequest(true, "Simulated after redelivery"))).StatusCode);
+    }
+
+    [Fact]
+    public async Task PollExpiresDeliveredCommandsAfterTheirSignedEnvelopeExpires()
+    {
+        var device = await SeedDeviceAsync();
+        using var admin = await OperatorAsync();
+        using var agent = AgentClient(device.Id);
+        Guid commandId;
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<SentinelDbContext>();
+            var now = DateTimeOffset.UtcNow;
+            var expired = new DeviceCommand
+            {
+                OrganizationId = device.OrganizationId,
+                DeviceId = device.Id,
+                IssuedByUserId = Guid.NewGuid(),
+                Type = "SimulateLock",
+                Reason = "Expired before poll retry",
+                Nonce = Guid.NewGuid().ToString("N"),
+                Signature = "expired-envelope",
+                IssuedAt = now.AddMinutes(-2),
+                ExpiresAt = now.AddMinutes(-1),
+                Status = DeviceCommandStatus.Delivered,
+                DeliveryLeaseExpiresAt = now.AddSeconds(-1)
+            };
+            commandId = expired.Id;
+            db.Add(expired);
+            await db.SaveChangesAsync();
+        }
+
+        Assert.Equal(HttpStatusCode.NoContent, (await agent.PostAsync("/api/v1/agent/commands/poll", null)).StatusCode);
+        await using var verifyScope = factory.Services.CreateAsyncScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<SentinelDbContext>();
+        var storedExpired = await verifyDb.Commands.SingleAsync(item => item.Id == commandId);
+        Assert.Equal(DeviceCommandStatus.Expired, storedExpired.Status);
+        Assert.Null(storedExpired.DeliveryLeaseExpiresAt);
+    }
+
+    [Fact]
     public async Task RejectsMissingConfirmationUnsupportedTypeExpiryPendingResultAndForeignDevice()
     {
         var device = await SeedDeviceAsync();

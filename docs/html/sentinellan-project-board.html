@@ -186,7 +186,7 @@
       <div class="hero-status" aria-label="Tóm tắt trạng thái">
         <div class="stat open"><span>Trạng thái Production</span><strong>Chưa đủ chuẩn Prod · Củng cố mã & docs</strong></div>
         <div class="stat done"><span>Kiểm thử đã chạy 25/09</span><strong>25 Vitest + 6 Playwright | 39 Mobile Jest</strong></div>
-        <div class="stat done"><span>.NET đã chạy 25/09</span><strong>142/142 pass · 7 Maestro scripts chưa chạy</strong></div>
+        <div class="stat done"><span>.NET đã chạy 25/09</span><strong>145/145 pass · 7 Maestro scripts chưa chạy</strong></div>
         <div class="stat open"><span>Cổng Môi trường</span><strong>Chờ Docker & PostgreSQL thật</strong></div>
       </div>
     </div>
@@ -257,7 +257,7 @@
 
     <section id="weeks">
       <p class="subtitle">
-        ⚠️ <strong>Đánh giá thực tế (25/09/2026):</strong> Đã chạy 142/142 .NET, 25/25 Vitest, 6/6 Playwright Chromium và 39/39 Mobile Jest; 7 YAML Maestro là kịch bản chưa chạy vì thiếu adb/Android SDK. Production Agent có queue telemetry, nonce và biên lai chờ trong file mã hóa, còn Development mặc định dùng RAM. <strong>Chưa xác nhận hoàn thiện Production</strong> vì PostgreSQL runtime/restore drill và kiểm thử Agent sau restart trên host triển khai còn cần nghiệm thu.
+        ⚠️ <strong>Đánh giá thực tế (25/09/2026):</strong> Đã chạy 145/145 .NET, 25/25 Vitest, 6/6 Playwright Chromium và 39/39 Mobile Jest; 7 YAML Maestro là kịch bản chưa chạy vì thiếu adb/Android SDK. Production Agent có queue telemetry, nonce và biên lai chờ trong file mã hóa, còn Development mặc định dùng RAM. <strong>Chưa xác nhận hoàn thiện Production</strong> vì PostgreSQL runtime/restore drill và kiểm thử Agent sau restart trên host triển khai còn cần nghiệm thu.
       </p>
 
       <div class="section-head">
@@ -377,7 +377,7 @@
           <div class="panel-body">
             <ol class="log">
               <li><time>Kiểm soát Vận hành & Bảo mật (24/09/2026)</time><p>Chặn demo credentials ở môi trường Production; Khóa tài khoản thu hồi phiên tức thì (IsLocked + SessionRevocation); SSH Host Key Pinning (SHA256); Two-Phase Nonce VPS Restart (dành trước nonce trong PostgreSQL); chuẩn hóa API QR Code, Incident và Work Order CMMS.</p></li>
-              <li><time>Kiểm thử local (25/09/2026)</time><p>Build .NET sạch; 142/142 test .NET, 25/25 Vitest, 6/6 Playwright Chromium và 39/39 Mobile Jest đạt. Web/mobile typecheck và lint, web production build đạt. 7 Maestro YAML scripts chưa chạy do thiếu adb/Android SDK; PostgreSQL runtime và restore drill chưa kiểm chứng.</p></li>
+              <li><time>Kiểm thử local (25/09/2026)</time><p>Build .NET sạch; 145/145 test .NET, 25/25 Vitest, 6/6 Playwright Chromium và 39/39 Mobile Jest đạt. Web/mobile typecheck và lint, web production build đạt. 7 Maestro YAML scripts chưa chạy do thiếu adb/Android SDK; PostgreSQL runtime và restore drill chưa kiểm chứng.</p></li>
               <li><time>Cloud VPS SSH Governance</time><p>Quản lý VPS dùng Private Key Vault AES-256-GCM ở server, SSH.NET thu thập metrics, Host Key Pinning và thao tác restart có xác nhận/nonces. Đây không phải Zero-Knowledge vault.</p></li>
               <li><time>Release v1.0.0 Pipeline</time><p>Thiết lập GitHub Actions Release tự động, script đóng gói build-release.ps1 / build-release.sh, mã băm SHA256SUMS và tài liệu Release Notes.</p></li>
               <li><time>Enrollment Audit</time><p>Ghi AuditLog đầy đủ cho AgentEnrolled (Success) và AgentEnrollmentFailed (Token already used / Token expired) có gắn OrganizationId.</p></li>
@@ -394,7 +394,7 @@
         <article class="panel">
           <div class="panel-head"><h3>Kiểm thử working tree ngày 25/09/2026</h3></div>
           <div class="panel-body">
-            <div class="gate done"><b>.NET suite</b><small>dotnet test SentinelLAN.slnx --no-build: 142/142 pass (gồm 20 Agent, 50 integration); chạy ngoài sandbox để Windows DPAPI hoạt động.</small></div>
+            <div class="gate done"><b>.NET suite</b><small>dotnet test SentinelLAN.slnx --no-build: 145/145 pass (gồm 20 Agent, 52 integration); chạy ngoài sandbox để Windows DPAPI hoạt động.</small></div>
             <div class="gate done"><b>Web unit tests</b><small>npm.cmd test: 25/25 Vitest pass; lint, typecheck và production build đạt.</small></div>
             <div class="gate done"><b>Playwright Chromium</b><small>npm.cmd run test:e2e: 6/6 pass với API Debug DLL trong Development, chạy ngoài sandbox.</small></div>
             <div class="gate done"><b>Mobile tests</b><small>npm.cmd run test:mobile: 39/39 Jest pass; lint và typecheck đạt.</small></div>

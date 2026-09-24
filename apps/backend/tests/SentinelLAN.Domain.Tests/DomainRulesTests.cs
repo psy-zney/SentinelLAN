@@ -38,6 +38,29 @@ public sealed class DomainRulesTests
     }
 
     [Fact]
+    public void CommandDeliveryLeaseAllowsSameEnvelopeRedeliveryOnlyAfterLeaseAndBeforeExpiry()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var command = new DeviceCommand
+        {
+            OrganizationId = Guid.NewGuid(), DeviceId = Guid.NewGuid(), IssuedByUserId = Guid.NewGuid(),
+            Type = "SimulateLock", Reason = "Authorized demo", Nonce = "stable-nonce", Signature = "stable-signature",
+            IssuedAt = now, ExpiresAt = now.AddMinutes(1), Status = DeviceCommandStatus.Pending
+        };
+
+        Assert.True(command.TryLeaseForDelivery(now, TimeSpan.FromSeconds(30)));
+        Assert.Equal(DeviceCommandStatus.Delivered, command.Status);
+        Assert.Equal(now.AddSeconds(30), command.DeliveryLeaseExpiresAt);
+        Assert.False(command.CanDeliver(now.AddSeconds(29)));
+        Assert.True(command.CanDeliver(now.AddSeconds(30)));
+        Assert.True(command.TryLeaseForDelivery(now.AddSeconds(30), TimeSpan.FromSeconds(30)));
+        Assert.Equal("stable-nonce", command.Nonce);
+        Assert.Equal("stable-signature", command.Signature);
+        Assert.Equal(now.AddMinutes(1), command.DeliveryLeaseExpiresAt);
+        Assert.False(command.CanDeliver(now.AddMinutes(1)));
+    }
+
+    [Fact]
     public void RefreshSessionRotatesOnceAndCanBeRevoked()
     {
         var now = DateTimeOffset.UtcNow;

@@ -810,7 +810,7 @@
     <div class="stats-bar">
       <div class="stat-pill">
         <div class="stat-label">Kiểm thử Backend</div>
-        <div class="stat-val">142/142 .NET tests pass · 25/09/2026</div>
+        <div class="stat-val">145/145 .NET tests pass · 25/09/2026</div>
       </div>
       <div class="stat-pill">
         <div class="stat-label">Web Dashboard</div>
@@ -1567,15 +1567,15 @@
                 <div>
                   <div class="step-number">03</div>
                   <div class="step-title">Agent Polling & Xác Thực</div>
-                  <div class="step-desc">Agent nhận lệnh qua polling: Kiểm tra chữ ký khớp, kiểm tra thời hạn và kiểm tra Nonce chống Replay Attack. Nếu sai lệch -> Hủy lệnh và ghi cờ cảnh báo.</div>
+                  <div class="step-desc">Server giao lại cùng ID, chữ ký và nonce sau lease 30 giây nếu chưa có kết quả. Agent kiểm tra chữ ký, thời hạn và nonce; lệnh không hợp lệ bị từ chối, nonce đã nhận không được thực hiện lại.</div>
                 </div>
-                <div class="step-code-badge">CommandVerifier.Verify()</div>
+                <div class="step-code-badge">CommandVerifier.TryAccept()</div>
               </div>
               <div class="flow-step-card">
                 <div>
                   <div class="step-number">04</div>
                   <div class="step-title">Thực Thi & Trả Biên Lai</div>
-                <div class="step-desc">Lệnh hiện trả kết quả mô phỏng. Agent gửi trạng thái thành công/thất bại và message qua Device ID/Secret authentication; receipt không có chữ ký HMAC riêng.</div>
+                <div class="step-desc">Lệnh hiện trả kết quả mô phỏng. Production Agent lưu biên lai đang chờ trong file bảo vệ và gửi lại sau restart; API nhận retry idempotent qua Device ID/Secret authentication. Receipt không có chữ ký HMAC riêng.</div>
                 </div>
                 <div class="step-code-badge">POST /api/v1/agent/commands/{id}/result</div>
               </div>
@@ -2515,7 +2515,7 @@ X-SentinelLAN-CSRF: 1
               <strong>Sửa Nhãn Lệnh Mô Phỏng Trung Thực:</strong> Các nhãn mô tả lệnh của Agent thể hiện rõ ràng bản chất mô phỏng an toàn (SimulateLock, SimulateNetworkIsolation), không gây hiểu nhầm là đã can thiệp OS thật.
             </li>
             <li>
-              <strong>Kiểm thử local ngày 25/09/2026:</strong> 142/142 .NET, 25/25 Vitest, 6/6 Playwright Chromium và 39/39 Mobile Jest đạt; web/mobile lint và typecheck, web production build cũng đạt. 7 Maestro YAML vẫn là kịch bản chưa chạy vì máy này thiếu adb/Android SDK. Kết quả này chưa thay thế nghiệm thu PostgreSQL, backup restore và Agent trên host triển khai.
+              <strong>Kiểm thử local ngày 25/09/2026:</strong> 145/145 .NET, 25/25 Vitest, 6/6 Playwright Chromium và 39/39 Mobile Jest đạt; web/mobile lint và typecheck, web production build cũng đạt. 7 Maestro YAML vẫn là kịch bản chưa chạy vì máy này thiếu adb/Android SDK. Kết quả này chưa thay thế nghiệm thu PostgreSQL, backup restore và Agent trên host triển khai.
             </li>
             <li>
               <strong>Hoàn Thiện .gitignore & Chống Rò Rỉ:</strong> Bổ sung quy tắc bỏ qua tài liệu, chứng chỉ, khóa bí mật, file backup cục bộ và cơ sở dữ liệu chỉ mục <code>.codegraph/</code>.

@@ -672,12 +672,24 @@ v1.MapPost("/agent/commands/poll", async (HttpContext http, SentinelDbContext db
     using var developmentWrite = db.Database.IsRelational() ? null : await DevelopmentWriteGate.EnterAsync(ct);
     var agent = http.User.ToAgentContext()!.Value;
     var now = DateTimeOffset.UtcNow;
-    var expired = await db.Commands.Where(x => x.DeviceId == agent.DeviceId && x.OrganizationId == agent.OrganizationId && x.Status == DeviceCommandStatus.Pending && x.ExpiresAt <= now).ToListAsync(ct);
-    foreach (var item in expired) item.Status = DeviceCommandStatus.Expired;
-    var command = await db.Commands.OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(x => x.DeviceId == agent.DeviceId && x.OrganizationId == agent.OrganizationId && x.Status == DeviceCommandStatus.Pending && x.ExpiresAt > now, ct);
-    if (command is null) { await db.SaveChangesAsync(ct); return Results.NoContent(); }
+    var expired = await db.Commands.Where(x => x.DeviceId == agent.DeviceId && x.OrganizationId == agent.OrganizationId && (x.Status == DeviceCommandStatus.Pending || x.Status == DeviceCommandStatus.Delivered) && x.ExpiresAt <= now).ToListAsync(ct);
+    foreach (var item in expired)
+    {
+        item.Status = DeviceCommandStatus.Expired;
+        item.DeliveryLeaseExpiresAt = null;
+    }
+    var command = await db.Commands.OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(x =>
+        x.DeviceId == agent.DeviceId && x.OrganizationId == agent.OrganizationId && x.ExpiresAt > now &&
+        (x.Status == DeviceCommandStatus.Pending ||
+         (x.Status == DeviceCommandStatus.Delivered && x.DeliveryLeaseExpiresAt <= now)), ct);
+    if (command is null)
+    {
+        try { await db.SaveChangesAsync(ct); }
+        catch (DbUpdateConcurrencyException) { return Results.NoContent(); }
+        return Results.NoContent();
+    }
     if (!signer.Verify(command)) return Results.Problem("Command signature validation failed", statusCode: 409);
-    command.Status = DeviceCommandStatus.Delivered;
+    if (!command.TryLeaseForDelivery(now, TimeSpan.FromSeconds(30))) return Results.NoContent();
     try { await db.SaveChangesAsync(ct); }
     catch (DbUpdateConcurrencyException) { return Results.NoContent(); }
     return Results.Ok(command);
@@ -694,6 +706,7 @@ v1.MapPost("/agent/commands/{id:guid}/result", async (Guid id, CommandResultRequ
     if (command.Status != DeviceCommandStatus.Delivered || command.ExpiresAt <= DateTimeOffset.UtcNow)
         return Results.Conflict(new ProblemDetails { Title = "Only a delivered, unexpired command can receive a result", Status = 409 });
     command.Status = request.Succeeded ? DeviceCommandStatus.Succeeded : DeviceCommandStatus.Failed;
+    command.DeliveryLeaseExpiresAt = null;
     db.Add(new CommandResult { OrganizationId = command.OrganizationId, DeviceId = command.DeviceId, CommandId = id, Succeeded = request.Succeeded, Message = request.Message });
     db.Add(new AuditLog { OrganizationId = command.OrganizationId, ActorId = agent.DeviceId, DeviceId = command.DeviceId, Action = $"CommandCompleted:{command.Id:N}:{command.Type}", Reason = command.Reason, Outcome = command.Status.ToString() });
     try { await db.SaveChangesAsync(ct); }

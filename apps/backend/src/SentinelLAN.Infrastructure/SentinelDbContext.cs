@@ -50,6 +50,8 @@ public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> option
         modelBuilder.Entity<CommandResult>().HasIndex(x => x.CommandId).IsUnique();
         modelBuilder.Entity<DeviceCommand>().HasIndex(x => new { x.DeviceId, x.Nonce }).IsUnique();
         modelBuilder.Entity<DeviceCommand>().Property(x => x.Status).IsConcurrencyToken();
+        modelBuilder.Entity<DeviceCommand>().Property(x => x.DeliveryLeaseExpiresAt).IsConcurrencyToken();
+        modelBuilder.Entity<DeviceCommand>().HasIndex(x => new { x.DeviceId, x.Status, x.ExpiresAt, x.DeliveryLeaseExpiresAt });
         modelBuilder.Entity<Device>()
             .Property(x => x.RowVersion)
             .IsRequired()

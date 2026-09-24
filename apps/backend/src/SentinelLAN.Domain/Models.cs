@@ -151,7 +151,21 @@ public sealed class DeviceCommand : Entity, ITenantOwned
     public DateTimeOffset IssuedAt { get; init; }
     public DateTimeOffset ExpiresAt { get; init; }
     public DeviceCommandStatus Status { get; set; }
-    public bool CanDeliver(DateTimeOffset now) => Allowed.Contains(Type) && Status == DeviceCommandStatus.Pending && now < ExpiresAt;
+    public DateTimeOffset? DeliveryLeaseExpiresAt { get; set; }
+
+    public bool CanDeliver(DateTimeOffset now) =>
+        Allowed.Contains(Type) && now < ExpiresAt &&
+        (Status == DeviceCommandStatus.Pending ||
+         (Status == DeviceCommandStatus.Delivered && DeliveryLeaseExpiresAt <= now));
+
+    public bool TryLeaseForDelivery(DateTimeOffset now, TimeSpan leaseDuration)
+    {
+        if (!CanDeliver(now) || leaseDuration <= TimeSpan.Zero) return false;
+        Status = DeviceCommandStatus.Delivered;
+        var leaseExpiry = now.Add(leaseDuration);
+        DeliveryLeaseExpiresAt = leaseExpiry < ExpiresAt ? leaseExpiry : ExpiresAt;
+        return true;
+    }
 }
 
 public sealed class CommandResult : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public Guid DeviceId { get; init; } public Guid CommandId { get; init; } public bool Succeeded { get; init; } public required string Message { get; init; } }
