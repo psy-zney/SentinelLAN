@@ -14,11 +14,11 @@ test("Admin can create an Employee, issue a one-time token, and open assignment 
   await page.getByRole("button", { name: "+ Tạo tài khoản" }).click();
   await page.locator("#user-display-name").fill(`E2E Employee ${suffix}`);
   await page.locator("#user-email").fill(email);
-  await page.locator("#user-password").fill("local-e2e-password");
   await page.locator("#user-reason").fill("E2E onboarding lifecycle");
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Lưu" }).click();
-  await expect(page.getByText(email)).toBeVisible();
+  await expect(page.locator('input[readonly][value*="/activate?token="]')).toBeVisible();
+  await expect(page.getByRole("cell", { name: email, exact: true })).toBeVisible();
 
   await page.goto("/devices");
   await page.getByRole("button", { name: "+ Cấp token enrollment" }).click();

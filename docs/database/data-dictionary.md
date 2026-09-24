@@ -10,6 +10,16 @@ Device telemetry is limited to CPU/RAM/disk percentages and declared OS/Agent ve
 
 Commands store actor, device, type, reason, issue/expiry, nonce, signature, status, and one idempotent result. Audit logs are application append-only; production should additionally restrict database UPDATE/DELETE privileges.
 
+`User.Status` is `PendingActivation`, `Active`, or `Locked`. Authentication accepts only active users. `SecurityStamp` changes when activation establishes a new password.
+
+`AccountActivationToken` is tenant-owned and binds one user to a SHA-256 token hash, expiry, issuer, `UsedAt`, `RevokedAt`, and an application-managed concurrency row version. A partial unique index permits at most one unconsumed, unrevoked token per tenant/user. Activation updates the user, consumes the token, revokes sibling tokens, and appends an audit event in one save transaction.
+
+`DeviceQrLabel` is tenant-owned and binds a device to a high-entropy opaque code hash. It stores only a short non-secret prefix for support/audit, optional expiry, revocation, last authenticated scan time, and a concurrency row version. A partial unique index permits at most one unrevoked label per tenant/device. The plaintext code is returned only when generated or rotated.
+
+Public QR responses intentionally omit internal UUIDs, assigned-user identity, full serial number, detailed location, purchase cost, telemetry, and secrets. Authenticated resolution is tenant- and assignment-scoped.
+
+`VpsNode.HostKeyFingerprint` stores the operator-verified `SHA256:` SSH host-key fingerprint. Legacy null values block SSH until the node is re-registered. The private key remains encrypted with the server vault key. `VpsActionReservation` records organization, node, actor, nonce and expiry; `(OrganizationId, Nonce)` is unique so a restart request can execute at most once. The restart API requires `confirmed`, a reason, a fresh nonce and an expiry no more than five minutes ahead.
+
 ## Verification update — 2026-09-06
 
 - EnrollmentTokens.UsedAt and Commands.Status are optimistic concurrency tokens. New migrations record these model changes; no merged migration was edited.

@@ -26,6 +26,7 @@ public sealed class VpsNodeService(
         if (request.Port is < 1 or > 65535) return null;
         if (string.IsNullOrWhiteSpace(request.Username) || request.Username.Trim().Length is < 1 or > 64) return null;
         if (string.IsNullOrWhiteSpace(request.PrivateKey) || !request.PrivateKey.Contains("PRIVATE KEY", StringComparison.OrdinalIgnoreCase)) return null;
+        if (!IsValidHostKeyFingerprint(request.HostKeyFingerprint)) return null;
 
         var name = request.Name.Trim();
         if (await store.ExistsNameAsync(actor.OrganizationId, name, null, cancellationToken)) return null;
@@ -39,6 +40,7 @@ public sealed class VpsNodeService(
             Port = request.Port,
             Username = request.Username.Trim(),
             EncryptedPrivateKey = encryptedKey,
+            HostKeyFingerprint = request.HostKeyFingerprint.Trim(),
             Status = "Connecting"
         };
 
@@ -57,7 +59,7 @@ public sealed class VpsNodeService(
         // Attempt initial connection probe asynchronously
         try
         {
-            var testResult = await sshService.TestConnectionAsync(created.Host, created.Port, created.Username, request.PrivateKey.Trim(), cancellationToken);
+            var testResult = await sshService.TestConnectionAsync(created.Host, created.Port, created.Username, request.PrivateKey.Trim(), created.HostKeyFingerprint!, cancellationToken);
             if (testResult.Success)
             {
                 created.Status = "Online";
@@ -114,6 +116,7 @@ public sealed class VpsNodeService(
     {
         var node = await store.GetByIdAsync(actor.OrganizationId, id, cancellationToken);
         if (node is null) return new VpsConnectionTestResultDto(false, "VPS Node not found");
+        if (!IsValidHostKeyFingerprint(node.HostKeyFingerprint)) return new VpsConnectionTestResultDto(false, "SSH host key fingerprint is missing or invalid. Re-register this node with a verified SHA256 fingerprint.");
 
         string decryptedKey;
         try
@@ -129,7 +132,7 @@ public sealed class VpsNodeService(
             return new VpsConnectionTestResultDto(false, node.ErrorMessage);
         }
 
-        var result = await sshService.TestConnectionAsync(node.Host, node.Port, node.Username, decryptedKey, cancellationToken);
+        var result = await sshService.TestConnectionAsync(node.Host, node.Port, node.Username, decryptedKey, node.HostKeyFingerprint!, cancellationToken);
         node.Status = result.Success ? "Online" : "Error";
         node.ErrorMessage = result.Success ? null : result.Message;
         node.LastCheckedAt = DateTimeOffset.UtcNow;
@@ -161,6 +164,13 @@ public sealed class VpsNodeService(
     {
         var node = await store.GetByIdAsync(actor.OrganizationId, id, cancellationToken);
         if (node is null) return null;
+        if (!IsValidHostKeyFingerprint(node.HostKeyFingerprint))
+        {
+            node.Status = "Error";
+            node.ErrorMessage = "SSH host key fingerprint is missing or invalid. Re-register this node with a verified SHA256 fingerprint.";
+            await store.UpdateAsync(node, cancellationToken);
+            return ToDto(node);
+        }
 
         string decryptedKey;
         try
@@ -176,7 +186,7 @@ public sealed class VpsNodeService(
             return ToDto(node);
         }
 
-        var metrics = await sshService.CollectMetricsAsync(node.Host, node.Port, node.Username, decryptedKey, cancellationToken);
+        var metrics = await sshService.CollectMetricsAsync(node.Host, node.Port, node.Username, decryptedKey, node.HostKeyFingerprint!, cancellationToken);
         node.LastCheckedAt = DateTimeOffset.UtcNow;
         if (metrics.Success)
         {
@@ -212,6 +222,11 @@ public sealed class VpsNodeService(
 
     public async Task<VpsCommandResultDto> RestartServiceAsync(ActorContext actor, Guid id, RestartVpsServiceRequest request, CancellationToken cancellationToken)
     {
+        if (!request.Confirmed)
+            return new VpsCommandResultDto(false, "Explicit confirmation is required");
+        var now = DateTimeOffset.UtcNow;
+        if (request.Nonce == Guid.Empty || request.ExpiresAt <= now || request.ExpiresAt > now.AddMinutes(5))
+            return new VpsCommandResultDto(false, "A unique nonce and expiry within five minutes are required");
         if (string.IsNullOrWhiteSpace(request.ServiceName))
             return new VpsCommandResultDto(false, "ServiceName is required");
 
@@ -221,11 +236,12 @@ public sealed class VpsNodeService(
             return new VpsCommandResultDto(false, $"Service '{serviceName}' is not in the allow-list. Allowed services: {string.Join(", ", VpsNode.GetAllowedServices())}");
         }
 
-        if (string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Trim().Length < 3)
-            return new VpsCommandResultDto(false, "Reason is required (minimum 3 characters)");
+        if (string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Trim().Length is < 3 or > 1000)
+            return new VpsCommandResultDto(false, "Reason must be 3-1000 characters");
 
         var node = await store.GetByIdAsync(actor.OrganizationId, id, cancellationToken);
         if (node is null) return new VpsCommandResultDto(false, "VPS Node not found");
+        if (!IsValidHostKeyFingerprint(node.HostKeyFingerprint)) return new VpsCommandResultDto(false, "SSH host key fingerprint is missing or invalid. Re-register this node with a verified SHA256 fingerprint.");
 
         string decryptedKey;
         try
@@ -237,7 +253,17 @@ public sealed class VpsNodeService(
             return new VpsCommandResultDto(false, "Failed to decrypt private key: " + ex.Message);
         }
 
-        var result = await sshService.RestartServiceAsync(node.Host, node.Port, node.Username, decryptedKey, serviceName, cancellationToken);
+        if (!await store.TryReserveActionAsync(new VpsActionReservation
+        {
+            OrganizationId = actor.OrganizationId,
+            VpsNodeId = node.Id,
+            ActorId = actor.UserId,
+            Nonce = request.Nonce,
+            ExpiresAt = request.ExpiresAt
+        }, cancellationToken))
+            return new VpsCommandResultDto(false, "This restart request has already been used");
+
+        var result = await sshService.RestartServiceAsync(node.Host, node.Port, node.Username, decryptedKey, node.HostKeyFingerprint!, serviceName, cancellationToken);
 
         await store.RecordAuditAsync(new AuditLog
         {
@@ -245,11 +271,20 @@ public sealed class VpsNodeService(
             ActorId = actor.UserId,
             DeviceId = null,
             Action = "VpsServiceRestarted",
-            Reason = $"Restarted service '{serviceName}' on VPS '{node.Name}' ({node.Host}). Reason: {request.Reason.Trim()}",
+            Reason = $"Restarted service '{serviceName}' on VPS '{node.Name}' ({node.Host}). Nonce: {request.Nonce}. Reason: {request.Reason.Trim()}",
             Outcome = result.Success ? "Success" : "Failed"
         }, cancellationToken);
 
         return result;
+    }
+
+    private static bool IsValidHostKeyFingerprint(string? value)
+    {
+        if (value is null || !value.StartsWith("SHA256:", StringComparison.Ordinal)) return false;
+        var fingerprint = value[7..];
+        if (fingerprint.Length != 43) return false;
+        try { return Convert.FromBase64String(fingerprint + "=").Length == 32; }
+        catch (FormatException) { return false; }
     }
 
     private static VpsNodeDto ToDto(VpsNode node) => new(
@@ -259,6 +294,7 @@ public sealed class VpsNodeService(
         node.Host,
         node.Port,
         node.Username,
+        node.HostKeyFingerprint,
         node.Status,
         node.CpuPercent,
         node.RamPercent,

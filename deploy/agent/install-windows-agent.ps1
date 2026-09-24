@@ -6,7 +6,7 @@ param (
     [Parameter(Mandatory = $true)]
     [string]$ServerUrl,
 
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $false)]
     [string]$EnrollToken,
 
     [string]$InstallDir = "$env:ProgramFiles\SentinelLAN\Agent",
@@ -14,6 +14,19 @@ param (
 )
 
 $ErrorActionPreference = "Stop"
+
+$parsedServerUrl = $null
+if (-not [Uri]::TryCreate($ServerUrl, [UriKind]::Absolute, [ref]$parsedServerUrl) -or
+    ($parsedServerUrl.Scheme -ne 'https' -and -not $parsedServerUrl.IsLoopback)) {
+    throw 'A trusted HTTPS server URL is required outside loopback.'
+}
+if ([string]::IsNullOrWhiteSpace($EnrollToken)) {
+    $secureToken = Read-Host 'One-time enrollment token' -AsSecureString
+    $tokenPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureToken)
+    try { $EnrollToken = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($tokenPointer) }
+    finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($tokenPointer) }
+}
+if ([string]::IsNullOrWhiteSpace($EnrollToken)) { throw 'Enrollment token is required.' }
 
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host "    SentinelLAN — Windows Endpoint Agent Installer          " -ForegroundColor Cyan
@@ -51,8 +64,8 @@ if (Test-Path $SourceExe) {
 # Set system-wide environment variables for the agent service
 [Environment]::SetEnvironmentVariable("SENTINELLAN_API_URL", $ServerUrl, [EnvironmentVariableTarget]::Machine)
 [Environment]::SetEnvironmentVariable("SENTINELLAN_ENROLLMENT_TOKEN", $EnrollToken, [EnvironmentVariableTarget]::Machine)
-[Environment]::SetEnvironmentVariable("SENTINELLAN_ALLOW_REAL_COMMANDS", "true", [EnvironmentVariableTarget]::Machine)
-[Environment]::SetEnvironmentVariable("SENTINELLAN_LAB_EXECUTION", "true", [EnvironmentVariableTarget]::Machine)
+[Environment]::SetEnvironmentVariable("SENTINELLAN_ALLOW_REAL_COMMANDS", "false", [EnvironmentVariableTarget]::Machine)
+[Environment]::SetEnvironmentVariable("SENTINELLAN_LAB_EXECUTION", "false", [EnvironmentVariableTarget]::Machine)
 
 Write-Host "[✓] Configured Server URL: $ServerUrl" -ForegroundColor Green
 
@@ -77,6 +90,17 @@ if ($RunStandalone) {
 
     Write-Host "[*] Starting $ServiceName..." -ForegroundColor Yellow
     Start-Service -Name $ServiceName
+
+    $identityPath = Join-Path $env:ProgramData 'SentinelLAN\Agent\identity.dat'
+    for ($attempt = 0; $attempt -lt 30 -and -not (Test-Path -LiteralPath $identityPath); $attempt++) {
+        Start-Sleep -Seconds 2
+    }
+    if (Test-Path -LiteralPath $identityPath) {
+        [Environment]::SetEnvironmentVariable('SENTINELLAN_ENROLLMENT_TOKEN', $null, [EnvironmentVariableTarget]::Machine)
+        Write-Host '[✓] Enrollment completed; removed one-time token from machine environment.' -ForegroundColor Green
+    } else {
+        Write-Warning 'Identity was not created. Check service logs and clear the enrollment token after retry.'
+    }
 
     Write-Host ""
     Write-Host "============================================================" -ForegroundColor Green

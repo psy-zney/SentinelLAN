@@ -10,6 +10,7 @@ public record ExecutionResult(bool Succeeded, string Message);
 public interface IDeviceIdentityStore { Task<DeviceIdentity?> LoadAsync(CancellationToken cancellationToken); Task SaveAsync(DeviceIdentity identity, CancellationToken cancellationToken); }
 public interface ITelemetryCollector { TelemetrySnapshot Collect(); }
 public record TelemetrySnapshot(double CpuPercent, double RamPercent, double DiskPercent, string OsVersion, string AgentVersion);
+public record QueuedTelemetry(TelemetrySnapshot Snapshot, string IdempotencyKey);
 public interface IAgentApi
 {
     Task<DeviceIdentity> EnrollAsync(string token, CancellationToken cancellationToken);
@@ -80,6 +81,33 @@ public class ResilientOfflineQueue<T>(int capacity = 100)
         while (_items.Count > capacity) _items.TryDequeue(out _);
     }
 
+    public bool TryPeek(TimeSpan retention, out T? value)
+    {
+        var minimum = DateTimeOffset.UtcNow - retention;
+        while (_items.TryPeek(out var item))
+        {
+            if (item.CreatedAt >= minimum)
+            {
+                value = item.Value;
+                return true;
+            }
+            _items.TryDequeue(out _);
+        }
+        value = default;
+        return false;
+    }
+
+    public bool TryDequeue(out T? value)
+    {
+        if (_items.TryDequeue(out var item))
+        {
+            value = item.Value;
+            return true;
+        }
+        value = default;
+        return false;
+    }
+
     public IReadOnlyList<T> Drain(TimeSpan retention)
     {
         var minimum = DateTimeOffset.UtcNow - retention;
@@ -90,8 +118,4 @@ public class ResilientOfflineQueue<T>(int capacity = 100)
         }
         return values;
     }
-}
-
-public sealed class LocalQueueStore<T>(int capacity) : ResilientOfflineQueue<T>(capacity)
-{
 }

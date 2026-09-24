@@ -2,35 +2,22 @@ namespace SentinelLAN.Agent.Core;
 
 public sealed class AgentCycle(DeviceIdentity identity, ITelemetryCollector telemetry, IAgentApi api,
     CommandVerifier verifier, ICommandSignatureVerifier signatures, TimeProvider clock,
-    ResilientOfflineQueue<TelemetrySnapshot>? offlineTelemetry = null)
+    ResilientOfflineQueue<QueuedTelemetry>? offlineTelemetry = null)
 {
-    private (TelemetrySnapshot Snapshot, string Key)? _heartbeat;
     private (RemoteCommand Command, ExecutionResult Result)? _result;
-    private readonly ResilientOfflineQueue<TelemetrySnapshot> _offlineQueue = offlineTelemetry ?? new(50);
+    private readonly ResilientOfflineQueue<QueuedTelemetry> _offlineQueue = offlineTelemetry ?? new(50);
 
     public int OfflineQueueCount => _offlineQueue.Count;
 
     public async Task<string?> RunAsync(CancellationToken cancellationToken)
     {
-        _heartbeat ??= (telemetry.Collect(), Guid.NewGuid().ToString("N"));
-        try
+        _offlineQueue.Enqueue(new QueuedTelemetry(telemetry.Collect(), Guid.NewGuid().ToString("N")));
+        var sent = 0;
+        while (sent < 10 && _offlineQueue.TryPeek(TimeSpan.FromHours(1), out var pending))
         {
-            await api.SendHeartbeatAsync(identity, _heartbeat.Value.Snapshot, _heartbeat.Value.Key, cancellationToken);
-            _heartbeat = null;
-
-            var pending = _offlineQueue.Drain(TimeSpan.FromHours(1));
-            foreach (var buffered in pending)
-            {
-                await api.SendHeartbeatAsync(identity, buffered, Guid.NewGuid().ToString("N"), cancellationToken);
-            }
-        }
-        catch (Exception)
-        {
-            if (_heartbeat is not null)
-            {
-                _offlineQueue.Enqueue(_heartbeat.Value.Snapshot);
-            }
-            throw;
+            await api.SendHeartbeatAsync(identity, pending!.Snapshot, pending.IdempotencyKey, cancellationToken);
+            _offlineQueue.TryDequeue(out _);
+            sent++;
         }
 
         if (_result is not null)

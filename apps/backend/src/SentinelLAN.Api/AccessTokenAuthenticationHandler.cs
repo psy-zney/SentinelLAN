@@ -17,15 +17,20 @@ public sealed class AccessTokenAuthenticationHandler(
     ILoggerFactory logger,
     UrlEncoder encoder,
     IAccessTokenService tokens,
+    IAuthenticationStore users,
     TimeProvider timeProvider) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
-    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         var token = GetToken();
-        if (string.IsNullOrWhiteSpace(token)) return Task.FromResult(AuthenticateResult.NoResult());
+        if (string.IsNullOrWhiteSpace(token)) return AuthenticateResult.NoResult();
 
         var actor = tokens.Validate(token, timeProvider.GetUtcNow());
-        if (actor is null) return Task.FromResult(AuthenticateResult.Fail("Invalid or expired access token."));
+        if (actor is null) return AuthenticateResult.Fail("Invalid or expired access token.");
+        var user = await users.FindUserAsync(actor.Value.UserId, actor.Value.OrganizationId, Context.RequestAborted);
+        if (user is null || user.Status != SentinelLAN.Domain.UserStatuses.Active || user.Role != actor.Value.Role ||
+            user.SecurityStamp != actor.Value.SecurityStamp)
+            return AuthenticateResult.Fail("Account is inactive or session was revoked.");
 
         var claims = new[]
         {
@@ -35,7 +40,7 @@ public sealed class AccessTokenAuthenticationHandler(
         };
         var identity = new ClaimsIdentity(claims, SentinelAuthenticationDefaults.Scheme, ClaimTypes.NameIdentifier, ClaimTypes.Role);
         var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), SentinelAuthenticationDefaults.Scheme);
-        return Task.FromResult(AuthenticateResult.Success(ticket));
+        return AuthenticateResult.Success(ticket);
     }
 
     private string? GetToken()

@@ -51,15 +51,15 @@ export function LoginForm() {
 
       <label className="field">
         {t("orgCodePrompt")}
-        <input name="organizationCode" type="text" autoComplete="organization" defaultValue="demo" required />
+        <input name="organizationCode" type="text" autoComplete="organization" required />
       </label>
       <label className="field">
         {t("emailPrompt")}
-        <input name="email" type="email" autoComplete="username" defaultValue="admin@sentinellan.local" required />
+        <input name="email" type="email" autoComplete="username" required />
       </label>
       <label className="field">
         {t("passwordPrompt")}
-        <input name="password" type="password" autoComplete="current-password" defaultValue="local-demo-only" required />
+        <input name="password" type="password" autoComplete="current-password" required />
       </label>
 
       {error && <p role="alert" className="subtitle" style={{ color: "var(--danger)" }}>{error}</p>}

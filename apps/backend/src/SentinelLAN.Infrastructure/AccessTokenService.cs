@@ -22,6 +22,7 @@ public sealed class AccessTokenService(string signingKey) : IAccessTokenService
             sub = user.Id,
             org = user.OrganizationId,
             role = user.Role,
+            stamp = user.SecurityStamp,
             iat = now.ToUnixTimeSeconds(),
             exp = expiresAt.ToUnixTimeSeconds(),
             jti = Guid.NewGuid()
@@ -51,7 +52,8 @@ public sealed class AccessTokenService(string signingKey) : IAccessTokenService
 
             var role = root.GetProperty("role").GetString();
             if (role is not (Roles.Admin or Roles.Technician or Roles.Employee)) return null;
-            return new ActorContext(root.GetProperty("sub").GetGuid(), root.GetProperty("org").GetGuid(), role);
+            return new ActorContext(root.GetProperty("sub").GetGuid(), root.GetProperty("org").GetGuid(), role,
+                root.GetProperty("stamp").GetString());
         }
         catch (Exception exception) when (exception is JsonException or FormatException or InvalidOperationException or KeyNotFoundException)
         {

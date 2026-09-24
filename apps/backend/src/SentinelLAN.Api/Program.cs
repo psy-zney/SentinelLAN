@@ -31,6 +31,8 @@ builder.Services.AddRateLimiter(options =>
 });
 
 var connectionString = builder.Configuration.GetConnectionString("SentinelLAN");
+if (!builder.Environment.IsDevelopment() && string.IsNullOrWhiteSpace(connectionString))
+    throw new InvalidOperationException("ConnectionStrings__SentinelLAN is required outside Development.");
 builder.Services.AddDbContext<SentinelDbContext>(options =>
 {
     if (string.IsNullOrWhiteSpace(connectionString)) options.UseInMemoryDatabase("sentinellan-development");
@@ -38,8 +40,16 @@ builder.Services.AddDbContext<SentinelDbContext>(options =>
 });
 var signingKey = builder.Configuration["SENTINELLAN_SIGNING_KEY"] ?? "development-signing-key-change-before-deployment";
 var accessTokenSigningKey = builder.Configuration["SENTINELLAN_ACCESS_TOKEN_SIGNING_KEY"] ?? "development-access-token-signing-key-change-before-deployment";
-if (!builder.Environment.IsDevelopment() && accessTokenSigningKey.StartsWith("development-", StringComparison.Ordinal))
-    throw new InvalidOperationException("SENTINELLAN_ACCESS_TOKEN_SIGNING_KEY must be set outside Development.");
+var serverVaultKey = builder.Configuration["SENTINELLAN_SERVER_VAULT_KEY"] ?? "development-server-vault-key-32-bytes-long!";
+if (!builder.Environment.IsDevelopment())
+{
+    if (IsUnsafeProductionSecret(signingKey))
+        throw new InvalidOperationException("SENTINELLAN_SIGNING_KEY must be a unique secret of at least 32 characters outside Development.");
+    if (IsUnsafeProductionSecret(accessTokenSigningKey))
+        throw new InvalidOperationException("SENTINELLAN_ACCESS_TOKEN_SIGNING_KEY must be set outside Development.");
+    if (IsUnsafeProductionSecret(serverVaultKey))
+        throw new InvalidOperationException("SENTINELLAN_SERVER_VAULT_KEY must be a unique secret of at least 32 characters outside Development.");
+}
 if (accessTokenSigningKey.Length < 32) throw new InvalidOperationException("The access-token signing key must contain at least 32 characters.");
 builder.Services.AddSingleton<ICommandSigner>(new HmacCommandSigner(signingKey));
 builder.Services.AddSingleton<IAccessTokenService>(new AccessTokenService(accessTokenSigningKey));
@@ -60,11 +70,17 @@ builder.Services.AddScoped<PolicyService>();
 builder.Services.AddScoped<IAlertStore, AlertStore>();
 builder.Services.AddScoped<IAlertDeviceLookup, AlertDeviceLookup>();
 builder.Services.AddScoped<AlertService>();
-var serverVaultKey = builder.Configuration["SENTINELLAN_SERVER_VAULT_KEY"] ?? "development-server-vault-key-32-bytes-long!";
 builder.Services.AddSingleton<IVpsVaultService>(new VpsVaultService(serverVaultKey));
 builder.Services.AddSingleton<IVpsSshService, SshNetVpsSshService>();
 builder.Services.AddScoped<IVpsNodeStore, VpsNodeStore>();
 builder.Services.AddScoped<VpsNodeService>();
+builder.Services.AddScoped<IAssetStore, AssetStore>();
+builder.Services.AddScoped<IAssetManagementService, AssetManagementService>();
+builder.Services.AddSingleton<IActivationTokenGenerator, ActivationTokenGenerator>();
+builder.Services.AddSingleton<IQrCodeGenerator, QrCodeGenerator>();
+builder.Services.AddScoped<IQrManagementService, QrManagementService>();
+builder.Services.AddScoped<IMyDeviceStore, MyDeviceStore>();
+builder.Services.AddScoped<IMyDeviceService, MyDeviceService>();
 builder.Services.AddSingleton<AuthCookieManager>();
 builder.Services
     .AddAuthentication(SentinelAuthenticationDefaults.Scheme)
@@ -119,7 +135,21 @@ app.UseRateLimiter();
 if (app.Environment.IsDevelopment()) app.MapOpenApi();
 
 using (var scope = app.Services.CreateScope())
-    await DemoSeeder.SeedAsync(scope.ServiceProvider.GetRequiredService<SentinelDbContext>(), scope.ServiceProvider.GetRequiredService<IPasswordHasher>(), key => builder.Configuration[key]);
+{
+    var db = scope.ServiceProvider.GetRequiredService<SentinelDbContext>();
+    var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+    if (app.Environment.IsDevelopment())
+        await DemoSeeder.SeedAsync(db, passwordHasher, key => builder.Configuration[key]);
+    else
+    {
+        await db.Database.MigrateAsync();
+        await BootstrapOrganizationInitializer.EnsureCreatedAsync(db, passwordHasher,
+            builder.Configuration["SENTINELLAN_BOOTSTRAP_ORG_CODE"],
+            builder.Configuration["SENTINELLAN_BOOTSTRAP_ORG_NAME"],
+            builder.Configuration["SENTINELLAN_BOOTSTRAP_ADMIN_EMAIL"],
+            builder.Configuration["SENTINELLAN_BOOTSTRAP_ADMIN_PASSWORD"]);
+    }
+}
 
 app.MapGet("/", () => Results.Ok(new { product = "SentinelLAN", version = "0.1.0", openApi = "/openapi/v1.json" }));
 app.MapGet("/health/live", () => Results.Ok(new { status = "live" }));
@@ -162,25 +192,172 @@ v1.MapGet("/auth/session", async (HttpContext http, SentinelDbContext db, Cancel
     return Results.Ok(new CurrentSessionResponse(user.Role, user.DisplayName));
 }).RequireAuthorization();
 
+var mobile = v1.MapGroup("/mobile");
+var mobileAuth = mobile.MapGroup("/auth");
+
+mobileAuth.MapPost("/login", async (MobileLoginRequest request, HttpContext http, SentinelLAN.Application.AuthenticationService authentication, CancellationToken ct) =>
+{
+    http.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+    http.Response.Headers.Pragma = "no-cache";
+    var result = await authentication.LoginMobileAsync(request, ct);
+    if (result is null) return Results.Unauthorized();
+    return Results.Ok(new MobileAuthSessionResponse(
+        result.AccessToken,
+        (int)(result.AccessTokenExpiresAt - DateTimeOffset.UtcNow).TotalSeconds,
+        result.RefreshToken,
+        result.RefreshTokenExpiresAt,
+        "Bearer",
+        new MobileUserInfo(result.UserId, result.Email, result.DisplayName, result.Role, result.OrganizationId, result.OrganizationCode)
+    ));
+}).AllowAnonymous().RequireRateLimiting("sensitive");
+
+mobileAuth.MapPost("/refresh", async (MobileRefreshRequest request, HttpContext http, SentinelLAN.Application.AuthenticationService authentication, CancellationToken ct) =>
+{
+    http.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+    http.Response.Headers.Pragma = "no-cache";
+    if (string.IsNullOrWhiteSpace(request.RefreshToken)) return Results.Unauthorized();
+    var result = await authentication.RefreshMobileAsync(request.RefreshToken, ct);
+    if (result.Status != RefreshStatus.Succeeded || result.Result is null)
+    {
+        return Results.Unauthorized();
+    }
+    return Results.Ok(new MobileRefreshResponse(
+        result.Result.AccessToken,
+        (int)(result.Result.AccessTokenExpiresAt - DateTimeOffset.UtcNow).TotalSeconds,
+        result.Result.RefreshToken,
+        result.Result.RefreshTokenExpiresAt,
+        "Bearer"
+    ));
+}).AllowAnonymous().RequireRateLimiting("sensitive");
+
+mobileAuth.MapPost("/logout", async (MobileLogoutRequest request, HttpContext http, SentinelLAN.Application.AuthenticationService authentication, CancellationToken ct) =>
+{
+    http.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+    http.Response.Headers.Pragma = "no-cache";
+    await authentication.LogoutMobileAsync(request.RefreshToken, ct);
+    return Results.NoContent();
+}).AllowAnonymous().RequireRateLimiting("sensitive");
+
+mobileAuth.MapPost("/logout-all", async (HttpContext http, SentinelLAN.Application.AuthenticationService authentication, CancellationToken ct) =>
+{
+    http.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+    http.Response.Headers.Pragma = "no-cache";
+    var actor = http.User.ToActorContext()!.Value;
+    await authentication.LogoutAllUserSessionsAsync(actor.OrganizationId, actor.UserId, ct);
+    return Results.NoContent();
+}).RequireAuthorization().RequireRateLimiting("sensitive");
+
+mobile.MapGet("/bootstrap", (HttpContext http) =>
+{
+    http.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+    http.Response.Headers.Pragma = "no-cache";
+    return Results.Ok(new MobileBootstrapResponse(
+        MinimumAppVersion: "1.0.0",
+        LatestAppVersion: "1.0.0",
+        PrivacyManifestVersion: "2026.1",
+        MaintenanceMode: false,
+        SupportEmail: "it-support@sentinellan.local",
+        SupportedAuthSchemes: ["Bearer"]
+    ));
+}).AllowAnonymous();
+
+v1.MapGet("/auth/activation/validate", async ([FromQuery] string? token, UserManagementService users, HttpContext http, CancellationToken ct) =>
+{
+    http.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+    http.Response.Headers.Pragma = "no-cache";
+    var result = await users.ValidateActivationTokenAsync(token, ct);
+    return Results.Ok(result);
+}).AllowAnonymous().RequireRateLimiting("sensitive");
+
+v1.MapPost("/auth/activate", async (ActivateAccountRequest req, UserManagementService users, IPasswordHasher passwordHasher, SentinelDbContext db, HttpContext http, CancellationToken ct) =>
+{
+    using var developmentWrite = db.Database.IsRelational() ? null : await DevelopmentWriteGate.EnterAsync(ct);
+    http.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+    http.Response.Headers.Pragma = "no-cache";
+    var (status, message) = await users.ActivateAccountAsync(req, passwordHasher, ct);
+    return status switch
+    {
+        ManagementResultStatus.Succeeded => Results.Ok(new { message }),
+        ManagementResultStatus.Conflict => Results.Conflict(new ProblemDetails { Title = "Activation conflict", Detail = message, Status = 409 }),
+        _ => Results.BadRequest(new ProblemDetails { Title = "Activation failed", Detail = message, Status = 400 })
+    };
+}).AllowAnonymous().RequireRateLimiting("sensitive");
+
 v1.MapPost("/users", async (CreateUserRequest request, HttpContext http, SentinelDbContext db, UserManagementService users, IPasswordHasher passwordHasher, CancellationToken ct) =>
 {
     using var developmentWrite = db.Database.IsRelational() ? null : await DevelopmentWriteGate.EnterAsync(ct);
+    http.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+    http.Response.Headers.Pragma = "no-cache";
     var actor = http.User.ToActorContext()!.Value;
     var result = await users.CreateAsync(actor, request, passwordHasher, ct);
     return result.Status switch
     {
-        ManagementResultStatus.Succeeded => Results.Created($"/api/v1/users/{result.User!.Id}", result.User),
+        ManagementResultStatus.Succeeded => Results.Created($"/api/v1/users/{result.User!.Id}", new CreateUserResponse(result.User, result.ActivationToken, result.ActivationUrl, result.ExpiresAt)),
         ManagementResultStatus.Forbidden => Results.StatusCode(StatusCodes.Status403Forbidden),
         ManagementResultStatus.Conflict => Results.Conflict(new ProblemDetails { Title = "A user with that email already exists", Status = 409 }),
         _ => Results.BadRequest(new ProblemDetails { Title = "Invalid user details", Status = 400 })
     };
 })
     .WithName("CreateUser")
-    .Produces<UserSummaryDto>(StatusCodes.Status201Created)
+    .Produces<CreateUserResponse>(StatusCodes.Status201Created)
     .ProducesProblem(StatusCodes.Status400BadRequest)
     .ProducesProblem(StatusCodes.Status403Forbidden)
     .ProducesProblem(StatusCodes.Status409Conflict)
     .RequireAuthorization(AuthorizationPolicies.Admin);
+
+v1.MapPut("/users/{id:guid}/status", async (Guid id, SetUserStatusRequest request, HttpContext http, SentinelDbContext db, UserManagementService users, CancellationToken ct) =>
+{
+    using var developmentWrite = db.Database.IsRelational() ? null : await DevelopmentWriteGate.EnterAsync(ct);
+    var actor = http.User.ToActorContext()!.Value;
+    var (status, user) = await users.SetStatusAsync(actor, id, request, ct);
+    return status switch
+    {
+        ManagementResultStatus.Succeeded => Results.Ok(user),
+        ManagementResultStatus.Forbidden => Results.StatusCode(StatusCodes.Status403Forbidden),
+        ManagementResultStatus.NotFound => Results.NotFound(),
+        ManagementResultStatus.Conflict => Results.Conflict(new ProblemDetails { Title = "Account state cannot be changed", Status = 409 }),
+        _ => Results.BadRequest(new ProblemDetails { Title = "Status, reason and confirmation are required", Status = 400 })
+    };
+}).WithName("SetUserStatus")
+  .Produces<UserSummaryDto>(StatusCodes.Status200OK)
+  .ProducesProblem(StatusCodes.Status400BadRequest)
+  .ProducesProblem(StatusCodes.Status403Forbidden)
+  .ProducesProblem(StatusCodes.Status404NotFound)
+  .ProducesProblem(StatusCodes.Status409Conflict)
+  .RequireAuthorization(AuthorizationPolicies.Admin)
+  .RequireRateLimiting("sensitive");
+
+v1.MapPost("/users/{id:guid}/activation-token", async (Guid id, ReissueActivationTokenRequest req, HttpContext http, SentinelDbContext db, UserManagementService users, CancellationToken ct) =>
+{
+    using var developmentWrite = db.Database.IsRelational() ? null : await DevelopmentWriteGate.EnterAsync(ct);
+    http.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+    http.Response.Headers.Pragma = "no-cache";
+    var actor = http.User.ToActorContext()!.Value;
+    var (status, response, message) = await users.ReissueActivationTokenAsync(actor, id, req, ct);
+    return status switch
+    {
+        ManagementResultStatus.Succeeded => Results.Ok(response),
+        ManagementResultStatus.NotFound => Results.NotFound(new ProblemDetails { Title = "User not found", Detail = message, Status = 404 }),
+        ManagementResultStatus.Forbidden => Results.StatusCode(StatusCodes.Status403Forbidden),
+        ManagementResultStatus.Conflict => Results.Conflict(new ProblemDetails { Title = "Conflict", Detail = message, Status = 409 }),
+        _ => Results.BadRequest(new ProblemDetails { Title = "Invalid request", Detail = message, Status = 400 })
+    };
+}).RequireAuthorization(AuthorizationPolicies.Admin);
+
+v1.MapDelete("/users/{id:guid}/activation-token", async (Guid id, [FromBody] RevokeActivationTokenRequest? req, HttpContext http, SentinelDbContext db, UserManagementService users, CancellationToken ct) =>
+{
+    using var developmentWrite = db.Database.IsRelational() ? null : await DevelopmentWriteGate.EnterAsync(ct);
+    var actor = http.User.ToActorContext()!.Value;
+    var request = req ?? new RevokeActivationTokenRequest("Revoked by administrator", true);
+    var (status, message) = await users.RevokeActivationTokenAsync(actor, id, request, ct);
+    return status switch
+    {
+        ManagementResultStatus.Succeeded => Results.NoContent(),
+        ManagementResultStatus.NotFound => Results.NotFound(new ProblemDetails { Title = "User not found", Detail = message, Status = 404 }),
+        ManagementResultStatus.Forbidden => Results.StatusCode(StatusCodes.Status403Forbidden),
+        _ => Results.BadRequest(new ProblemDetails { Title = "Invalid request", Detail = message, Status = 400 })
+    };
+}).RequireAuthorization(AuthorizationPolicies.Admin);
 
 v1.MapPost("/enrollment-tokens", async (EnrollmentTokenRequest request, HttpContext http, SentinelDbContext db, EnrollmentTokenService tokens, CancellationToken ct) =>
 {
@@ -278,30 +455,46 @@ v1.MapGet("/dashboard", async (HttpContext http, SentinelDbContext db, Cancellat
     return Results.Ok(new DashboardDto(dto.Count, dto.Count(x => x.IsOnline), dto.Count(x => !x.IsOnline), await db.Alerts.CountAsync(x => x.OrganizationId == actor.OrganizationId && x.IsOpen, ct), dto));
 }).RequireAuthorization(AuthorizationPolicies.ViewDevices);
 
-v1.MapGet("/my-device", async (HttpContext http, SentinelDbContext db, CancellationToken ct) =>
+v1.MapGet("/my-device", async (HttpContext http, IMyDeviceService myDeviceService, CancellationToken ct) =>
 {
+    http.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+    http.Response.Headers.Pragma = "no-cache";
     var actor = http.User.ToActorContext()!.Value;
-    var device = await DeviceScope.ForActor(db.Devices.AsNoTracking(), actor).Where(x => !x.IsRevoked).SingleOrDefaultAsync(ct);
-    if (device is null) return Results.NotFound();
+    var device = await myDeviceService.GetMyDeviceAsync(actor, ct);
+    return device is null ? Results.NotFound() : Results.Ok(device);
+}).RequireAuthorization(AuthorizationPolicies.ViewAssignedDevice).RequireRateLimiting("sensitive");
 
-    var policyName = await (
-        from assignment in db.PolicyAssignments.AsNoTracking()
-        join policy in db.Policies.AsNoTracking() on assignment.PolicyId equals policy.Id
-        where assignment.OrganizationId == actor.OrganizationId &&
-              assignment.DeviceId == device.Id &&
-              policy.OrganizationId == actor.OrganizationId
-        orderby assignment.CreatedAt descending
-        select policy.Name).FirstOrDefaultAsync(ct);
-    var actions = await db.AuditLogs
-        .AsNoTracking()
-        .Where(item => item.OrganizationId == actor.OrganizationId && item.DeviceId == device.Id)
-        .OrderByDescending(item => item.CreatedAt)
-        .Take(20)
-        .Select(item => new EmployeeDeviceActionDto(item.Action, item.Reason, item.Outcome, item.CreatedAt))
-        .ToListAsync(ct);
-    var dto = new DeviceDto(device.Id, device.Name, device.OsVersion, device.AgentVersion, device.LastSeenAt, device.IsOnline(DateTimeOffset.UtcNow), device.AssignedUserId, device.IsRevoked);
-    return Results.Ok(new EmployeeDeviceDto(dto, policyName, actions));
-}).RequireAuthorization(AuthorizationPolicies.ViewAssignedDevice);
+v1.MapGet("/my-device/telemetry", async ([FromQuery] int? limit, HttpContext http, IMyDeviceService myDeviceService, CancellationToken ct) =>
+{
+    http.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+    http.Response.Headers.Pragma = "no-cache";
+    var actor = http.User.ToActorContext()!.Value;
+    var history = await myDeviceService.GetMyDeviceTelemetryAsync(actor, limit ?? 10, ct);
+    return Results.Ok(history);
+}).RequireAuthorization(AuthorizationPolicies.ViewAssignedDevice).RequireRateLimiting("sensitive");
+
+v1.MapGet("/my-device/incidents", async (HttpContext http, IMyDeviceService myDeviceService, CancellationToken ct) =>
+{
+    http.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+    http.Response.Headers.Pragma = "no-cache";
+    var actor = http.User.ToActorContext()!.Value;
+    var incidents = await myDeviceService.GetMyDeviceIncidentsAsync(actor, ct);
+    return Results.Ok(incidents);
+}).RequireAuthorization(AuthorizationPolicies.ViewAssignedDevice).RequireRateLimiting("sensitive");
+
+v1.MapPost("/my-device/incidents", async (ReportMyDeviceIncidentRequest req, HttpContext http, IMyDeviceService myDeviceService, CancellationToken ct) =>
+{
+    http.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+    http.Response.Headers.Pragma = "no-cache";
+    var actor = http.User.ToActorContext()!.Value;
+    var (status, incident, message) = await myDeviceService.ReportIncidentAsync(actor, req, ct);
+    return status switch
+    {
+        ManagementResultStatus.Succeeded => Results.Created($"/api/v1/my-device/incidents/{incident!.Id}", incident),
+        ManagementResultStatus.NotFound => Results.NotFound(new ProblemDetails { Title = "Device not found", Detail = message, Status = 404 }),
+        _ => Results.BadRequest(new ProblemDetails { Title = "Failed to report incident", Detail = message, Status = 400 })
+    };
+}).RequireAuthorization(AuthorizationPolicies.ViewAssignedDevice).RequireRateLimiting("sensitive");
 
 v1.MapPost("/agent/enroll", async (EnrollRequest request, SentinelDbContext db, IHubContext<UpdatesHub> hub, CancellationToken ct) =>
 {
@@ -608,11 +801,11 @@ v1.MapGet("/audit-logs", async (HttpContext http, SentinelDbContext db, [FromQue
 }).RequireAuthorization(AuthorizationPolicies.ViewAudit);
 
 // USERS & ORGANIZATIONS
-v1.MapGet("/users", async (HttpContext http, SentinelDbContext db, CancellationToken ct) =>
+v1.MapGet("/users", async (HttpContext http, UserManagementService users, CancellationToken ct) =>
 {
     var actor = http.User.ToActorContext()!.Value;
-    var users = await db.Users.AsNoTracking().Where(u => u.OrganizationId == actor.OrganizationId).OrderBy(u => u.DisplayName).ToListAsync(ct);
-    return Results.Ok(users.Select(u => new UserSummaryDto(u.Id, u.Email, u.DisplayName, u.Role, u.CreatedAt)));
+    var list = await users.GetUsersAsync(actor, ct);
+    return Results.Ok(list);
 }).RequireAuthorization(AuthorizationPolicies.Admin);
 
 v1.MapGet("/organizations", async (HttpContext http, SentinelDbContext db, CancellationToken ct) =>
@@ -642,7 +835,7 @@ v1.MapPost("/vps-nodes", async (CreateVpsNodeRequest req, HttpContext http, VpsN
     var actor = http.User.ToActorContext()!.Value;
     var created = await vpsService.CreateNodeAsync(actor, req, ct);
     return created is null
-        ? Results.BadRequest(new ProblemDetails { Title = "Invalid VPS node data", Detail = "Name, host, port, username, and a valid OpenSSH private key are required." })
+        ? Results.BadRequest(new ProblemDetails { Title = "Invalid VPS node data", Detail = "Name, host, port, username, a valid OpenSSH private key, and a verified SHA256 host key fingerprint are required." })
         : Results.Created($"/api/v1/vps-nodes/{created.Id}", created);
 }).RequireAuthorization(AuthorizationPolicies.Admin);
 
@@ -674,7 +867,207 @@ v1.MapPost("/vps-nodes/{id:guid}/restart-service", async (Guid id, RestartVpsSer
     return result.Success ? Results.Ok(result) : Results.BadRequest(result);
 }).RequireAuthorization(AuthorizationPolicies.Technician);
 
+// --- ITAM & CMMS Asset Management Endpoints ---
+v1.MapGet("/devices/{id:guid}/asset-detail", async (Guid id, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
+{
+    var actor = http.User.ToActorContext()!.Value;
+    var detail = await assetService.GetDeviceAssetDetailAsync(actor, id, ct);
+    return detail is null ? Results.NotFound() : Results.Ok(detail);
+});
+
+v1.MapPut("/devices/{id:guid}/asset-profile", async (Guid id, UpdateAssetProfileRequest req, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
+{
+    var actor = http.User.ToActorContext()!.Value;
+    var (status, message) = await assetService.UpdateAssetProfileAsync(actor, id, req, ct);
+    return status switch
+    {
+        ManagementResultStatus.Succeeded => Results.Ok(new { message }),
+        ManagementResultStatus.NotFound => Results.NotFound(new { message }),
+        ManagementResultStatus.Forbidden => Results.Forbid(),
+        _ => Results.BadRequest(new ProblemDetails { Title = "Invalid profile update", Detail = message })
+    };
+}).RequireAuthorization(AuthorizationPolicies.Technician);
+
+v1.MapGet("/devices/{id:guid}/timeline", async (Guid id, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
+{
+    var actor = http.User.ToActorContext()!.Value;
+    var timeline = await assetService.GetDeviceTimelineAsync(actor, id, ct);
+    return Results.Ok(timeline);
+});
+
+v1.MapGet("/incidents", async (Guid? deviceId, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
+{
+    var actor = http.User.ToActorContext()!.Value;
+    var incidents = await assetService.GetIncidentsAsync(actor, deviceId, ct);
+    return Results.Ok(incidents);
+});
+
+v1.MapPost("/incidents", async (CreateIncidentRequest req, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
+{
+    var actor = http.User.ToActorContext()!.Value;
+    var (status, incident, message) = await assetService.CreateIncidentAsync(actor, req, ct);
+    return status switch
+    {
+        ManagementResultStatus.Succeeded => Results.Created($"/api/v1/incidents/{incident!.Id}", incident),
+        ManagementResultStatus.NotFound => Results.NotFound(new { message }),
+        ManagementResultStatus.Forbidden => Results.Forbid(),
+        _ => Results.BadRequest(new ProblemDetails { Title = "Failed to report incident", Detail = message })
+    };
+});
+
+v1.MapPut("/incidents/{id:guid}/status", async (Guid id, UpdateIncidentStatusRequest req, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
+{
+    var actor = http.User.ToActorContext()!.Value;
+    var (status, message) = await assetService.UpdateIncidentStatusAsync(actor, id, req, ct);
+    return status switch
+    {
+        ManagementResultStatus.Succeeded => Results.Ok(new { message }),
+        ManagementResultStatus.NotFound => Results.NotFound(new { message }),
+        ManagementResultStatus.Forbidden => Results.Forbid(),
+        _ => Results.BadRequest(new ProblemDetails { Title = "Failed to update incident", Detail = message })
+    };
+}).RequireAuthorization(AuthorizationPolicies.Technician);
+
+v1.MapGet("/work-orders", async (Guid? deviceId, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
+{
+    var actor = http.User.ToActorContext()!.Value;
+    var workOrders = await assetService.GetWorkOrdersAsync(actor, deviceId, ct);
+    return Results.Ok(workOrders);
+});
+
+v1.MapPost("/work-orders", async (CreateWorkOrderRequest req, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
+{
+    var actor = http.User.ToActorContext()!.Value;
+    var (status, wo, message) = await assetService.CreateWorkOrderAsync(actor, req, ct);
+    return status switch
+    {
+        ManagementResultStatus.Succeeded => Results.Created($"/api/v1/work-orders/{wo!.Id}", wo),
+        ManagementResultStatus.NotFound => Results.NotFound(new { message }),
+        ManagementResultStatus.Forbidden => Results.Forbid(),
+        _ => Results.BadRequest(new ProblemDetails { Title = "Failed to create work order", Detail = message })
+    };
+}).RequireAuthorization(AuthorizationPolicies.Technician);
+
+v1.MapPut("/work-orders/{id:guid}/complete", async (Guid id, CompleteWorkOrderRequest req, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
+{
+    var actor = http.User.ToActorContext()!.Value;
+    var (status, message) = await assetService.CompleteWorkOrderAsync(actor, id, req, ct);
+    return status switch
+    {
+        ManagementResultStatus.Succeeded => Results.Ok(new { message }),
+        ManagementResultStatus.NotFound => Results.NotFound(new { message }),
+        ManagementResultStatus.Forbidden => Results.Forbid(),
+        _ => Results.BadRequest(new ProblemDetails { Title = "Failed to complete work order", Detail = message })
+    };
+}).RequireAuthorization(AuthorizationPolicies.Technician);
+
+v1.MapGet("/asset-loans", async (Guid? deviceId, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
+{
+    var actor = http.User.ToActorContext()!.Value;
+    var loans = await assetService.GetAssetLoansAsync(actor, deviceId, ct);
+    return Results.Ok(loans);
+}).RequireAuthorization(AuthorizationPolicies.Technician);
+
+v1.MapPost("/asset-loans", async (CreateLoanRequest req, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
+{
+    var actor = http.User.ToActorContext()!.Value;
+    var (status, loan, message) = await assetService.CreateAssetLoanAsync(actor, req, ct);
+    return status switch
+    {
+        ManagementResultStatus.Succeeded => Results.Created($"/api/v1/asset-loans/{loan!.Id}", loan),
+        ManagementResultStatus.NotFound => Results.NotFound(new { message }),
+        ManagementResultStatus.Forbidden => Results.Forbid(),
+        _ => Results.BadRequest(new ProblemDetails { Title = "Failed to create asset loan", Detail = message })
+    };
+}).RequireAuthorization(AuthorizationPolicies.Technician);
+
+v1.MapPut("/asset-loans/{id:guid}/return", async (Guid id, ReturnLoanRequest req, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
+{
+    var actor = http.User.ToActorContext()!.Value;
+    var (status, message) = await assetService.ReturnAssetLoanAsync(actor, id, req, ct);
+    return status switch
+    {
+        ManagementResultStatus.Succeeded => Results.Ok(new { message }),
+        ManagementResultStatus.NotFound => Results.NotFound(new { message }),
+        ManagementResultStatus.Forbidden => Results.Forbid(),
+        _ => Results.BadRequest(new ProblemDetails { Title = "Failed to process asset return", Detail = message })
+    };
+}).RequireAuthorization(AuthorizationPolicies.Technician);
+
+// Legacy GUID lookup retained for authenticated support tooling only.
+v1.MapGet("/public/qr/{id:guid}", async (Guid id, IAssetManagementService assetService, CancellationToken ct) =>
+{
+    var info = await assetService.GetPublicQrDeviceAsync(id, ct);
+    return info is null ? Results.NotFound() : Results.Ok(info);
+}).RequireAuthorization(AuthorizationPolicies.Technician);
+
+// --- Device QR Label Lifecycle & Scoped Resolution Endpoints ---
+v1.MapPost("/devices/{id:guid}/qr-label", async (Guid id, GenerateQrLabelRequest req, HttpContext http, SentinelDbContext db, IQrManagementService qrService, CancellationToken ct) =>
+{
+    using var developmentWrite = db.Database.IsRelational() ? null : await DevelopmentWriteGate.EnterAsync(ct);
+    var actor = http.User.ToActorContext()!.Value;
+    var (status, label, message) = await qrService.GenerateOrRotateLabelAsync(actor, id, req, ct);
+    return status switch
+    {
+        ManagementResultStatus.Succeeded => Results.Created($"/api/v1/devices/{id}/qr-label", label),
+        ManagementResultStatus.NotFound => Results.NotFound(new ProblemDetails { Title = "Device not found", Detail = message, Status = 404 }),
+        ManagementResultStatus.Forbidden => Results.StatusCode(StatusCodes.Status403Forbidden),
+        ManagementResultStatus.Conflict => Results.Conflict(new ProblemDetails { Title = "Conflict", Detail = message, Status = 409 }),
+        _ => Results.BadRequest(new ProblemDetails { Title = "Invalid request", Detail = message, Status = 400 })
+    };
+}).RequireAuthorization(AuthorizationPolicies.Technician).RequireRateLimiting("sensitive");
+
+v1.MapDelete("/devices/{id:guid}/qr-label", async (Guid id, [FromBody] RevokeQrLabelRequest? req, HttpContext http, SentinelDbContext db, IQrManagementService qrService, CancellationToken ct) =>
+{
+    using var developmentWrite = db.Database.IsRelational() ? null : await DevelopmentWriteGate.EnterAsync(ct);
+    var actor = http.User.ToActorContext()!.Value;
+    var request = req ?? new RevokeQrLabelRequest("Revoked by technician", true);
+    var (status, message) = await qrService.RevokeLabelAsync(actor, id, request, ct);
+    return status switch
+    {
+        ManagementResultStatus.Succeeded => Results.NoContent(),
+        ManagementResultStatus.NotFound => Results.NotFound(new ProblemDetails { Title = "Not found", Detail = message, Status = 404 }),
+        ManagementResultStatus.Forbidden => Results.StatusCode(StatusCodes.Status403Forbidden),
+        _ => Results.BadRequest(new ProblemDetails { Title = "Invalid request", Detail = message, Status = 400 })
+    };
+}).RequireAuthorization(AuthorizationPolicies.Technician).RequireRateLimiting("sensitive");
+
+v1.MapGet("/devices/{id:guid}/qr-label", async (Guid id, HttpContext http, IQrManagementService qrService, CancellationToken ct) =>
+{
+    var actor = http.User.ToActorContext()!.Value;
+    var label = await qrService.GetActiveLabelAsync(actor, id, ct);
+    return label is null ? Results.NotFound() : Results.Ok(label);
+}).RequireAuthorization(AuthorizationPolicies.Technician);
+
+v1.MapGet("/qr/{code}/public", async (string code, IQrManagementService qrService, HttpContext http, CancellationToken ct) =>
+{
+    http.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+    http.Response.Headers.Pragma = "no-cache";
+    var info = await qrService.ResolvePublicAsync(code, ct);
+    return info is null ? Results.NotFound() : Results.Ok(info);
+}).AllowAnonymous().RequireRateLimiting("sensitive");
+
+v1.MapGet("/qr/{code}", async (string code, HttpContext http, IQrManagementService qrService, CancellationToken ct) =>
+{
+    http.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+    http.Response.Headers.Pragma = "no-cache";
+    var actor = http.User.ToActorContext()!.Value;
+    var (status, result, message) = await qrService.ResolveAuthenticatedAsync(actor, code, ct);
+    return status switch
+    {
+        ManagementResultStatus.Succeeded => Results.Ok(result),
+        ManagementResultStatus.NotFound => Results.NotFound(new ProblemDetails { Title = "QR not found", Detail = message, Status = 404 }),
+        ManagementResultStatus.Forbidden => Results.StatusCode(StatusCodes.Status403Forbidden),
+        _ => Results.BadRequest(new ProblemDetails { Title = "Invalid scan", Detail = message, Status = 400 })
+    };
+}).RequireAuthorization().RequireRateLimiting("sensitive");
+
 app.MapHub<UpdatesHub>("/hubs/updates").RequireAuthorization(AuthorizationPolicies.ViewDevices);
+
+static bool IsUnsafeProductionSecret(string secret) =>
+    secret.Length < 32 || new[] { "development-", "local-", "change-me", "replace-", "demo-" }
+        .Any(marker => secret.Contains(marker, StringComparison.OrdinalIgnoreCase));
+
 app.Run();
 
 static async Task<IResult> PublishDeviceUpdateAsync(DeviceDto device, IHubContext<UpdatesHub> hub, HttpContext http, CancellationToken cancellationToken)

@@ -12,8 +12,9 @@ public sealed class AgentCycleTests
         var cycle = Cycle(api, collector, new Signatures());
         await Assert.ThrowsAsync<HttpRequestException>(() => cycle.RunAsync(default));
         await cycle.RunAsync(default);
-        Assert.Equal(1, collector.Samples);
+        Assert.Equal(2, collector.Samples);
         Assert.Equal(api.HeartbeatKeys[0], api.HeartbeatKeys[1]);
+        Assert.Equal(3, api.HeartbeatKeys.Count);
         Assert.False(string.IsNullOrEmpty(api.HeartbeatKeys[0]));
     }
 
@@ -64,7 +65,7 @@ public sealed class AgentCycleTests
     {
         var api = new FakeApi { FailHeartbeat = true };
         var collector = new Collector();
-        var offlineQueue = new ResilientOfflineQueue<TelemetrySnapshot>(10);
+        var offlineQueue = new ResilientOfflineQueue<QueuedTelemetry>(10);
         var cycle = new AgentCycle(new DeviceIdentity(DeviceId, "test"), collector, api, new CommandVerifier(), new Signatures(), TimeProvider.System, offlineQueue);
 
         // First run: fails and buffers into offlineQueue
@@ -75,8 +76,9 @@ public sealed class AgentCycleTests
         api.FailHeartbeat = false;
         await cycle.RunAsync(default);
 
-        // Both the new heartbeat and the flushed offline snapshot are delivered
-        Assert.True(api.HeartbeatKeys.Count >= 2);
+        // The failed heartbeat keeps its idempotency key and is sent before the new sample.
+        Assert.Equal(3, api.HeartbeatKeys.Count);
+        Assert.Equal(api.HeartbeatKeys[0], api.HeartbeatKeys[1]);
         Assert.Equal(0, offlineQueue.Count);
     }
 
@@ -86,7 +88,7 @@ public sealed class AgentCycleTests
         var tempFile = Path.Combine(Path.GetTempPath(), $"sentinellan_test_{Guid.NewGuid():N}.dat");
         try
         {
-            var store = new SentinelLAN.Agent.Infrastructure.ProtectedDeviceIdentityStore(tempFile);
+            var store = new SentinelLAN.Agent.Infrastructure.ProtectedDeviceIdentityStore(tempFile, "test-agent-store-key-at-least-32-characters");
             var id = new DeviceIdentity(Guid.NewGuid(), "super-secret-key-12345");
             await store.SaveAsync(id, default);
 

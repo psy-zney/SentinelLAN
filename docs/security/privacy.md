@@ -10,6 +10,6 @@ On Windows, CPU uses GetSystemTimes and RAM uses GlobalMemoryStatusEx. On Linux,
 
 Telemetry does not contain keystrokes, screen content, personal file contents, browsing activity, audio/video, network payloads, or authentication secrets. Credentials are used separately for authentication; the server stores hashes. The Development Agent identity file is not yet protected by the OS.
 
-Employee users can see their assigned device, applied policy name, and the latest 20 related audit events. Tenant boundaries use explicit query scopes; global query filters have not been implemented. This disclosure describes implemented behavior and does not certify regulatory compliance.
+In Production, the Windows Agent encrypts identity with DPAPI; the Linux Agent uses a unique operator-managed key with AES-GCM and restrictive file permissions. The Development identity file remains unprotected and must not be reused for deployment. Employee users can see their assigned device, applied policy name, and related audit events. Tenant boundaries use explicit query scopes; global query filters have not been implemented. This disclosure describes implemented behavior and does not certify regulatory compliance.
 
 References: [GetSystemTimes](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getsystemtimes), [GlobalMemoryStatusEx](https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-globalmemorystatusex), [Linux proc documentation](https://docs.kernel.org/filesystems/proc.html).

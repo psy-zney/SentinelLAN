@@ -14,16 +14,18 @@ public sealed partial class SshNetVpsSshService : IVpsSshService
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(5);
 
     public async Task<VpsConnectionTestResultDto> TestConnectionAsync(
-        string host, int port, string username, string decryptedPrivateKey, CancellationToken cancellationToken = default)
+        string host, int port, string username, string decryptedPrivateKey, string hostKeyFingerprint, CancellationToken cancellationToken = default)
     {
         return await Task.Run(() =>
         {
             try
             {
-                using var client = CreateClient(host, port, username, decryptedPrivateKey);
+                using var client = CreateClient(host, port, username, decryptedPrivateKey, hostKeyFingerprint);
                 client.Connect();
 
-                var cmd = client.RunCommand("uname -srm; uptime -p; free -m; df -k /; docker ps -q 2>/dev/null | wc -l");
+                using var cmd = client.CreateCommand("uname -srm; uptime -p; free -m; df -k /; docker ps -q 2>/dev/null | wc -l");
+                cmd.CommandTimeout = TimeSpan.FromSeconds(15);
+                cmd.Execute();
                 client.Disconnect();
 
                 var parsed = ParseProbeOutput(cmd.Result);
@@ -58,16 +60,18 @@ public sealed partial class SshNetVpsSshService : IVpsSshService
     }
 
     public async Task<VpsMetricsResultDto> CollectMetricsAsync(
-        string host, int port, string username, string decryptedPrivateKey, CancellationToken cancellationToken = default)
+        string host, int port, string username, string decryptedPrivateKey, string hostKeyFingerprint, CancellationToken cancellationToken = default)
     {
         return await Task.Run(() =>
         {
             try
             {
-                using var client = CreateClient(host, port, username, decryptedPrivateKey);
+                using var client = CreateClient(host, port, username, decryptedPrivateKey, hostKeyFingerprint);
                 client.Connect();
 
-                var cmd = client.RunCommand("uname -srm; uptime -p; free -m; df -k /; docker ps -q 2>/dev/null | wc -l");
+                using var cmd = client.CreateCommand("uname -srm; uptime -p; free -m; df -k /; docker ps -q 2>/dev/null | wc -l");
+                cmd.CommandTimeout = TimeSpan.FromSeconds(15);
+                cmd.Execute();
                 client.Disconnect();
 
                 var parsed = ParseProbeOutput(cmd.Result);
@@ -90,7 +94,7 @@ public sealed partial class SshNetVpsSshService : IVpsSshService
     }
 
     public async Task<VpsCommandResultDto> RestartServiceAsync(
-        string host, int port, string username, string decryptedPrivateKey, string serviceName, CancellationToken cancellationToken = default)
+        string host, int port, string username, string decryptedPrivateKey, string hostKeyFingerprint, string serviceName, CancellationToken cancellationToken = default)
     {
         if (!VpsNode.IsAllowedService(serviceName))
         {
@@ -101,17 +105,25 @@ public sealed partial class SshNetVpsSshService : IVpsSshService
         {
             try
             {
-                using var client = CreateClient(host, port, username, decryptedPrivateKey);
+                using var client = CreateClient(host, port, username, decryptedPrivateKey, hostKeyFingerprint);
                 client.Connect();
 
                 // Safe restart command without shell expansion
-                var cmd = client.RunCommand($"systemctl restart {serviceName} || sudo systemctl restart {serviceName}");
-                client.Disconnect();
+                using var cmd = client.CreateCommand($"systemctl restart {serviceName} || sudo -n systemctl restart {serviceName}");
+                cmd.CommandTimeout = TimeSpan.FromSeconds(20);
+                cmd.Execute();
 
-                if (cmd.ExitStatus != 0 && !string.IsNullOrWhiteSpace(cmd.Error))
+                if (cmd.ExitStatus != 0)
                 {
-                    return new VpsCommandResultDto(false, $"Command failed with exit code {cmd.ExitStatus}: {cmd.Error.Trim()}", cmd.Result);
+                    return new VpsCommandResultDto(false, $"Command failed with exit code {cmd.ExitStatus}: {cmd.Error?.Trim()}", cmd.Result);
                 }
+
+                using var verify = client.CreateCommand($"systemctl is-active --quiet {serviceName}");
+                verify.CommandTimeout = TimeSpan.FromSeconds(10);
+                verify.Execute();
+                client.Disconnect();
+                if (verify.ExitStatus != 0)
+                    return new VpsCommandResultDto(false, $"Restart returned success but service '{serviceName}' is not active.", verify.Result);
 
                 return new VpsCommandResultDto(true, $"Service '{serviceName}' restarted successfully.", cmd.Result?.Trim());
             }
@@ -122,8 +134,10 @@ public sealed partial class SshNetVpsSshService : IVpsSshService
         }, cancellationToken);
     }
 
-    private static SshClient CreateClient(string host, int port, string username, string decryptedPrivateKey)
+    private static SshClient CreateClient(string host, int port, string username, string decryptedPrivateKey, string hostKeyFingerprint)
     {
+        if (string.IsNullOrWhiteSpace(hostKeyFingerprint) || !hostKeyFingerprint.StartsWith("SHA256:", StringComparison.Ordinal))
+            throw new InvalidOperationException("A verified SSH SHA256 host key fingerprint is required.");
         var keyBytes = Encoding.UTF8.GetBytes(decryptedPrivateKey);
         using var stream = new MemoryStream(keyBytes);
         var keyFile = new PrivateKeyFile(stream);
@@ -138,7 +152,12 @@ public sealed partial class SshNetVpsSshService : IVpsSshService
             Timeout = DefaultTimeout
         };
 
-        return new SshClient(connectionInfo);
+        var client = new SshClient(connectionInfo);
+        client.HostKeyReceived += (_, args) =>
+        {
+            args.CanTrust = string.Equals("SHA256:" + args.FingerPrintSHA256, hostKeyFingerprint, StringComparison.Ordinal);
+        };
+        return client;
     }
 
     private static (string? OsInfo, string? Uptime, double? CpuPercent, double? RamPercent, double? DiskPercent, int? DockerContainersCount)

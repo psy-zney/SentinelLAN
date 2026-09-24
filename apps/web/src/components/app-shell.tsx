@@ -22,6 +22,7 @@ const linkDefs: Record<Exclude<Role, "Agent">, readonly (readonly [TranslationKe
   Admin: [
     ["dashboard", "/dashboard"],
     ["devices", "/devices"],
+    ["scanQr", "/scan"],
     ["vpsNodes", "/vps-nodes"],
     ["policies", "/policies"],
     ["commands", "/commands"],
@@ -32,13 +33,15 @@ const linkDefs: Record<Exclude<Role, "Agent">, readonly (readonly [TranslationKe
   Technician: [
     ["dashboard", "/dashboard"],
     ["devices", "/devices"],
+    ["scanQr", "/scan"],
     ["vpsNodes", "/vps-nodes"],
     ["policies", "/policies"],
     ["commands", "/commands"],
     ["alerts", "/alerts"]
   ],
   Employee: [
-    ["myDevice", "/my-device"]
+    ["myDevice", "/my-device"],
+    ["scanQr", "/scan"]
   ]
 };
 
@@ -52,7 +55,8 @@ const sectionMetaMap: Record<string, { titleKey: TranslationKey; eyebrowKey: Tra
   "Dashboard": { titleKey: "dashboard", eyebrowKey: "eyebrowOperations" },
   "Devices": { titleKey: "devices", eyebrowKey: "eyebrowOperations" },
   "Device Details": { titleKey: "devices", eyebrowKey: "eyebrowOperations" },
-  "Your Assigned Device": { titleKey: "myDevice", eyebrowKey: "eyebrowTransparency" }
+  "Your Assigned Device": { titleKey: "myDevice", eyebrowKey: "eyebrowTransparency" },
+  "QR Scanner": { titleKey: "scanQr", eyebrowKey: "eyebrowOperations" }
 };
 
 export function AppShell({

@@ -1,0 +1,28 @@
+appId: com.sentinellan.mobile
+---
+# Flow 1: Kích hoạt tài khoản và Đăng nhập Native
+- launchApp:
+    clearState: true
+
+- assertVisible: "SentinelLAN Mobile"
+- assertVisible: "Đăng nhập tài khoản nhân viên"
+
+# Nhập email và password hợp lệ
+- tapOn:
+    id: "login-email-input"
+- inputText: "employee@sentinellan.local"
+
+- tapOn:
+    id: "login-password-input"
+- inputText: "SecurePass123!"
+
+- hideKeyboard
+
+# Thực hiện đăng nhập
+- tapOn:
+    id: "login-submit-button"
+
+# Kiểm tra chuyển hướng thành công vào hệ thống
+- assertVisible: "Tổng quan"
+- assertVisible: "Máy của tôi"
+- assertVisible: "Quét QR"

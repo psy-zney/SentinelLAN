@@ -7,6 +7,7 @@ public sealed record VpsNodeDto(
     string Host,
     int Port,
     string Username,
+    string? HostKeyFingerprint,
     string Status,
     double? CpuPercent,
     double? RamPercent,
@@ -25,20 +26,16 @@ public sealed record CreateVpsNodeRequest(
     string Host,
     int Port,
     string Username,
-    string PrivateKey
-);
-
-public sealed record UpdateVpsNodeRequest(
-    string Name,
-    string Host,
-    int Port,
-    string Username,
-    string? NewPrivateKey = null
+    string PrivateKey,
+    string HostKeyFingerprint
 );
 
 public sealed record RestartVpsServiceRequest(
     string ServiceName,
-    string Reason
+    string Reason,
+    bool Confirmed,
+    Guid Nonce,
+    DateTimeOffset ExpiresAt
 );
 
 public sealed record VpsConnectionTestResultDto(
@@ -77,9 +74,9 @@ public interface IVpsVaultService
 
 public interface IVpsSshService
 {
-    Task<VpsConnectionTestResultDto> TestConnectionAsync(string host, int port, string username, string decryptedPrivateKey, CancellationToken cancellationToken = default);
-    Task<VpsMetricsResultDto> CollectMetricsAsync(string host, int port, string username, string decryptedPrivateKey, CancellationToken cancellationToken = default);
-    Task<VpsCommandResultDto> RestartServiceAsync(string host, int port, string username, string decryptedPrivateKey, string serviceName, CancellationToken cancellationToken = default);
+    Task<VpsConnectionTestResultDto> TestConnectionAsync(string host, int port, string username, string decryptedPrivateKey, string hostKeyFingerprint, CancellationToken cancellationToken = default);
+    Task<VpsMetricsResultDto> CollectMetricsAsync(string host, int port, string username, string decryptedPrivateKey, string hostKeyFingerprint, CancellationToken cancellationToken = default);
+    Task<VpsCommandResultDto> RestartServiceAsync(string host, int port, string username, string decryptedPrivateKey, string hostKeyFingerprint, string serviceName, CancellationToken cancellationToken = default);
 }
 
 public interface IVpsNodeStore
@@ -91,4 +88,5 @@ public interface IVpsNodeStore
     Task<bool> DeleteAsync(Guid organizationId, Guid id, CancellationToken cancellationToken = default);
     Task<bool> ExistsNameAsync(Guid organizationId, string name, Guid? excludeId = null, CancellationToken cancellationToken = default);
     Task RecordAuditAsync(Domain.AuditLog auditLog, CancellationToken cancellationToken = default);
+    Task<bool> TryReserveActionAsync(Domain.VpsActionReservation reservation, CancellationToken cancellationToken = default);
 }

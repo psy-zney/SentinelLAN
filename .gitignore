@@ -12,6 +12,8 @@ TestResults/
 test-results/
 playwright-report/
 *.tsbuildinfo
+.expo/
+*.expo/
 .env
 .env.*
 !.env.example
@@ -28,11 +30,7 @@ playwright-report/
 *.dump
 agent-data/
 
-# Auxiliary, internal, and report files
-Takenote.md
-Takenote*
-VERIFICATION.md
-AGENTS.md
+# Local notes and generated reports
 CLAUDE.md
 LICENSE
 PROJECT_OVERVIEW.md
@@ -40,16 +38,28 @@ BAO_CAO*
 *bao_cao*
 plan/
 plans/
+!docs/plans/
+docs/plans/*
+!docs/plans/qr-personal-device-management-plan.md
+!docs/plans/employee-mobile-app-plan.md
 aio/
 .aio/
 .agents/
 .claude/
 .codex/
 scratch/
+/backups/
+/docs/local/
+/docs/private/
+/deploy/vps/certs/
+/INFRASTRUCTURE_CONG_VPS.txt
+**/AGENTS.md
+docs/html/codegraph-visualizer.html
 
 # Ignore internal markdown files in root except public README.md
 /*.md
 !/README.md
+!/MVP_IMPLEMENTATION_PLAN.md
 
 # Office, document, and report formats
 *.docx
@@ -67,3 +77,4 @@ Desktop.ini
 *.tmp
 *.bak
 *.swp
+.codegraph/

@@ -1,0 +1,23 @@
+appId: com.sentinellan.mobile
+---
+# Flow 5: Quét hoặc nhập mã QR không được phân công (Forbidden / Unassigned Device)
+- launchApp
+
+# Chuyển sang tab Quét QR
+- tapOn: "Quét QR"
+
+# Nhập mã thiết bị thuộc về nhân viên khác hoặc chưa được gán
+- tapOn:
+    id: "manual-entry-button"
+
+- tapOn:
+    id: "manual-code-input"
+- inputText: "QR-SENTINEL-FOREIGN-99"
+
+- hideKeyboard
+- tapOn:
+    id: "submit-manual-code-button"
+
+# Kiểm tra thông báo lỗi phân quyền từ server và không chuyển hướng vào My Device
+- assertVisible: "Mã QR hợp lệ nhưng thiết bị này không được phân công cho tài khoản của bạn."
+- assertNotVisible: "Thiết bị được phân công"

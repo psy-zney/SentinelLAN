@@ -22,9 +22,22 @@ public sealed class DevelopmentIdentityStore(string path) : IDeviceIdentityStore
     }
 }
 
-public sealed class ProtectedDeviceIdentityStore(string path) : IDeviceIdentityStore
+public sealed class ProtectedDeviceIdentityStore : IDeviceIdentityStore
 {
     private static readonly byte[] Entropy = [0x53, 0x65, 0x6e, 0x74, 0x69, 0x6e, 0x65, 0x6c, 0x4c, 0x41, 0x4e, 0x5f, 0x50, 0x72, 0x6f, 0x74];
+    private readonly string path;
+    private readonly byte[]? nonWindowsKey;
+
+    public ProtectedDeviceIdentityStore(string path, string? nonWindowsKey = null)
+    {
+        this.path = path;
+        if (!OperatingSystem.IsWindows())
+        {
+            if (string.IsNullOrWhiteSpace(nonWindowsKey) || nonWindowsKey.Length < 32)
+                throw new InvalidOperationException("SENTINELLAN_AGENT_STORE_KEY must be a unique secret of at least 32 characters on non-Windows hosts.");
+            this.nonWindowsKey = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(nonWindowsKey));
+        }
+    }
 
     public async Task<DeviceIdentity?> LoadAsync(CancellationToken cancellationToken)
     {
@@ -36,28 +49,47 @@ public sealed class ProtectedDeviceIdentityStore(string path) : IDeviceIdentityS
 
     public async Task SaveAsync(DeviceIdentity identity, CancellationToken cancellationToken)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        var directory = Path.GetDirectoryName(path)!;
+        Directory.CreateDirectory(directory);
+        if (!OperatingSystem.IsWindows())
+            File.SetUnixFileMode(directory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         var plainBytes = JsonSerializer.SerializeToUtf8Bytes(identity);
         var protectedBytes = Protect(plainBytes);
-        await File.WriteAllBytesAsync(path, protectedBytes, cancellationToken);
+        var temporaryPath = Path.Combine(directory, $".identity-{Guid.NewGuid():N}.tmp");
+        try
+        {
+            var options = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write };
+            if (!OperatingSystem.IsWindows())
+                options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+            await using (var stream = new FileStream(temporaryPath, options))
+            {
+                await stream.WriteAsync(protectedBytes, cancellationToken);
+                await stream.FlushAsync(cancellationToken);
+            }
+            File.Move(temporaryPath, path, true);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+        }
     }
 
-    private static byte[] Protect(byte[] plainData)
+    private byte[] Protect(byte[] plainData)
     {
         if (OperatingSystem.IsWindows())
         {
             return WindowsDpapi.Protect(plainData, Entropy);
         }
-        return FallbackCipher.Protect(plainData, Entropy);
+        return NonWindowsIdentityCipher.Protect(plainData, nonWindowsKey!);
     }
 
-    private static byte[] Unprotect(byte[] protectedData)
+    private byte[] Unprotect(byte[] protectedData)
     {
         if (OperatingSystem.IsWindows())
         {
             return WindowsDpapi.Unprotect(protectedData, Entropy);
         }
-        return FallbackCipher.Unprotect(protectedData, Entropy);
+        return NonWindowsIdentityCipher.Unprotect(protectedData, nonWindowsKey!);
     }
 }
 
@@ -144,35 +176,29 @@ internal static class WindowsDpapi
     }
 }
 
-internal static class FallbackCipher
+internal static class NonWindowsIdentityCipher
 {
-    public static byte[] Protect(byte[] data, byte[] entropy)
+    private static readonly byte[] Magic = [0x53, 0x4c, 0x32, 0x00];
+
+    public static byte[] Protect(byte[] data, byte[] key)
     {
-        using var aes = System.Security.Cryptography.Aes.Create();
-        aes.Key = System.Security.Cryptography.SHA256.HashData(entropy);
-        aes.GenerateIV();
-        using var ms = new MemoryStream();
-        ms.Write(aes.IV, 0, aes.IV.Length);
-        using (var cs = new System.Security.Cryptography.CryptoStream(ms, aes.CreateEncryptor(), System.Security.Cryptography.CryptoStreamMode.Write))
-        {
-            cs.Write(data, 0, data.Length);
-        }
-        return ms.ToArray();
+        var nonce = System.Security.Cryptography.RandomNumberGenerator.GetBytes(12);
+        var cipher = new byte[data.Length];
+        var tag = new byte[16];
+        using var aes = new System.Security.Cryptography.AesGcm(key, tag.Length);
+        aes.Encrypt(nonce, data, cipher, tag);
+        return [.. Magic, .. nonce, .. tag, .. cipher];
     }
 
-    public static byte[] Unprotect(byte[] data, byte[] entropy)
+    public static byte[] Unprotect(byte[] data, byte[] key)
     {
-        using var aes = System.Security.Cryptography.Aes.Create();
-        aes.Key = System.Security.Cryptography.SHA256.HashData(entropy);
-        var iv = new byte[aes.BlockSize / 8];
-        Array.Copy(data, 0, iv, 0, iv.Length);
-        aes.IV = iv;
-        using var ms = new MemoryStream();
-        using (var cs = new System.Security.Cryptography.CryptoStream(new MemoryStream(data, iv.Length, data.Length - iv.Length), aes.CreateDecryptor(), System.Security.Cryptography.CryptoStreamMode.Read))
-        {
-            cs.CopyTo(ms);
-        }
-        return ms.ToArray();
+        if (data.Length < Magic.Length + 12 + 16 || !data.AsSpan(0, Magic.Length).SequenceEqual(Magic))
+            throw new System.Security.Cryptography.CryptographicException("Unsupported identity format; re-enroll the device.");
+        var plain = new byte[data.Length - Magic.Length - 12 - 16];
+        using var aes = new System.Security.Cryptography.AesGcm(key, 16);
+        aes.Decrypt(data.AsSpan(Magic.Length, 12), data.AsSpan(Magic.Length + 12 + 16),
+            data.AsSpan(Magic.Length + 12, 16), plain);
+        return plain;
     }
 }
 

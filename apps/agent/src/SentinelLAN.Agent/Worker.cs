@@ -2,7 +2,7 @@ using SentinelLAN.Agent.Core;
 
 namespace SentinelLAN.Agent;
 
-public sealed class Worker(ILogger<Worker> logger, IDeviceIdentityStore identityStore, ITelemetryCollector telemetry, IAgentApi api, CommandVerifier verifier, ICommandSignatureVerifier signatureVerifier, IConfiguration configuration, ResilientOfflineQueue<TelemetrySnapshot>? offlineQueue = null) : BackgroundService
+public sealed class Worker(ILogger<Worker> logger, IDeviceIdentityStore identityStore, ITelemetryCollector telemetry, IAgentApi api, CommandVerifier verifier, ICommandSignatureVerifier signatureVerifier, IConfiguration configuration, ResilientOfflineQueue<QueuedTelemetry>? offlineQueue = null) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -13,7 +13,7 @@ public sealed class Worker(ILogger<Worker> logger, IDeviceIdentityStore identity
             if (string.IsNullOrWhiteSpace(enrollmentToken)) { logger.LogWarning("Agent is not enrolled. Set SENTINELLAN_ENROLLMENT_TOKEN for this authorized device."); return; }
             identity = await api.EnrollAsync(enrollmentToken, stoppingToken);
             await identityStore.SaveAsync(identity, stoppingToken);
-            logger.LogWarning("Development identity store is file-based. Use an OS-protected credential store before deployment.");
+            logger.LogInformation("Device enrollment completed; identity persisted by the configured store.");
         }
 
         if (!signatureVerifier.IsConfigured) logger.LogWarning("Command polling is disabled until SENTINELLAN_SIGNING_KEY is configured. Telemetry remains active.");

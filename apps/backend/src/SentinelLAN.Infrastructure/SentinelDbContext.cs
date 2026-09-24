@@ -24,6 +24,12 @@ public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> option
     public DbSet<SecurityEvent> SecurityEvents => Set<SecurityEvent>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<VpsNode> VpsNodes => Set<VpsNode>();
+    public DbSet<VpsActionReservation> VpsActionReservations => Set<VpsActionReservation>();
+    public DbSet<IncidentTicket> Incidents => Set<IncidentTicket>();
+    public DbSet<WorkOrder> WorkOrders => Set<WorkOrder>();
+    public DbSet<AssetLoan> AssetLoans => Set<AssetLoan>();
+    public DbSet<AccountActivationToken> AccountActivationTokens => Set<AccountActivationToken>();
+    public DbSet<DeviceQrLabel> DeviceQrLabels => Set<DeviceQrLabel>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -49,29 +55,58 @@ public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> option
             .IsRequired()
             .IsConcurrencyToken()
             .ValueGeneratedNever();
+        modelBuilder.Entity<AccountActivationToken>().HasIndex(x => x.TokenHash).IsUnique();
+        modelBuilder.Entity<AccountActivationToken>()
+            .HasIndex(x => new { x.OrganizationId, x.UserId })
+            .HasFilter("\"UsedAt\" IS NULL AND \"RevokedAt\" IS NULL")
+            .IsUnique();
+        modelBuilder.Entity<AccountActivationToken>()
+            .Property(x => x.RowVersion)
+            .IsRequired()
+            .IsConcurrencyToken()
+            .ValueGeneratedNever();
+        modelBuilder.Entity<DeviceQrLabel>().HasIndex(x => x.CodeHash).IsUnique();
+        modelBuilder.Entity<DeviceQrLabel>()
+            .HasIndex(x => new { x.OrganizationId, x.DeviceId })
+            .HasFilter("\"RevokedAt\" IS NULL")
+            .IsUnique();
+        modelBuilder.Entity<DeviceQrLabel>()
+            .Property(x => x.RowVersion)
+            .IsRequired()
+            .IsConcurrencyToken()
+            .ValueGeneratedNever();
         modelBuilder.Entity<VpsNode>().HasIndex(x => new { x.OrganizationId, x.Name });
         modelBuilder.Entity<VpsNode>().HasIndex(x => new { x.OrganizationId, x.Host });
+        modelBuilder.Entity<VpsActionReservation>().HasIndex(x => new { x.OrganizationId, x.Nonce }).IsUnique();
+        modelBuilder.Entity<IncidentTicket>().HasIndex(x => new { x.OrganizationId, x.DeviceId });
+        modelBuilder.Entity<WorkOrder>().HasIndex(x => new { x.OrganizationId, x.DeviceId });
+        modelBuilder.Entity<WorkOrder>().HasIndex(x => new { x.OrganizationId, x.WorkOrderNumber }).IsUnique();
+        modelBuilder.Entity<AssetLoan>().HasIndex(x => new { x.OrganizationId, x.DeviceId });
         foreach (var type in modelBuilder.Model.GetEntityTypes().Where(x => typeof(ITenantOwned).IsAssignableFrom(x.ClrType)))
             modelBuilder.Entity(type.ClrType).HasIndex(nameof(ITenantOwned.OrganizationId));
     }
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
-        SetDeviceRowVersions();
+        UpdateConcurrencyRowVersions();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
     public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
-        SetDeviceRowVersions();
+        UpdateConcurrencyRowVersions();
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 
-    private void SetDeviceRowVersions()
+    private void UpdateConcurrencyRowVersions()
     {
         if (ChangeTracker.Entries<AuditLog>().Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
             throw new InvalidOperationException("Audit entries are append-only.");
         foreach (var entry in ChangeTracker.Entries<Device>().Where(entry => entry.State is EntityState.Added or EntityState.Modified))
             entry.Property(device => device.RowVersion).CurrentValue = Guid.NewGuid().ToByteArray();
+        foreach (var entry in ChangeTracker.Entries<AccountActivationToken>().Where(entry => entry.State is EntityState.Added or EntityState.Modified))
+            entry.Property(token => token.RowVersion).CurrentValue = Guid.NewGuid().ToByteArray();
+        foreach (var entry in ChangeTracker.Entries<DeviceQrLabel>().Where(entry => entry.State is EntityState.Added or EntityState.Modified))
+            entry.Property(label => label.RowVersion).CurrentValue = Guid.NewGuid().ToByteArray();
     }
 }

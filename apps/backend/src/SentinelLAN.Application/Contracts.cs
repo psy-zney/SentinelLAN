@@ -50,7 +50,7 @@ public static class AuthorizationPolicies
     public const string ManageAlerts = nameof(ManageAlerts);
 }
 
-public readonly record struct ActorContext(Guid UserId, Guid OrganizationId, string Role);
+public readonly record struct ActorContext(Guid UserId, Guid OrganizationId, string Role, string? SecurityStamp = null);
 public readonly record struct AgentContext(Guid DeviceId, Guid OrganizationId);
 
 public static class DeviceScope
@@ -85,9 +85,79 @@ public record AlertDto(Guid Id, Guid? DeviceId, string? DeviceName, string Sever
 public record CreateAlertRequest(Guid? DeviceId, string Severity, string Message);
 
 public record AuditLogDto(Guid Id, Guid ActorId, string? ActorName, Guid? DeviceId, string? DeviceName, string Action, string Reason, string Outcome, DateTimeOffset CreatedAt);
-public record UserSummaryDto(Guid Id, string Email, string DisplayName, string Role, DateTimeOffset CreatedAt);
+public record UserSummaryDto(Guid Id, string Email, string DisplayName, string Role, string Status, DateTimeOffset CreatedAt, bool HasActiveInvitation = false);
 public record OrganizationSummaryDto(Guid Id, string Code, string Name, DateTimeOffset CreatedAt);
-public record CreateUserRequest(string Email, string DisplayName, string Role, string Password, string Reason, bool Confirmed);
+public record CreateUserRequest
+{
+    [System.Text.Json.Serialization.JsonConstructor]
+    public CreateUserRequest(string email, string displayName, string role, string reason, bool confirmed, string? password = null, int validForHours = 24)
+    {
+        Email = email;
+        DisplayName = displayName;
+        Role = role;
+        Reason = reason;
+        Confirmed = confirmed;
+        Password = password;
+        ValidForHours = validForHours;
+    }
+
+    public CreateUserRequest(string email, string displayName, string role, string password, string reason, bool confirmed)
+        : this(email, displayName, role, reason, confirmed, password, 24) { }
+
+    public string Email { get; init; } = string.Empty;
+    public string DisplayName { get; init; } = string.Empty;
+    public string Role { get; init; } = string.Empty;
+    public string Reason { get; init; } = string.Empty;
+    public bool Confirmed { get; init; }
+    public string? Password { get; init; }
+    public int ValidForHours { get; init; } = 24;
+
+    public void Deconstruct(out string email, out string displayName, out string role, out string reason, out bool confirmed, out string? password, out int validForHours)
+    {
+        email = Email;
+        displayName = DisplayName;
+        role = Role;
+        reason = Reason;
+        confirmed = Confirmed;
+        password = Password;
+        validForHours = ValidForHours;
+    }
+}
+public record CreateUserResponse(UserSummaryDto User, string? ActivationToken, string? ActivationUrl, DateTimeOffset? ExpiresAt);
+public record SetUserStatusRequest(string Status, string Reason, bool Confirmed);
+public record ReissueActivationTokenRequest(string Reason, bool Confirmed, int ValidForHours = 24);
+public record ReissueActivationTokenResponse(string ActivationToken, string ActivationUrl, DateTimeOffset ExpiresAt);
+public record RevokeActivationTokenRequest(string Reason, bool Confirmed);
+public record ActivateAccountRequest(string Token, string Password);
+public record ValidateActivationTokenResponse(bool Valid, string? Message = null);
+
+public record GenerateQrLabelRequest(string Reason, bool Confirmed, int? ValidForDays = null);
+public record RevokeQrLabelRequest(string Reason, bool Confirmed);
+public record QrLabelResponse(Guid Id, string Code, string CodePrefix, string QrUrl, DateTimeOffset CreatedAt, DateTimeOffset? ExpiresAt);
+public record QrLabelStatusDto(Guid Id, string CodePrefix, DateTimeOffset CreatedAt, DateTimeOffset? ExpiresAt, DateTimeOffset? LastScannedAt, bool IsActive);
+public record PublicQrResolveDto(string DeviceName, string AssetTag, string AssetStatus, string ContactPolicy, bool IsOnline, bool IsAssigned);
+public record AuthenticatedQrResolveDto(Guid DeviceId, string DeviceName, string NextRoute, string Role, bool Authorized, string? Message = null);
+
+public record PrivacyManifestDto(
+    IReadOnlyList<string> CollectedTechnicalData,
+    IReadOnlyList<string> StrictlyProhibitedData,
+    IReadOnlyList<string> AgentPermissions,
+    int DataRetentionDays);
+public record MyDeviceDto(
+    DeviceDto Device,
+    string? AppliedPolicy,
+    TelemetrySnapshotDto? LatestTelemetry,
+    IReadOnlyList<IncidentDto> Incidents,
+    IReadOnlyList<EmployeeDeviceActionDto> RecentActions,
+    PrivacyManifestDto PrivacyManifest,
+    string? SerialNumber,
+    string? Manufacturer,
+    string? Model,
+    string? AssetType,
+    string? Location,
+    DateTimeOffset AssignedAt);
+public record ReportMyDeviceIncidentRequest(string Title, string? Description, string Severity = "Medium");
+
 public record EnrollmentTokenRequest(int ValidForMinutes, string Reason, bool Confirmed);
 public record EnrollmentTokenResponse(string Token, DateTimeOffset ExpiresAt);
 public record DeviceAssignmentRequest(Guid? AssignedUserId, string Reason, bool Confirmed);

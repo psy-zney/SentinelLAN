@@ -1,107 +1,77 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 
-# SentinelLAN VPS One-Click Production Deployment Script
-# Target OS: Ubuntu 22.04 / 24.04 LTS, Debian 12
-
-echo "============================================================"
-echo "    SentinelLAN — Production VPS Deployment Setup           "
-echo "============================================================"
-
-if [ "$EUID" -ne 0 ]; then
-  echo "[!] Please run this script with sudo or as root."
-  exit 1
-fi
-
+# Requires a DNS name and a trusted certificate in ./certs/fullchain.pem and ./certs/privkey.pem.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# 1. Check and install Docker if missing
-if ! command -v docker &> /dev/null; then
-    echo "[*] Docker not found. Installing Docker Engine..."
-    apt-get update
-    apt-get install -y ca-certificates curl gnupg lsb-release
-    install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    chmod a+r /etc/apt/keyrings/docker.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-    apt-get update
-    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-    systemctl enable docker
-    systemctl start docker
-    echo "[✓] Docker installed successfully."
+if [ "$EUID" -ne 0 ]; then
+    echo "Run as root so the private configuration and certificate stay protected." >&2
+    exit 1
 fi
 
-# 2. Generate secure production .env if not exists
-if [ ! -f .env ]; then
-    echo "[*] Generating cryptographically secure .env configuration..."
-    DB_PASS=$(openssl rand -hex 24)
-    ADM_PASS=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9!@#$%')
-    SIGN_KEY=$(openssl rand -hex 32)
-    JWT_KEY=$(openssl rand -hex 32)
-    ENROLL_TOK=$(openssl rand -hex 16)
-    VPS_IP=$(curl -s -4 ifconfig.me || hostname -I | awk '{print $1}')
+if ! command -v docker >/dev/null || ! docker compose version >/dev/null 2>&1; then
+    echo "Install Docker Engine and the Compose plugin before running this script." >&2
+    exit 1
+fi
+if ! command -v openssl >/dev/null || ! command -v curl >/dev/null; then
+    echo "Install openssl and curl before running this script." >&2
+    exit 1
+fi
+if [ ! -s certs/fullchain.pem ] || [ ! -s certs/privkey.pem ]; then
+    echo "Place a trusted certificate and private key in deploy/vps/certs/ before deployment." >&2
+    exit 1
+fi
 
-    cat <<EOF > .env
+if [ ! -f .env ]; then
+    : "${PUBLIC_DOMAIN:?Set PUBLIC_DOMAIN to a DNS name with a trusted certificate}"
+    : "${BOOTSTRAP_ADMIN_EMAIL:?Set BOOTSTRAP_ADMIN_EMAIL to the initial administrator email}"
+    : "${BOOTSTRAP_ORG_CODE:?Set BOOTSTRAP_ORG_CODE to the organization code}"
+    : "${BOOTSTRAP_ORG_NAME:?Set BOOTSTRAP_ORG_NAME to the organization name}"
+    if [[ ! "$PUBLIC_DOMAIN" =~ ^[a-zA-Z0-9.-]+$ ]] ||
+       [[ ! "$BOOTSTRAP_ORG_CODE" =~ ^[a-z][a-z0-9-]{2,49}$ ]] ||
+       [[ ! "$BOOTSTRAP_ADMIN_EMAIL" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]] ||
+       (( ${#BOOTSTRAP_ORG_NAME} < 2 || ${#BOOTSTRAP_ORG_NAME} > 100 )) ||
+       [[ "$BOOTSTRAP_ORG_NAME" == *$'\n'* ]] || [[ "$BOOTSTRAP_ORG_NAME" == *$'\r'* ]] ||
+       [[ "$BOOTSTRAP_ORG_NAME" == *'$'* ]] || [[ "$BOOTSTRAP_ORG_NAME" == *'#'* ]] ||
+       [[ "$BOOTSTRAP_ORG_NAME" == *'='* ]]; then
+        echo "Bootstrap values contain characters unsafe for the Compose environment file." >&2
+        exit 1
+    fi
+    cat > .env <<EOF
+PUBLIC_DOMAIN=${PUBLIC_DOMAIN}
 POSTGRES_DB=sentinellan
 POSTGRES_USER=sentinellan
-POSTGRES_PASSWORD=${DB_PASS}
-ADMIN_EMAIL=admin@sentinellan.local
-ADMIN_PASSWORD=${ADM_PASS}
-SIGNING_KEY=${SIGN_KEY}
-ACCESS_TOKEN_SIGNING_KEY=${JWT_KEY}
-ENROLLMENT_TOKEN=${ENROLL_TOK}
-WEB_ORIGINS=http://${VPS_IP},http://localhost
-NEXT_PUBLIC_API_URL=
+POSTGRES_PASSWORD=$(openssl rand -hex 32)
+BOOTSTRAP_ORG_CODE=${BOOTSTRAP_ORG_CODE}
+BOOTSTRAP_ORG_NAME=${BOOTSTRAP_ORG_NAME}
+BOOTSTRAP_ADMIN_EMAIL=${BOOTSTRAP_ADMIN_EMAIL}
+BOOTSTRAP_ADMIN_PASSWORD=$(openssl rand -hex 24)
+SIGNING_KEY=$(openssl rand -hex 32)
+ACCESS_TOKEN_SIGNING_KEY=$(openssl rand -hex 32)
+SERVER_VAULT_KEY=$(openssl rand -hex 32)
 EOF
-    echo "[✓] Configuration written to deploy/vps/.env"
+    chmod 600 .env
+    echo "Created deploy/vps/.env (mode 600). Read the bootstrap password from that file using a protected terminal."
 else
-    echo "[*] Existing .env file found. Preserving current secrets."
+    echo "Using existing deploy/vps/.env; secrets were not changed."
 fi
 
-# Load variables
-set -a
-# shellcheck source=/dev/null
-source .env
-set +a
+DEPLOY_DOMAIN="$(sed -n 's/^PUBLIC_DOMAIN=//p' .env | tail -n 1)"
+: "${DEPLOY_DOMAIN:?Set PUBLIC_DOMAIN in deploy/vps/.env}"
 
-# 3. Build and launch services
-echo "[*] Building and starting SentinelLAN containers..."
-docker compose -f docker-compose.prod.yaml down --remove-orphans || true
+docker compose -f docker-compose.prod.yaml config --quiet
 docker compose -f docker-compose.prod.yaml up -d --build
 
-# 4. Wait for readiness
-echo "[*] Waiting for API readiness check..."
-ATTEMPTS=0
-MAX_ATTEMPTS=30
-while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
-    if curl -s -f http://localhost/health/ready > /dev/null 2>&1; then
-        echo "[✓] SentinelLAN Production API is LIVE and READY!"
-        break
+for attempt in $(seq 1 30); do
+    if curl --silent --show-error --fail --resolve "${DEPLOY_DOMAIN}:443:127.0.0.1" \
+        "https://${DEPLOY_DOMAIN}/health/ready" >/dev/null 2>&1; then
+        echo "Ready: https://${DEPLOY_DOMAIN}"
+        exit 0
     fi
-    ATTEMPTS=$((ATTEMPTS + 1))
     sleep 2
 done
 
-if [ $ATTEMPTS -eq $MAX_ATTEMPTS ]; then
-    echo "[!] Warning: Readiness check timed out. Inspect logs with: docker compose -f docker-compose.prod.yaml logs"
-fi
-
-VPS_HOST="${WEB_ORIGINS%%,*}"
-echo ""
-echo "============================================================"
-echo "    Deployment Complete! Keep this information safe:       "
-echo "============================================================"
-echo " Web Dashboard URL   : ${VPS_HOST}"
-echo " Admin Email         : ${ADMIN_EMAIL}"
-echo " Admin Password      : ${ADMIN_PASSWORD}"
-echo " Agent Enroll Token  : ${ENROLLMENT_TOKEN}"
-echo "============================================================"
-echo ""
-echo "To enroll a Windows PC or another Linux VPS:"
-echo "  Windows (PowerShell as Admin):"
-echo "    .\\deploy\\agent\\install-windows-agent.ps1 -ServerUrl \"${VPS_HOST}\" -EnrollToken \"${ENROLLMENT_TOKEN}\""
-echo ""
-echo "  Linux (Bash as Root):"
-echo "    sudo bash ./deploy/agent/install-linux-agent.sh --server \"${VPS_HOST}\" --token \"${ENROLLMENT_TOKEN}\""
-echo "============================================================"
+echo "Readiness failed. Inspect: docker compose -f docker-compose.prod.yaml logs api nginx" >&2
+exit 1

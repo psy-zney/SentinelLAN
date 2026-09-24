@@ -166,13 +166,15 @@
     <a class="rail-brand" href="#top"><span class="shield">S</span>SentinelLAN / Project Board</a>
     <nav aria-label="Mục lục">
       <a href="../index.html">← Portal Docs</a>
-      <a href="#architecture">Kiến trúc</a>
-      <a href="#auth-flow">Auth flow</a>
+      <a href="../index.html#architecture">Kiến trúc & Kết nối</a>
+      <a href="../index.html#file-structure">Cấu trúc File</a>
+      <a href="../index.html#workflows">12 Luồng E2E</a>
+      <a href="../index.html#packets">Gói tin & Ping</a>
+      <a href="../index.html#readiness">Đánh giá Production</a>
       <a href="#weeks">Checklist 6 tuần</a>
-      <a href="#evidence">Nhật ký</a>
       <a href="#operations">Test & config</a>
     </nav>
-    <a class="rail-link" href="../index.html#workflows">Sơ đồ Workflows ↗</a>
+    <a class="rail-link" href="../index.html#packets">Đặc tả Gói tin ↗</a>
     <button class="print" type="button" onclick="window.print()">In / PDF</button>
   </div>
 
@@ -182,10 +184,10 @@
       <h1>Cấu trúc dự án.<br>Tiến độ có bằng chứng.</h1>
       <p class="hero-copy">Một file độc lập để theo dõi toàn bộ kiến trúc Zero Trust, luồng dữ liệu, tech stack, checklist sáu tuần, kịch bản demo 5 phút, config và cách debug. Màu xanh chỉ xuất hiện khi đường nối hoặc công việc đã có code và kiểm chứng tương ứng; các cổng môi trường và giới hạn thực tế được ghi chú (note) minh bạch.</p>
       <div class="hero-status" aria-label="Tóm tắt trạng thái">
-        <div class="stat done"><span>Tiến độ thực tế</span><strong>~95% (Sẵn sàng Release)</strong></div>
-        <div class="stat done"><span>Cloud VPS SSH</span><strong>Vault AES-256 Đã Thông</strong></div>
-        <div class="stat done"><span>Kiểm thử Backend</span><strong>85 / 85 xanh (100%)</strong></div>
-        <div class="stat done"><span>Đóng gói Release</span><strong>v1.0.0 Pipeline Đã Sẵn Sàng</strong></div>
+        <div class="stat open"><span>Trạng thái Production</span><strong>Chưa đủ chuẩn Prod · Củng cố mã & docs</strong></div>
+        <div class="stat done"><span>Kiểm thử Web & Mobile</span><strong>25 Unit + 6 E2E | 38 Mobile (Maestro)</strong></div>
+        <div class="stat done"><span>Kiểm thử Backend</span><strong>79+ Unit .NET PASS</strong></div>
+        <div class="stat open"><span>Cổng Môi trường</span><strong>Chờ Docker & PostgreSQL thật</strong></div>
       </div>
     </div>
   </header>
@@ -255,7 +257,7 @@
 
     <section id="weeks">
       <p class="subtitle">
-        ⚠️ <strong>Đánh giá tiến độ hiện tại:</strong> Khoảng <strong>40% code</strong> đã có kiểm chứng local; <strong>chưa đủ điều kiện đánh giá 50% hoàn thành</strong> do các cổng môi trường (PostgreSQL runtime, Lab flag kiểm thử máy thật, SQLite offline queue bền vững) chưa nghiệm thu trên môi trường thực tế. Hãy theo dõi kỹ các <code>note</code> dưới đây trước khi chuyển giai đoạn.
+        ⚠️ <strong>Đánh giá thực tế (24/09/2026):</strong> Phần mã nguồn, các lớp bảo vệ và tài liệu đã được củng cố rất đáng kể (Web 25 unit + 6 E2E, Mobile 38 test + 4 Maestro flows, Backend 79+ unit test, chặn demo credentials ở Production, khóa tài khoản thu hồi phiên tức thì, SSH Host Key Pinning và Two-Phase Nonce Reservation). Tuy nhiên, <strong>chưa thể xác nhận hoàn thiện Production</strong> do các cổng môi trường (PostgreSQL runtime thật, thử nghiệm khôi phục thảm họa trên Docker, hàng đợi đệm bền vững khi restart, và kiểm thử DLL trên Windows) vẫn là các điều kiện tiên quyết cần được nghiệm thu tại hạ tầng thực tế.
       </p>
 
       <div class="section-head">
@@ -374,7 +376,9 @@
           <div class="panel-head"><h3>Nhật ký kiểm chứng hiện tại</h3></div>
           <div class="panel-body">
             <ol class="log">
-              <li><time>Cloud VPS SSH Governance</time><p>Triển khai toàn diện quản lý VPS từ xa: Zero-Knowledge Private Key Vault AES-256-GCM, kết nối SSH.NET thu thập metrics (CPU, RAM, Disk, Docker) và tự phục hồi dịch vụ an toàn.</p></li>
+              <li><time>Kiểm soát Vận hành & Bảo mật (24/09/2026)</time><p>Chặn demo credentials ở môi trường Production; Khóa tài khoản thu hồi phiên tức thì (IsLocked + SessionRevocation); SSH Host Key Pinning (SHA256); Two-Phase Nonce VPS Restart (dành trước nonce trong PostgreSQL); chuẩn hóa API QR Code, Incident và Work Order CMMS.</p></li>
+              <li><time>Bộ Kiểm thử Web & Mobile Đầy Đủ (24/09/2026)</time><p>Web: 25 unit tests Vitest và 6 kịch bản Playwright E2E xanh 100%; Mobile: 38 unit/component tests và 4 luồng Maestro E2E (Kích hoạt, Quét QR, Báo cáo sự cố, Mượn trả thiết bị); Backend: 79+ unit tests.</p></li>
+              <li><time>Cloud VPS SSH Governance</time><p>Triển khai toàn diện quản lý VPS từ xa: Zero-Knowledge Private Key Vault AES-256-GCM, kết nối SSH.NET thu thập metrics (CPU, RAM, Disk, Docker), Host Key Pinning và tự phục hồi dịch vụ an toàn.</p></li>
               <li><time>Release v1.0.0 Pipeline</time><p>Thiết lập GitHub Actions Release tự động, script đóng gói build-release.ps1 / build-release.sh, mã băm SHA256SUMS và tài liệu Release Notes.</p></li>
               <li><time>Enrollment Audit</time><p>Ghi AuditLog đầy đủ cho AgentEnrolled (Success) và AgentEnrollmentFailed (Token already used / Token expired) có gắn OrganizationId.</p></li>
               <li><time>Heartbeat Idempotency</time><p>Củng cố chống nhân đôi dữ liệu heartbeat và telemetry snapshot; hỗ trợ AgentApi truyền idempotency key khi retry.</p></li>

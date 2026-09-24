@@ -11,6 +11,7 @@ public sealed class AuthenticationOpenApiTransformer : IOpenApiDocumentTransform
     private const string CsrfScheme = "csrfHeader";
     private const string AgentIdScheme = "agentDeviceId";
     private const string AgentSecretScheme = "agentDeviceSecret";
+    private const string BearerScheme = "bearerAuth";
 
     public Task TransformAsync(OpenApiDocument document, OpenApiDocumentTransformerContext context, CancellationToken cancellationToken)
     {
@@ -21,6 +22,13 @@ public sealed class AuthenticationOpenApiTransformer : IOpenApiDocumentTransform
         document.Components.SecuritySchemes[CsrfScheme] = ApiKey(ParameterLocation.Header, AuthCookieManager.CsrfHeaderName, "Required with value 1 on state-changing cookie requests.");
         document.Components.SecuritySchemes[AgentIdScheme] = ApiKey(ParameterLocation.Header, AgentAuthenticationDefaults.DeviceIdHeader, "Enrolled device identifier.");
         document.Components.SecuritySchemes[AgentSecretScheme] = ApiKey(ParameterLocation.Header, AgentAuthenticationDefaults.DeviceSecretHeader, "Per-device secret; never place it in a URL or request body.");
+        document.Components.SecuritySchemes[BearerScheme] = new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            Description = "Short-lived JWT Bearer access token for mobile client."
+        };
         return Task.CompletedTask;
     }
 
@@ -45,10 +53,25 @@ public sealed class AuthenticationOpenApiTransformer : IOpenApiDocumentTransform
 
         if (authorization.Length > 0 && metadata.OfType<IAllowAnonymous>().Any() is false)
         {
-            if (HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method))
-                AddRequirement(operation, context.Document!, AccessCookieScheme);
+            if (path.StartsWith("api/v1/mobile", StringComparison.OrdinalIgnoreCase))
+            {
+                AddRequirement(operation, context.Document!, BearerScheme);
+            }
+            else if (path.StartsWith("api/v1/my-device", StringComparison.OrdinalIgnoreCase) || path.StartsWith("api/v1/qr", StringComparison.OrdinalIgnoreCase))
+            {
+                AddRequirement(operation, context.Document!, BearerScheme);
+                if (HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method))
+                    AddRequirement(operation, context.Document!, AccessCookieScheme);
+                else
+                    AddRequirement(operation, context.Document!, AccessCookieScheme, CsrfScheme);
+            }
             else
-                AddRequirement(operation, context.Document!, AccessCookieScheme, CsrfScheme);
+            {
+                if (HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method))
+                    AddRequirement(operation, context.Document!, AccessCookieScheme);
+                else
+                    AddRequirement(operation, context.Document!, AccessCookieScheme, CsrfScheme);
+            }
         }
 
         return Task.CompletedTask;

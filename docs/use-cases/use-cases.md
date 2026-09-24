@@ -19,3 +19,11 @@
 - **Resilient Heartbeat & Deduplication**: Dispatch periodic UTC heartbeats with idempotency keys; gracefully queue offline telemetry in local encrypted storage during outages and flush with exponential backoff.
 - **Tamper-Resistant Execution**: Verify server HMAC/signatures, validate nonces against replay attacks, execute allow-listed actions, and return idempotent execution receipts.
 
+## 5. Account Activation & QR Asset Access
+
+- **Admin-created account**: An Admin creates a pending account and receives a cryptographically random activation link exactly once. The database stores only the token hash.
+- **Single-use activation**: The invited user sets a password of at least 12 characters. Expired, revoked, replayed, or concurrently consumed tokens are rejected.
+- **QR asset lifecycle**: Admins and Technicians generate, rotate, revoke, download, and print an opaque QR label for an authorized device. Raw QR codes are never written to the audit log.
+- **Context-aware scan**: Anonymous users receive only a minimal asset card. Admins and Technicians are routed to the tenant-scoped device view; an Employee is routed to `/my-device` only when the device is assigned to that account.
+- **Accessible PWA scanner**: `/scan` supports the browser Barcode Detector API, a pinned ZXing fallback, local image upload, and manual code entry. URLs from another origin and invalid schemes are rejected.
+- **Employee incident report**: An Employee can create and follow incidents for the assigned device without supplying or changing a device ID.

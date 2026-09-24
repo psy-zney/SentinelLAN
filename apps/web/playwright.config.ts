@@ -1,7 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const apiUrl = "http://127.0.0.1:8080";
-const webUrl = "http://127.0.0.1:3100";
+const apiUrl = process.env.SENTINELLAN_E2E_API_URL ?? "http://127.0.0.1:8080";
+const webUrl = process.env.SENTINELLAN_E2E_WEB_URL ?? "http://127.0.0.1:3100";
+const webPort = new URL(webUrl).port || "3100";
+const apiCommand = process.env.SENTINELLAN_E2E_API_COMMAND ?? "dotnet ../backend/src/SentinelLAN.Api/bin/Release/net10.0/SentinelLAN.Api.dll";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -21,7 +23,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: "dotnet run --project ../backend/src/SentinelLAN.Api --no-launch-profile",
+      command: apiCommand,
       url: `${apiUrl}/health/ready`,
       timeout: 180_000,
       reuseExistingServer: false,
@@ -31,11 +33,11 @@ export default defineConfig({
         SENTINELLAN_ACCESS_TOKEN_SIGNING_KEY: "e2e-access-token-signing-key-at-least-32-characters",
         SENTINELLAN_DEMO_ADMIN_PASSWORD: "local-demo-only",
         SENTINELLAN_ENROLLMENT_TOKEN: "local-e2e-enrollment-only",
-        SENTINELLAN_WEB_ORIGINS: "http://127.0.0.1:3100,http://localhost:3100,http://127.0.0.1:3000,http://localhost:3000"
+        SENTINELLAN_WEB_ORIGINS: `${webUrl},http://localhost:${webPort}`
       }
     },
     {
-      command: "npm run dev -- --hostname 127.0.0.1 --port 3100",
+      command: `npm run dev -- --hostname 127.0.0.1 --port ${webPort}`,
       url: `${webUrl}/login`,
       timeout: 180_000,
       reuseExistingServer: false,

@@ -25,7 +25,7 @@ public sealed class AuthCookieManager
     private static CookieOptions CreateOptions(HttpContext context, DateTimeOffset expiresAt, string path) => new()
     {
         HttpOnly = true,
-        Secure = context.Request.IsHttps,
+        Secure = context.Request.IsHttps || !context.RequestServices.GetRequiredService<IHostEnvironment>().IsDevelopment(),
         SameSite = SameSiteMode.Strict,
         Path = path,
         Expires = expiresAt,
@@ -35,7 +35,7 @@ public sealed class AuthCookieManager
     private static CookieOptions CreateDeleteOptions(HttpContext context, string path) => new()
     {
         HttpOnly = true,
-        Secure = context.Request.IsHttps,
+        Secure = context.Request.IsHttps || !context.RequestServices.GetRequiredService<IHostEnvironment>().IsDevelopment(),
         SameSite = SameSiteMode.Strict,
         Path = path,
         IsEssential = true

@@ -54,7 +54,14 @@ public sealed class AuthenticationServiceTests
         public Task<IReadOnlyList<RefreshSession>> FindRefreshFamilyAsync(Guid familyId, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<RefreshSession>>(Sessions.Where(session => session.FamilyId == familyId).ToList());
 
+        public Task<Organization?> FindOrganizationAsync(Guid organizationId, CancellationToken cancellationToken) =>
+            Task.FromResult<Organization?>(new Organization { Id = organizationId, Code = "demo", Name = "Demo Org" });
+
+        public Task<IReadOnlyList<RefreshSession>> FindActiveUserSessionsAsync(Guid organizationId, Guid userId, DateTimeOffset now, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<RefreshSession>>(Sessions.Where(s => s.OrganizationId == organizationId && s.UserId == userId && s.IsActive(now)).ToList());
+
         public void Add(RefreshSession session) => Sessions.Add(session);
+        public void AddAudit(AuditLog log) { }
         public Task SaveChangesAsync(CancellationToken cancellationToken) => Task.CompletedTask;
         public Task<bool> TrySaveChangesAsync(CancellationToken cancellationToken) => Task.FromResult(true);
     }

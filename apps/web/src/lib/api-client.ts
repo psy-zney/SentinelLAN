@@ -6,7 +6,6 @@ import type {
   CurrentSession,
   Dashboard,
   Device,
-  EmployeeDevice,
   EnrollmentToken,
   OrganizationItem,
   Policy,
@@ -15,10 +14,57 @@ import type {
   UserItem,
   VpsNode,
   CreateVpsNodeRequest,
-  VpsConnectionTestResult
+  VpsConnectionTestResult,
+  DeviceAssetDetail,
+  UpdateAssetProfileRequest,
+  IncidentItem,
+  CreateIncidentRequest,
+  UpdateIncidentStatusRequest,
+  WorkOrderItem,
+  CreateWorkOrderRequest,
+  CompleteWorkOrderRequest,
+  AssetLoanItem,
+  CreateLoanRequest,
+  ReturnLoanRequest,
+  AssetTimelineItem,
+  PublicQrDevice,
+  CreateUserResponse,
+  ReissueActivationTokenResponse,
+  ValidateActivationTokenResponse,
+  ActivateAccountRequest,
+  ActivateAccountResponse,
+  DeviceQrLabelDto,
+  GenerateQrLabelResponse,
+  PublicQrResolveResponse,
+  AuthenticatedQrResolveResponse,
+  MyDeviceDetailDto,
+  MyDeviceTelemetryDto,
+  IncidentSummaryDto,
+  ReportMyDeviceIncidentRequest,
+  ReportMyDeviceIncidentResponse
 } from "@/types/api";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+
+type MyDeviceApiResponse = {
+  device: Device;
+  appliedPolicy: string | null;
+  latestTelemetry: TelemetrySnapshot | null;
+  incidents: IncidentItem[];
+  recentActions: AuditEvent[];
+  privacyManifest: {
+    collectedTechnicalData: string[];
+    strictlyProhibitedData: string[];
+    agentPermissions: string[];
+    dataRetentionDays: number;
+  };
+  serialNumber: string | null;
+  manufacturer: string | null;
+  model: string | null;
+  assetType: string | null;
+  location: string | null;
+  assignedAt: string | null;
+};
 
 export class ApiClient {
   private static refreshInFlight: Promise<boolean> | undefined;
@@ -86,8 +132,40 @@ export class ApiClient {
     return this.request<Device[]>("/api/v1/devices");
   }
 
-  createUser(data: { email: string; displayName: string; role: Exclude<Role, "Agent">; password: string; reason: string; confirmed: boolean }) {
-    return this.request<UserItem>("/api/v1/users", { method: "POST", body: JSON.stringify(data) });
+  createUser(data: { email: string; displayName: string; role: Exclude<Role, "Agent">; password?: string; reason: string; confirmed: boolean }) {
+    return this.request<CreateUserResponse>("/api/v1/users", { method: "POST", body: JSON.stringify(data) });
+  }
+
+  setUserStatus(userId: string, status: "Active" | "Locked", reason: string, confirmed: boolean) {
+    return this.request<UserItem>(`/api/v1/users/${userId}/status`, {
+      method: "PUT",
+      body: JSON.stringify({ status, reason, confirmed })
+    });
+  }
+
+  reissueActivationToken(userId: string, reason: string, confirmed: boolean) {
+    return this.request<ReissueActivationTokenResponse>(`/api/v1/users/${userId}/activation-token`, {
+      method: "POST",
+      body: JSON.stringify({ reason, confirmed })
+    });
+  }
+
+  revokeActivationToken(userId: string, reason: string, confirmed: boolean) {
+    return this.request<void>(`/api/v1/users/${userId}/activation-token`, {
+      method: "DELETE",
+      body: JSON.stringify({ reason, confirmed })
+    });
+  }
+
+  validateActivationToken(token: string) {
+    return this.request<ValidateActivationTokenResponse>(`/api/v1/auth/activation/validate?token=${encodeURIComponent(token)}`);
+  }
+
+  activateAccount(data: ActivateAccountRequest) {
+    return this.request<ActivateAccountResponse>("/api/v1/auth/activate", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
   }
 
   createEnrollmentToken(data: { validForMinutes: number; reason: string; confirmed: boolean }) {
@@ -116,8 +194,46 @@ export class ApiClient {
     return this.request<TelemetrySnapshot[]>(`/api/v1/devices/${id}/telemetry`);
   }
 
-  myDevice() {
-    return this.request<EmployeeDevice>("/api/v1/my-device");
+  async myDevice(): Promise<MyDeviceDetailDto> {
+    const response = await this.request<MyDeviceApiResponse>("/api/v1/my-device");
+    return {
+      ...response.device,
+      serialNumber: response.serialNumber,
+      manufacturer: response.manufacturer,
+      model: response.model,
+      assetType: response.assetType,
+      location: response.location,
+      assignedAt: response.assignedAt,
+      appliedPolicy: response.appliedPolicy,
+      transparencyManifest: {
+        collectedTelemetry: response.privacyManifest.collectedTechnicalData,
+        privacyBoundaries: response.privacyManifest.strictlyProhibitedData,
+        agentPermissions: response.privacyManifest.agentPermissions,
+        dataRetentionDays: response.privacyManifest.dataRetentionDays
+      },
+      recentIncidents: response.incidents.map((incident) => ({
+        id: incident.id,
+        title: incident.title,
+        severity: incident.severity,
+        status: incident.status,
+        createdAt: incident.createdAt
+      }))
+    };
+  }
+
+  myDeviceTelemetry(limit = 10) {
+    return this.request<MyDeviceTelemetryDto[]>(`/api/v1/my-device/telemetry?limit=${limit}`);
+  }
+
+  myDeviceIncidents() {
+    return this.request<IncidentSummaryDto[]>("/api/v1/my-device/incidents");
+  }
+
+  reportMyDeviceIncident(data: ReportMyDeviceIncidentRequest) {
+    return this.request<ReportMyDeviceIncidentResponse>("/api/v1/my-device/incidents", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
   }
 
   // POLICIES
@@ -145,10 +261,30 @@ export class ApiClient {
     return this.request<CommandHistoryItem[]>("/api/v1/commands");
   }
 
-  createCommand(deviceId: string, type: CommandType, reason: string, confirmed = true, validForSeconds = 300, parameter?: string) {
+  createCommand(
+    deviceIdOrData: string | { deviceId: string; type: CommandType; reason: string; confirmed?: boolean; validForSeconds?: number; parameter?: string },
+    type?: CommandType,
+    reason?: string,
+    confirmed = true,
+    validForSeconds = 300,
+    parameter?: string
+  ) {
+    if (typeof deviceIdOrData === "object") {
+      return this.request<{ id: string }>(`/api/v1/commands`, {
+        method: "POST",
+        body: JSON.stringify({
+          deviceId: deviceIdOrData.deviceId,
+          type: deviceIdOrData.type,
+          reason: deviceIdOrData.reason,
+          confirmed: deviceIdOrData.confirmed ?? true,
+          validForSeconds: deviceIdOrData.validForSeconds ?? 300,
+          parameter: deviceIdOrData.parameter || null
+        })
+      });
+    }
     return this.request<{ id: string }>(`/api/v1/commands`, {
       method: "POST",
-      body: JSON.stringify({ deviceId, type, reason, confirmed, validForSeconds, parameter: parameter || null })
+      body: JSON.stringify({ deviceId: deviceIdOrData, type, reason, confirmed, validForSeconds, parameter: parameter || null })
     });
   }
 
@@ -223,11 +359,121 @@ export class ApiClient {
     });
   }
 
-  restartVpsService(id: string, serviceName: string, reason: string) {
+  restartVpsService(id: string, serviceName: string, reason: string, confirmed: boolean) {
     return this.request<{ success: boolean; message: string; output?: string }>(`/api/v1/vps-nodes/${id}/restart-service`, {
       method: "POST",
-      body: JSON.stringify({ serviceName, reason })
+      body: JSON.stringify({
+        serviceName,
+        reason,
+        confirmed,
+        nonce: globalThis.crypto.randomUUID(),
+        expiresAt: new Date(Date.now() + 2 * 60_000).toISOString()
+      })
     });
+  }
+
+  // --- ITAM & CMMS Asset Management ---
+
+  getDeviceAssetDetail(id: string) {
+    return this.request<DeviceAssetDetail>(`/api/v1/devices/${id}/asset-detail`);
+  }
+
+  updateAssetProfile(id: string, data: UpdateAssetProfileRequest) {
+    return this.request<{ message: string }>(`/api/v1/devices/${id}/asset-profile`, {
+      method: "PUT",
+      body: JSON.stringify(data)
+    });
+  }
+
+  getDeviceTimeline(id: string) {
+    return this.request<AssetTimelineItem[]>(`/api/v1/devices/${id}/timeline`);
+  }
+
+  getIncidents(deviceId?: string) {
+    const path = deviceId ? `/api/v1/incidents?deviceId=${deviceId}` : "/api/v1/incidents";
+    return this.request<IncidentItem[]>(path);
+  }
+
+  createIncident(data: CreateIncidentRequest) {
+    return this.request<IncidentItem>("/api/v1/incidents", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+  }
+
+  updateIncidentStatus(id: string, data: UpdateIncidentStatusRequest) {
+    return this.request<{ message: string }>(`/api/v1/incidents/${id}/status`, {
+      method: "PUT",
+      body: JSON.stringify(data)
+    });
+  }
+
+  getWorkOrders(deviceId?: string) {
+    const path = deviceId ? `/api/v1/work-orders?deviceId=${deviceId}` : "/api/v1/work-orders";
+    return this.request<WorkOrderItem[]>(path);
+  }
+
+  createWorkOrder(data: CreateWorkOrderRequest) {
+    return this.request<WorkOrderItem>("/api/v1/work-orders", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+  }
+
+  completeWorkOrder(id: string, data: CompleteWorkOrderRequest) {
+    return this.request<{ message: string }>(`/api/v1/work-orders/${id}/complete`, {
+      method: "PUT",
+      body: JSON.stringify(data)
+    });
+  }
+
+  getAssetLoans(deviceId?: string) {
+    const path = deviceId ? `/api/v1/asset-loans?deviceId=${deviceId}` : "/api/v1/asset-loans";
+    return this.request<AssetLoanItem[]>(path);
+  }
+
+  createAssetLoan(data: CreateLoanRequest) {
+    return this.request<AssetLoanItem>("/api/v1/asset-loans", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+  }
+
+  returnAssetLoan(id: string, data: ReturnLoanRequest) {
+    return this.request<{ message: string }>(`/api/v1/asset-loans/${id}/return`, {
+      method: "PUT",
+      body: JSON.stringify(data)
+    });
+  }
+
+  getPublicQrDevice(id: string) {
+    return this.request<PublicQrDevice>(`/api/v1/public/qr/${id}`);
+  }
+
+  generateQrLabel(deviceId: string, reason: string, validForDays?: number) {
+    return this.request<GenerateQrLabelResponse>(`/api/v1/devices/${deviceId}/qr-label`, {
+      method: "POST",
+      body: JSON.stringify({ reason, confirmed: true, validForDays })
+    });
+  }
+
+  revokeQrLabel(deviceId: string, reason: string) {
+    return this.request<void>(`/api/v1/devices/${deviceId}/qr-label`, {
+      method: "DELETE",
+      body: JSON.stringify({ reason, confirmed: true })
+    });
+  }
+
+  getQrLabel(deviceId: string) {
+    return this.request<DeviceQrLabelDto | null>(`/api/v1/devices/${deviceId}/qr-label`);
+  }
+
+  resolvePublicQr(code: string) {
+    return this.request<PublicQrResolveResponse>(`/api/v1/qr/${encodeURIComponent(code)}/public`);
+  }
+
+  resolveQr(code: string) {
+    return this.request<AuthenticatedQrResolveResponse>(`/api/v1/qr/${encodeURIComponent(code)}`);
   }
 }
 
@@ -239,15 +485,3 @@ export class ApiError extends Error {
     this.name = "ApiError";
   }
 }
-
-export const demoDashboard: Dashboard = {
-  totalDevices: 3,
-  onlineDevices: 2,
-  offlineDevices: 1,
-  openAlerts: 1,
-  devices: [
-    { id: "demo-01", name: "TRAINING-PC-01", osVersion: "Windows 11 24H2", agentVersion: "0.1.0", lastSeenAt: new Date().toISOString(), isOnline: true, assignedUserId: null, isRevoked: false },
-    { id: "demo-02", name: "FINANCE-LAPTOP", osVersion: "Windows 11 24H2", agentVersion: "0.1.0", lastSeenAt: new Date(Date.now() - 45_000).toISOString(), isOnline: true, assignedUserId: null, isRevoked: false },
-    { id: "demo-03", name: "LAB-PC-07", osVersion: "Windows 10 22H2", agentVersion: "0.1.0", lastSeenAt: new Date(Date.now() - 600_000).toISOString(), isOnline: false, assignedUserId: null, isRevoked: false }
-  ]
-};

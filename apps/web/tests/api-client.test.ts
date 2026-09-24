@@ -1,15 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiClient, ApiError, demoDashboard } from "../src/lib/api-client";
+import { ApiClient, ApiError } from "../src/lib/api-client";
 import { homePathForRole } from "../src/lib/auth-routing";
 
 beforeEach(() => vi.unstubAllGlobals());
 
-describe("dashboard model", () => {
-  it("keeps online and offline totals consistent", () => {
-    expect(demoDashboard.onlineDevices + demoDashboard.offlineDevices).toBe(demoDashboard.totalDevices);
-    expect(demoDashboard.devices.filter(device => device.isOnline)).toHaveLength(demoDashboard.onlineDevices);
-  });
-});
+const dashboardFixture = { totalDevices: 0, onlineDevices: 0, offlineDevices: 0, openAlerts: 0, devices: [] };
 
 describe("cookie session client", () => {
   it("routes Employee to the assigned-device view and operators to the dashboard", () => {
@@ -36,10 +31,10 @@ describe("cookie session client", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(null, { status: 401 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ expiresIn: 900, role: "Admin", displayName: "Demo Admin" }), { status: 200, headers: { "Content-Type": "application/json" } }))
-      .mockResolvedValueOnce(new Response(JSON.stringify(demoDashboard), { status: 200, headers: { "Content-Type": "application/json" } }));
+      .mockResolvedValueOnce(new Response(JSON.stringify(dashboardFixture), { status: 200, headers: { "Content-Type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(new ApiClient().dashboard()).resolves.toEqual(demoDashboard);
+    await expect(new ApiClient().dashboard()).resolves.toEqual(dashboardFixture);
     expect(fetchMock.mock.calls.map(call => String(call[0]))).toEqual([
       expect.stringContaining("/api/v1/dashboard"),
       expect.stringContaining("/api/v1/auth/refresh"),
@@ -143,12 +138,17 @@ describe("cookie session client", () => {
       host: "103.14.20.1",
       port: 22,
       username: "root",
-      privateKey: "-----BEGIN OPENSSH PRIVATE KEY-----\ntest\n-----END OPENSSH PRIVATE KEY-----"
+      privateKey: "-----BEGIN OPENSSH PRIVATE KEY-----\ntest\n-----END OPENSSH PRIVATE KEY-----",
+      hostKeyFingerprint: "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
     });
     expect(created.status).toBe("Online");
 
-    const restartRes = await client.restartVpsService("vps-1", "nginx", "Crash recovery");
+    const restartRes = await client.restartVpsService("vps-1", "nginx", "Crash recovery", true);
     expect(restartRes.success).toBe(true);
+    const restartBody = JSON.parse((fetchMock.mock.calls[2][1] as RequestInit).body as string);
+    expect(restartBody.confirmed).toBe(true);
+    expect(restartBody.nonce).toMatch(/^[0-9a-f-]{36}$/);
+    expect(new Date(restartBody.expiresAt).getTime()).toBeGreaterThan(Date.now());
     expect(fetchMock.mock.calls.map(call => String(call[0]))).toEqual([
       expect.stringContaining("/api/v1/vps-nodes"),
       expect.stringContaining("/api/v1/vps-nodes"),

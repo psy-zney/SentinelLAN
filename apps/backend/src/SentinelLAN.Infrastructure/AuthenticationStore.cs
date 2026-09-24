@@ -21,10 +21,20 @@ public sealed class AuthenticationStore(SentinelDbContext db) : IAuthenticationS
     public Task<RefreshSession?> FindRefreshSessionAsync(string tokenHash, CancellationToken cancellationToken) =>
         db.RefreshSessions.SingleOrDefaultAsync(session => session.TokenHash == tokenHash, cancellationToken);
 
+    public Task<Organization?> FindOrganizationAsync(Guid organizationId, CancellationToken cancellationToken) =>
+        db.Organizations.SingleOrDefaultAsync(org => org.Id == organizationId, cancellationToken);
+
     public async Task<IReadOnlyList<RefreshSession>> FindRefreshFamilyAsync(Guid familyId, CancellationToken cancellationToken) =>
         await db.RefreshSessions.Where(session => session.FamilyId == familyId).ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<RefreshSession>> FindActiveUserSessionsAsync(Guid organizationId, Guid userId, DateTimeOffset now, CancellationToken cancellationToken) =>
+        await db.RefreshSessions
+            .Where(session => session.OrganizationId == organizationId && session.UserId == userId && session.RevokedAt == null && session.ExpiresAt > now)
+            .ToListAsync(cancellationToken);
+
     public void Add(RefreshSession session) => db.RefreshSessions.Add(session);
+
+    public void AddAudit(AuditLog log) => db.AuditLogs.Add(log);
 
     public async Task SaveChangesAsync(CancellationToken cancellationToken) => await db.SaveChangesAsync(cancellationToken);
 

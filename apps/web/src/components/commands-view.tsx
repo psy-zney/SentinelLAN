@@ -238,12 +238,12 @@ export function CommandsView() {
                     value={commandType}
                     onChange={(e) => setCommandType(e.target.value as CommandType)}
                   >
-                    <option value="SimulateLock">{lang === "vi" ? "Khóa màn hình (LockWorkStation Win32 thật / Lab)" : "Workstation Lock (Win32 LockWorkStation)"}</option>
-                    <option value="RestartService">{lang === "vi" ? "Khởi động lại Service (Cloud Server / VPS Linux)" : "Restart Service (Cloud Server / VPS)"}</option>
-                    <option value="CollectTelemetryNow">{lang === "vi" ? "Thu thập Telemetry tức thì" : "Collect Telemetry Immediately"}</option>
-                    <option value="RefreshPolicy">{lang === "vi" ? "Làm mới chính sách bảo vệ" : "Refresh Applied Policy"}</option>
+                    <option value="SimulateLock">{lang === "vi" ? "Mô phỏng khóa màn hình" : "Simulate Workstation Lock"}</option>
+                    <option value="RestartService">{lang === "vi" ? "Mô phỏng khởi động lại dịch vụ trên Agent" : "Simulate Agent Service Restart"}</option>
+                    <option value="CollectTelemetryNow">{lang === "vi" ? "Mô phỏng yêu cầu telemetry tức thì" : "Simulate Immediate Telemetry Request"}</option>
+                    <option value="RefreshPolicy">{lang === "vi" ? "Mô phỏng làm mới chính sách" : "Simulate Policy Refresh"}</option>
                     <option value="SimulateNetworkIsolation">{lang === "vi" ? "Mô phỏng cách ly mạng" : "Simulate Network Isolation"}</option>
-                    <option value="ShowNotification">{lang === "vi" ? "Hiển thị thông báo người dùng" : "Display User Notification"}</option>
+                    <option value="ShowNotification">{lang === "vi" ? "Mô phỏng thông báo người dùng" : "Simulate User Notification"}</option>
                   </select>
                 </div>
 

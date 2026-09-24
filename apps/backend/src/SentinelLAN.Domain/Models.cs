@@ -6,14 +6,79 @@ public abstract class Entity
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
-
 public interface ITenantOwned { Guid OrganizationId { get; } }
 
 public sealed class Organization : Entity { public required string Code { get; init; } public required string Name { get; init; } }
 public sealed class Department : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public required string Name { get; init; } }
-public sealed class User : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public required string Email { get; init; } public required string DisplayName { get; init; } public required string Role { get; init; } public required string PasswordHash { get; set; } }
+public static class UserStatuses
+{
+    public const string PendingActivation = "PendingActivation";
+    public const string Active = "Active";
+    public const string Locked = "Locked";
+}
+
+public sealed class User : Entity, ITenantOwned
+{
+    public Guid OrganizationId { get; init; }
+    public required string Email { get; init; }
+    public required string DisplayName { get; init; }
+    public required string Role { get; init; }
+    public required string PasswordHash { get; set; }
+    public string Status { get; set; } = UserStatuses.Active;
+    public string? SecurityStamp { get; set; } = Guid.NewGuid().ToString("N");
+}
 public sealed class Role : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public required string Name { get; init; } }
 public sealed class Permission : Entity { public required string Name { get; init; } }
+
+public sealed class AccountActivationToken : Entity, ITenantOwned
+{
+    public Guid OrganizationId { get; init; }
+    public Guid UserId { get; init; }
+    public required string TokenHash { get; init; }
+    public DateTimeOffset ExpiresAt { get; init; }
+    public DateTimeOffset? UsedAt { get; private set; }
+    public DateTimeOffset? RevokedAt { get; private set; }
+    public Guid CreatedByUserId { get; init; }
+    public byte[] RowVersion { get; set; } = [];
+
+    public bool IsActive(DateTimeOffset now) => UsedAt is null && RevokedAt is null && now < ExpiresAt;
+
+    public bool TryUse(DateTimeOffset now)
+    {
+        if (!IsActive(now)) return false;
+        UsedAt = now;
+        return true;
+    }
+
+    public void Revoke(DateTimeOffset now)
+    {
+        if (RevokedAt is null) RevokedAt = now;
+    }
+}
+
+public sealed class DeviceQrLabel : Entity, ITenantOwned
+{
+    public Guid OrganizationId { get; init; }
+    public Guid DeviceId { get; init; }
+    public required string CodeHash { get; init; }
+    public required string CodePrefix { get; init; }
+    public DateTimeOffset? ExpiresAt { get; init; }
+    public DateTimeOffset? RevokedAt { get; private set; }
+    public DateTimeOffset? LastScannedAt { get; set; }
+    public byte[] RowVersion { get; set; } = [];
+
+    public bool IsActive(DateTimeOffset now) => RevokedAt is null && (ExpiresAt is null || now < ExpiresAt.Value);
+
+    public void Revoke(DateTimeOffset now)
+    {
+        if (RevokedAt is null) RevokedAt = now;
+    }
+
+    public void RecordScan(DateTimeOffset now)
+    {
+        LastScannedAt = now;
+    }
+}
 
 public sealed class Device : Entity, ITenantOwned
 {
@@ -25,6 +90,23 @@ public sealed class Device : Entity, ITenantOwned
     public DateTimeOffset? LastSeenAt { get; set; }
     public bool IsRevoked { get; set; }
     public byte[] RowVersion { get; set; } = [];
+
+    // Extended IT Asset & CMMS Profile
+    public string? SerialNumber { get; set; }
+    public string? Manufacturer { get; set; }
+    public string? Model { get; set; }
+    public string? AssetType { get; set; } = "Workstation";
+    public string? LocationCampus { get; set; }
+    public string? LocationBuilding { get; set; }
+    public string? LocationFloor { get; set; }
+    public string? LocationRoom { get; set; }
+    public string AssetStatus { get; set; } = "Active";
+    public DateTimeOffset? PurchaseDate { get; set; }
+    public decimal? PurchaseCost { get; set; }
+    public DateTimeOffset? WarrantyExpiresAt { get; set; }
+    public string? VendorName { get; set; }
+    public string? SpecificationsJson { get; set; }
+
     public bool IsOnline(DateTimeOffset now) => !IsRevoked && LastSeenAt is not null && now - LastSeenAt < TimeSpan.FromMinutes(2);
 }
 
@@ -99,6 +181,7 @@ public sealed class VpsNode : Entity, ITenantOwned
     public int Port { get; set; } = 22;
     public required string Username { get; set; }
     public required string EncryptedPrivateKey { get; set; }
+    public string? HostKeyFingerprint { get; set; }
     public string Status { get; set; } = "Offline";
     public double? CpuPercent { get; set; }
     public double? RamPercent { get; set; }
@@ -113,4 +196,78 @@ public sealed class VpsNode : Entity, ITenantOwned
         !string.IsNullOrWhiteSpace(serviceName) && AllowedServices.Contains(serviceName.Trim().ToLowerInvariant());
 
     public static IReadOnlyCollection<string> GetAllowedServices() => AllowedServices;
+}
+
+public sealed class IncidentTicket : Entity, ITenantOwned
+{
+    public Guid OrganizationId { get; init; }
+    public Guid DeviceId { get; init; }
+    public required string Title { get; set; }
+    public string? Description { get; set; }
+    public string Severity { get; set; } = "Medium";
+    public string Status { get; set; } = "Open";
+    public required Guid ReportedByUserId { get; init; }
+    public Guid? AssignedTechnicianId { get; set; }
+    public DateTimeOffset? ResolvedAt { get; set; }
+    public string? ResolutionNotes { get; set; }
+
+    public void Resolve(DateTimeOffset now, string? notes = null)
+    {
+        Status = "Resolved";
+        ResolvedAt = now;
+        if (!string.IsNullOrWhiteSpace(notes)) ResolutionNotes = notes;
+    }
+}
+
+public sealed class WorkOrder : Entity, ITenantOwned
+{
+    public Guid OrganizationId { get; init; }
+    public Guid DeviceId { get; init; }
+    public Guid? IncidentId { get; init; }
+    public required string WorkOrderNumber { get; set; }
+    public required string Title { get; set; }
+    public string Type { get; set; } = "Corrective";
+    public string Priority { get; set; } = "Medium";
+    public string Status { get; set; } = "Scheduled";
+    public DateTimeOffset? DueDate { get; set; }
+    public DateTimeOffset? CompletedAt { get; set; }
+    public double LaborHours { get; set; }
+    public decimal PartsCost { get; set; }
+    public decimal LaborCost { get; set; }
+    public decimal TotalCost => PartsCost + LaborCost;
+    public string? ChecklistJson { get; set; }
+    public string? Notes { get; set; }
+    public Guid? AssignedTechnicianId { get; set; }
+
+    public void Complete(DateTimeOffset now, double laborHours, decimal partsCost, decimal laborCost, string? notes = null)
+    {
+        Status = "Completed";
+        CompletedAt = now;
+        LaborHours = laborHours;
+        PartsCost = partsCost;
+        LaborCost = laborCost;
+        if (!string.IsNullOrWhiteSpace(notes)) Notes = notes;
+    }
+}
+
+public sealed class AssetLoan : Entity, ITenantOwned
+{
+    public Guid OrganizationId { get; init; }
+    public Guid DeviceId { get; init; }
+    public required Guid BorrowerUserId { get; init; }
+    public string Status { get; set; } = "Active";
+    public DateTimeOffset BorrowedAt { get; set; }
+    public DateTimeOffset ExpectedReturnDate { get; set; }
+    public DateTimeOffset? ReturnedAt { get; set; }
+    public string? ConditionBefore { get; set; }
+    public string? ConditionAfter { get; set; }
+    public Guid? ApprovedByUserId { get; set; }
+    public string? Notes { get; set; }
+
+    public void Return(DateTimeOffset now, string? conditionAfter = null)
+    {
+        Status = "Returned";
+        ReturnedAt = now;
+        if (!string.IsNullOrWhiteSpace(conditionAfter)) ConditionAfter = conditionAfter;
+    }
 }

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using SentinelLAN.Application;
 using SentinelLAN.Domain;
 
@@ -67,5 +68,20 @@ public sealed class VpsNodeStore(SentinelDbContext dbContext) : IVpsNodeStore
     {
         dbContext.AuditLogs.Add(auditLog);
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<bool> TryReserveActionAsync(VpsActionReservation reservation, CancellationToken cancellationToken = default)
+    {
+        dbContext.VpsActionReservations.Add(reservation);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+        catch (DbUpdateException exception) when (exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            dbContext.Entry(reservation).State = EntityState.Detached;
+            return false;
+        }
     }
 }

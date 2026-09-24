@@ -11,6 +11,8 @@ public sealed class RefreshSession : Entity, ITenantOwned
     public Guid? ReplacedBySessionId { get; private set; }
     public string? RevocationReason { get; private set; }
     public Guid Version { get; private set; } = Guid.NewGuid();
+    public string? ClientType { get; init; }
+    public string? AppVersion { get; init; }
 
     public bool IsActive(DateTimeOffset now) => RevokedAt is null && now < ExpiresAt;
 

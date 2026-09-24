@@ -30,15 +30,15 @@ export function VpsNodesView() {
   const [name, setName] = useState("");
   const [host, setHost] = useState("");
   const [port, setPort] = useState(22);
-  const [username, setUsername] = useState("root");
+  const [username, setUsername] = useState("");
   const [privateKey, setPrivateKey] = useState("");
+  const [hostKeyFingerprint, setHostKeyFingerprint] = useState("");
   const [submittingAdd, setSubmittingAdd] = useState(false);
-  const [testConnMessage, setTestConnMessage] = useState<string | null>(null);
-  const [isTestingConn, setIsTestingConn] = useState(false);
 
   // Restart Form State
   const [serviceName, setServiceName] = useState<string>("nginx");
   const [restartReason, setRestartReason] = useState("");
+  const [restartConfirmed, setRestartConfirmed] = useState(false);
   const [submittingRestart, setSubmittingRestart] = useState(false);
   const [restartResult, setRestartResult] = useState<{ success: boolean; message: string } | null>(null);
 
@@ -46,30 +46,9 @@ export function VpsNodesView() {
   const [actionNodeId, setActionNodeId] = useState<string | null>(null);
   const [bannerMessage, setBannerMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const handleTestConnection = async () => {
-    if (!host.trim() || !privateKey.trim()) {
-      setTestConnMessage(lang === "vi" ? "Vui lòng nhập Host và Private Key để kiểm tra." : "Please provide Host and Private Key to test.");
-      return;
-    }
-    setIsTestingConn(true);
-    setTestConnMessage(null);
-    try {
-      // Create temporary probe payload or inform user
-      setTestConnMessage(lang === "vi" ? "Đang gửi gói tin kiểm tra SSH tới " + host + ":" + port + "..." : "Sending SSH handshake to " + host + ":" + port + "...");
-      // Simulate quick key format validation
-      if (!privateKey.includes("PRIVATE KEY")) {
-        setTestConnMessage(lang === "vi" ? "Lỗi: Khóa OpenSSH Private Key không đúng định dạng PEM." : "Error: Invalid OpenSSH Private Key format.");
-      } else {
-        setTestConnMessage(lang === "vi" ? "Cú pháp Private Key hợp lệ. Hệ thống sẽ kết nối SSH ngay khi bấm lưu." : "Key format verified. Connection will be established upon saving.");
-      }
-    } finally {
-      setIsTestingConn(false);
-    }
-  };
-
   const handleCreateNode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !host.trim() || !username.trim() || !privateKey.trim() || submittingAdd) return;
+    if (!name.trim() || !host.trim() || !username.trim() || !privateKey.trim() || !hostKeyFingerprint.trim() || submittingAdd) return;
 
     setSubmittingAdd(true);
     setBannerMessage(null);
@@ -79,15 +58,26 @@ export function VpsNodesView() {
         host: host.trim(),
         port,
         username: username.trim(),
-        privateKey: privateKey.trim()
+        privateKey: privateKey.trim(),
+        hostKeyFingerprint: hostKeyFingerprint.trim()
       };
-      await new ApiClient().createVpsNode(req);
+      const client = new ApiClient();
+      const created = await client.createVpsNode(req);
       setShowAddModal(false);
       resetAddForm();
-      setBannerMessage({
-        type: "success",
-        text: lang === "vi" ? `Thêm máy chủ Cloud VPS '${name}' thành công!` : `Cloud VPS node '${name}' added successfully!`
-      });
+      try {
+        const connection = await client.testVpsConnection(created.id);
+        setBannerMessage(connection.success
+          ? { type: "success", text: lang === "vi" ? `Đã lưu và kết nối SSH tới '${name}' thành công.` : `Saved '${name}' and verified SSH connectivity.` }
+          : { type: "error", text: lang === "vi" ? `Đã lưu '${name}', nhưng SSH chưa kết nối: ${connection.message}` : `Saved '${name}', but SSH failed: ${connection.message}` });
+      } catch (connectionError) {
+        setBannerMessage({
+          type: "error",
+          text: lang === "vi"
+            ? `Đã lưu '${name}', nhưng kiểm tra SSH thất bại: ${connectionError instanceof Error ? connectionError.message : "Lỗi kết nối"}`
+            : `Saved '${name}', but SSH verification failed: ${connectionError instanceof Error ? connectionError.message : "Connection error"}`
+        });
+      }
       await fetchNodes();
     } catch (err) {
       setBannerMessage({
@@ -103,9 +93,9 @@ export function VpsNodesView() {
     setName("");
     setHost("");
     setPort(22);
-    setUsername("root");
+    setUsername("");
     setPrivateKey("");
-    setTestConnMessage(null);
+    setHostKeyFingerprint("");
   };
 
   const handleRefreshNode = async (node: VpsNode) => {
@@ -179,18 +169,19 @@ export function VpsNodesView() {
     setSelectedNodeForRestart(node);
     setServiceName("nginx");
     setRestartReason("");
+    setRestartConfirmed(false);
     setRestartResult(null);
     setShowRestartModal(true);
   };
 
   const handleRestartService = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedNodeForRestart || !serviceName || !restartReason.trim() || submittingRestart) return;
+    if (!selectedNodeForRestart || !serviceName || !restartReason.trim() || !restartConfirmed || submittingRestart) return;
 
     setSubmittingRestart(true);
     setRestartResult(null);
     try {
-      const res = await new ApiClient().restartVpsService(selectedNodeForRestart.id, serviceName, restartReason.trim());
+      const res = await new ApiClient().restartVpsService(selectedNodeForRestart.id, serviceName, restartReason.trim(), restartConfirmed);
       setRestartResult(res);
       if (res.success) {
         setBannerMessage({
@@ -490,7 +481,7 @@ export function VpsNodesView() {
 
             <div className="privacy" style={{ marginBottom: "1.25rem", padding: "12px 14px" }}>
               <p style={{ margin: 0, fontSize: "0.82rem", lineHeight: 1.5 }}>
-                🔒 <strong>Zero-Knowledge Vault:</strong> {t("vpsVaultNotice")}
+                🔒 <strong>{lang === "vi" ? "Kho khóa mã hóa trên server:" : "Server-side encrypted key vault:"}</strong> {t("vpsVaultNotice")}
               </p>
             </div>
 
@@ -563,29 +554,22 @@ export function VpsNodesView() {
                 />
               </div>
 
-              {testConnMessage && (
-                <div style={{
-                  padding: "0.65rem 0.85rem",
-                  background: isTestingConn ? "var(--accent-soft)" : "rgba(12, 38, 38, 0.05)",
-                  borderRadius: "8px",
-                  fontSize: "0.82rem",
-                  marginBottom: "1rem",
-                  color: "var(--ink)",
-                  border: "1px solid #cad9d4"
-                }}>
-                  {testConnMessage}
-                </div>
-              )}
+              <div className="form-group">
+                <label htmlFor="vps-host-fingerprint">{lang === "vi" ? "SHA256 fingerprint của SSH host key" : "SSH host key SHA256 fingerprint"} *</label>
+                <input
+                  id="vps-host-fingerprint"
+                  className="form-input"
+                  required
+                  pattern="SHA256:[A-Za-z0-9+/]{43}"
+                  placeholder="SHA256:..."
+                  value={hostKeyFingerprint}
+                  onChange={e => setHostKeyFingerprint(e.target.value)}
+                />
+                <small>{lang === "vi" ? "Xác minh qua console tin cậy trên VPS: ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub -E sha256" : "Verify through a trusted VPS console: ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub -E sha256"}</small>
+              </div>
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1.5rem" }}>
-                <button
-                  type="button"
-                  className="action-outline"
-                  disabled={isTestingConn}
-                  onClick={handleTestConnection}
-                >
-                  {isTestingConn ? t("testingConnection") : `🔌 ${t("testConnectionBtn")}`}
-                </button>
+                <p className="subtitle">{lang === "vi" ? "Lưu để kiểm tra SSH thật từ server; kết quả sẽ hiện sau khi kết nối." : "Save to run a real SSH check from the server; the result appears afterward."}</p>
 
                 <div style={{ display: "flex", gap: "0.6rem" }}>
                   <button type="button" className="action-outline" onClick={() => setShowAddModal(false)}>
@@ -643,6 +627,13 @@ export function VpsNodesView() {
                 />
               </div>
 
+              <div className="form-group">
+                <label htmlFor="vps-restart-confirm">
+                  <input id="vps-restart-confirm" type="checkbox" checked={restartConfirmed} onChange={e => setRestartConfirmed(e.target.checked)} required />{" "}
+                  {lang === "vi" ? "Tôi xác nhận khởi động lại dịch vụ thật trên VPS này." : "I confirm a real service restart on this VPS."}
+                </label>
+              </div>
+
               {restartResult && (
                 <div style={{
                   padding: "0.65rem 0.85rem",
@@ -661,7 +652,7 @@ export function VpsNodesView() {
                 <button type="button" className="action-outline" onClick={() => setShowRestartModal(false)}>
                   {t("cancel")}
                 </button>
-                <button type="submit" className="action" disabled={submittingRestart || !restartReason.trim()}>
+                <button type="submit" className="action" disabled={submittingRestart || !restartReason.trim() || !restartConfirmed}>
                   {submittingRestart ? "Executing..." : t("vpsRestartConfirmBtn")}
                 </button>
               </div>

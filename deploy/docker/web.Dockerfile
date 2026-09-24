@@ -2,8 +2,12 @@ FROM node:24.18.0-alpine AS build
 WORKDIR /src
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/package.json
-RUN npm ci
+COPY apps/mobile/package.json apps/mobile/package.json
+COPY packages/api-client/package.json packages/api-client/package.json
+COPY packages/shared-config/package.json packages/shared-config/package.json
+RUN npm ci --workspace=@sentinellan/web --include-workspace-root
 COPY apps/web apps/web
+COPY packages packages
 ARG NEXT_PUBLIC_API_URL=http://localhost:8080
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 RUN npm run build

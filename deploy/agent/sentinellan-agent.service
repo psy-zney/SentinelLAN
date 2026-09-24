@@ -5,18 +5,23 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=root
+User=sentinellan
+Group=sentinellan
 WorkingDirectory=/opt/sentinellan-agent
 ExecStart=/opt/sentinellan-agent/sentinellan-agent
 Restart=always
 RestartSec=10
 EnvironmentFile=/etc/sentinellan/agent.env
+StateDirectory=sentinellan-agent
 LimitNOFILE=65535
 
 # Security hardening
-ProtectSystem=full
-ProtectHome=read-only
-NoNewPrivileges=false
+ProtectSystem=strict
+ProtectHome=true
+NoNewPrivileges=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/sentinellan-agent
+CapabilityBoundingSet=
 
 [Install]
 WantedBy=multi-user.target
