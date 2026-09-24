@@ -19,7 +19,18 @@ var identityStore = builder.Environment.IsProduction()
     ? (IDeviceIdentityStore)new ProtectedDeviceIdentityStore(Path.Combine(dataDir, "identity.dat"), builder.Configuration["SENTINELLAN_AGENT_STORE_KEY"])
     : new DevelopmentIdentityStore(Path.Combine(dataDir, "identity.json"));
 builder.Services.AddSingleton<IDeviceIdentityStore>(identityStore);
-builder.Services.AddSingleton<ResilientOfflineQueue<QueuedTelemetry>>();
+builder.Services.AddSingleton<ICommandNonceStore>(builder.Environment.IsProduction()
+    ? new ProtectedCommandNonceStore(Path.Combine(dataDir, "command-nonces.dat"), builder.Configuration["SENTINELLAN_AGENT_STORE_KEY"])
+    : new InMemoryCommandNonceStore());
+var offlineQueue = builder.Environment.IsProduction()
+    ? new ResilientOfflineQueue<QueuedTelemetry>(50,
+        new ProtectedOfflineTelemetryQueueStore(Path.Combine(dataDir, "offline-telemetry.dat"), builder.Configuration["SENTINELLAN_AGENT_STORE_KEY"]),
+        TimeSpan.FromHours(1))
+    : new ResilientOfflineQueue<QueuedTelemetry>();
+builder.Services.AddSingleton(offlineQueue);
+if (builder.Environment.IsProduction())
+    builder.Services.AddSingleton<IPendingCommandResultStore>(new ProtectedPendingCommandResultStore(
+        Path.Combine(dataDir, "pending-command-result.dat"), builder.Configuration["SENTINELLAN_AGENT_STORE_KEY"]));
 builder.Services.AddSingleton<ITelemetryCollector, SystemTelemetryCollector>();
 builder.Services.AddSingleton<CommandVerifier>();
 builder.Services.AddSingleton<ICommandSignatureVerifier>(new HmacCommandVerifier(builder.Configuration["SENTINELLAN_SIGNING_KEY"]));

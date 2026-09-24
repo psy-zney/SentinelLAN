@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useLiveQuery } from "@/hooks/use-live-query";
 import { ApiClient, ApiError } from "@/lib/api-client";
 import { useCurrentSession } from "@/components/app-shell";
@@ -32,6 +32,7 @@ export function DeviceDetail({ id }: { id: string }) {
   // Forms / Modals state
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [reportIncOpen, setReportIncOpen] = useState(false);
+  const incidentIdempotencyKey = useRef<string | null>(null);
   const [createWoOpen, setCreateWoOpen] = useState(false);
   const [completeWoOpen, setCompleteWoOpen] = useState(false);
   const [selectedWo, setSelectedWo] = useState<WorkOrderItem | null>(null);
@@ -169,13 +170,16 @@ export function DeviceDetail({ id }: { id: string }) {
     e.preventDefault();
     if (!asset || !newIncTitle.trim()) return;
     setSending(true);
+    incidentIdempotencyKey.current ??= crypto.randomUUID();
     try {
       await new ApiClient().createIncident({
         deviceId: asset.id,
         title: newIncTitle.trim(),
         description: newIncDesc.trim() || null,
-        severity: newIncSeverity
+        severity: newIncSeverity,
+        idempotencyKey: incidentIdempotencyKey.current
       });
+      incidentIdempotencyKey.current = null;
       setReportIncOpen(false);
       setNewIncTitle("");
       setNewIncDesc("");
@@ -343,7 +347,7 @@ export function DeviceDetail({ id }: { id: string }) {
             type="button"
             className="action-outline"
             style={{ color: "var(--warn)" }}
-            onClick={() => setReportIncOpen(true)}
+            onClick={() => { incidentIdempotencyKey.current = null; setReportIncOpen(true); }}
           >
             🚨 {t("reportIncident")}
           </button>
@@ -921,7 +925,7 @@ export function DeviceDetail({ id }: { id: string }) {
                 type="button"
                 className="action-outline"
                 style={{ color: "var(--warn)" }}
-                onClick={() => setReportIncOpen(true)}
+                onClick={() => { incidentIdempotencyKey.current = null; setReportIncOpen(true); }}
               >
                 + {t("reportIncident")}
               </button>

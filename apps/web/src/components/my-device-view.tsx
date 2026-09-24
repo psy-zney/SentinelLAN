@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ApiClient, ApiError } from "@/lib/api-client";
 import { useTranslation } from "@/lib/i18n";
 import type {
@@ -18,6 +18,7 @@ export function MyDeviceView() {
   const [empty, setEmpty] = useState(false);
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
+  const incidentIdempotencyKey = useRef<string | null>(null);
 
   // Report Incident Modal State
   const [reportOpen, setReportOpen] = useState(false);
@@ -73,13 +74,16 @@ export function MyDeviceView() {
     if (!reportTitle.trim() || reporting) return;
     setReporting(true);
     setReportSuccessMessage(null);
+    incidentIdempotencyKey.current ??= crypto.randomUUID();
 
     try {
       await new ApiClient().reportMyDeviceIncident({
         title: reportTitle.trim(),
         description: reportDesc.trim() || undefined,
-        severity: reportSeverity
+        severity: reportSeverity,
+        idempotencyKey: incidentIdempotencyKey.current
       });
+      incidentIdempotencyKey.current = null;
       setReportOpen(false);
       setReportTitle("");
       setReportDesc("");
@@ -167,7 +171,7 @@ export function MyDeviceView() {
         <button
           type="button"
           className="action"
-          onClick={() => setReportOpen(true)}
+          onClick={() => { incidentIdempotencyKey.current = null; setReportOpen(true); }}
           style={{ display: "flex", alignItems: "center", gap: 6 }}
         >
           🚨 {t("reportMyDeviceIssue")}

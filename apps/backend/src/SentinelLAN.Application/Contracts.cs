@@ -129,6 +129,7 @@ public record ReissueActivationTokenRequest(string Reason, bool Confirmed, int V
 public record ReissueActivationTokenResponse(string ActivationToken, string ActivationUrl, DateTimeOffset ExpiresAt);
 public record RevokeActivationTokenRequest(string Reason, bool Confirmed);
 public record ActivateAccountRequest(string Token, string Password);
+public record ValidateActivationTokenRequest(string? Token);
 public record ValidateActivationTokenResponse(bool Valid, string? Message = null);
 
 public record GenerateQrLabelRequest(string Reason, bool Confirmed, int? ValidForDays = null);
@@ -156,7 +157,7 @@ public record MyDeviceDto(
     string? AssetType,
     string? Location,
     DateTimeOffset AssignedAt);
-public record ReportMyDeviceIncidentRequest(string Title, string? Description, string Severity = "Medium");
+public record ReportMyDeviceIncidentRequest(string Title, string? Description, string Severity = "Medium", string? IdempotencyKey = null);
 
 public record EnrollmentTokenRequest(int ValidForMinutes, string Reason, bool Confirmed);
 public record EnrollmentTokenResponse(string Token, DateTimeOffset ExpiresAt);

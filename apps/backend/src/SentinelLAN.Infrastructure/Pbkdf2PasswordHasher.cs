@@ -6,7 +6,7 @@ namespace SentinelLAN.Infrastructure;
 
 public sealed class Pbkdf2PasswordHasher : IPasswordHasher
 {
-    private const int Iterations = 210_000;
+    private const int Iterations = 600_000;
     private const int SaltLength = 16;
     private const int HashLength = 32;
     private const string Prefix = "pbkdf2-sha256";

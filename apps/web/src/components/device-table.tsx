@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import type { CommandType, Device } from "@/types/api";
 import { useTranslation } from "@/lib/i18n";
@@ -30,6 +30,7 @@ export function DeviceTable({ initialDevices }: { initialDevices: Device[] }) {
   const [incSeverity, setIncSeverity] = useState("Medium");
   const [incStatus, setIncStatus] = useState<string | null>(null);
   const [incLoading, setIncLoading] = useState(false);
+  const incidentIdempotencyKey = useRef<string | null>(null);
 
   function openQr(device: Device) {
     setSelectedDevice(device);
@@ -51,6 +52,7 @@ export function DeviceTable({ initialDevices }: { initialDevices: Device[] }) {
     setIncDesc("");
     setIncSeverity("Medium");
     setIncStatus(null);
+    incidentIdempotencyKey.current = null;
     setIncidentModalOpen(true);
   }
 
@@ -85,13 +87,16 @@ export function DeviceTable({ initialDevices }: { initialDevices: Device[] }) {
     if (!selectedDevice || !incTitle.trim()) return;
     setIncLoading(true);
     setIncStatus(null);
+    incidentIdempotencyKey.current ??= crypto.randomUUID();
     try {
       await new ApiClient().createIncident({
         deviceId: selectedDevice.id,
         title: incTitle.trim(),
         description: incDesc.trim() || undefined,
-        severity: incSeverity
+        severity: incSeverity,
+        idempotencyKey: incidentIdempotencyKey.current
       });
+      incidentIdempotencyKey.current = null;
       setIncStatus(lang === "vi" ? "Đã tiếp nhận báo hỏng thành công!" : "Incident report registered successfully!");
       setTimeout(() => {
         setIncidentModalOpen(false);

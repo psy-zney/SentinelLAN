@@ -243,10 +243,12 @@ export class MobileApiClient {
   }
 
   async validateActivationToken(token: string): Promise<ValidateActivationTokenResponse> {
-    const encoded = encodeURIComponent(token);
     const data = await this.executeWithRefresh<unknown>(
-      `/api/v1/auth/activation/validate?token=${encoded}`,
-      { method: 'GET' },
+      '/api/v1/auth/activation/validate',
+      {
+        method: 'POST',
+        body: JSON.stringify({ token }),
+      },
       false
     );
     return ValidateActivationTokenResponseSchema.parse(data);
@@ -290,6 +292,7 @@ export class MobileApiClient {
   async reportIncident(req: ReportMyDeviceIncidentRequest): Promise<IncidentDto> {
     const data = await this.executeWithRefresh<unknown>('/api/v1/my-device/incidents', {
       method: 'POST',
+      headers: { 'Idempotency-Key': req.idempotencyKey },
       body: JSON.stringify(req),
     });
     return IncidentDtoSchema.parse(data);

@@ -27,7 +27,6 @@ import type {
   CreateLoanRequest,
   ReturnLoanRequest,
   AssetTimelineItem,
-  PublicQrDevice,
   CreateUserResponse,
   ReissueActivationTokenResponse,
   ValidateActivationTokenResponse,
@@ -158,7 +157,10 @@ export class ApiClient {
   }
 
   validateActivationToken(token: string) {
-    return this.request<ValidateActivationTokenResponse>(`/api/v1/auth/activation/validate?token=${encodeURIComponent(token)}`);
+    return this.request<ValidateActivationTokenResponse>("/api/v1/auth/activation/validate", {
+      method: "POST",
+      body: JSON.stringify({ token })
+    });
   }
 
   activateAccount(data: ActivateAccountRequest) {
@@ -232,6 +234,7 @@ export class ApiClient {
   reportMyDeviceIncident(data: ReportMyDeviceIncidentRequest) {
     return this.request<ReportMyDeviceIncidentResponse>("/api/v1/my-device/incidents", {
       method: "POST",
+      headers: { "Idempotency-Key": data.idempotencyKey },
       body: JSON.stringify(data)
     });
   }
@@ -397,6 +400,7 @@ export class ApiClient {
   createIncident(data: CreateIncidentRequest) {
     return this.request<IncidentItem>("/api/v1/incidents", {
       method: "POST",
+      headers: { "Idempotency-Key": data.idempotencyKey },
       body: JSON.stringify(data)
     });
   }
@@ -444,10 +448,6 @@ export class ApiClient {
       method: "PUT",
       body: JSON.stringify(data)
     });
-  }
-
-  getPublicQrDevice(id: string) {
-    return this.request<PublicQrDevice>(`/api/v1/public/qr/${id}`);
   }
 
   generateQrLabel(deviceId: string, reason: string, validForDays?: number) {

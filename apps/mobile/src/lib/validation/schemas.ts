@@ -122,7 +122,7 @@ export const ReportMyDeviceIncidentRequestSchema = z.object({
   title: z.string().min(3).max(200),
   description: z.string().max(2000).optional(),
   severity: z.enum(['Low', 'Medium', 'High', 'Critical']).default('Medium'),
-  idempotencyKey: z.string().uuid().optional(),
+  idempotencyKey: z.string().uuid(),
 });
 
 export const AuthenticatedQrResolveSchema = z.object({

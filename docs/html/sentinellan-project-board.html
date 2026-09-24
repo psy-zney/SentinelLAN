@@ -185,8 +185,8 @@
       <p class="hero-copy">Một file độc lập để theo dõi toàn bộ kiến trúc Zero Trust, luồng dữ liệu, tech stack, checklist sáu tuần, kịch bản demo 5 phút, config và cách debug. Màu xanh chỉ xuất hiện khi đường nối hoặc công việc đã có code và kiểm chứng tương ứng; các cổng môi trường và giới hạn thực tế được ghi chú (note) minh bạch.</p>
       <div class="hero-status" aria-label="Tóm tắt trạng thái">
         <div class="stat open"><span>Trạng thái Production</span><strong>Chưa đủ chuẩn Prod · Củng cố mã & docs</strong></div>
-        <div class="stat done"><span>Kiểm thử Web & Mobile</span><strong>25 Unit + 6 E2E | 38 Mobile (Maestro)</strong></div>
-        <div class="stat done"><span>Kiểm thử Backend</span><strong>79+ Unit .NET PASS</strong></div>
+        <div class="stat done"><span>Kiểm thử đã chạy 25/09</span><strong>25 Vitest + 6 Playwright | 39 Mobile Jest</strong></div>
+        <div class="stat done"><span>.NET đã chạy 25/09</span><strong>142/142 pass · 7 Maestro scripts chưa chạy</strong></div>
         <div class="stat open"><span>Cổng Môi trường</span><strong>Chờ Docker & PostgreSQL thật</strong></div>
       </div>
     </div>
@@ -257,7 +257,7 @@
 
     <section id="weeks">
       <p class="subtitle">
-        ⚠️ <strong>Đánh giá thực tế (24/09/2026):</strong> Phần mã nguồn, các lớp bảo vệ và tài liệu đã được củng cố rất đáng kể (Web 25 unit + 6 E2E, Mobile 38 test + 4 Maestro flows, Backend 79+ unit test, chặn demo credentials ở Production, khóa tài khoản thu hồi phiên tức thì, SSH Host Key Pinning và Two-Phase Nonce Reservation). Tuy nhiên, <strong>chưa thể xác nhận hoàn thiện Production</strong> do các cổng môi trường (PostgreSQL runtime thật, thử nghiệm khôi phục thảm họa trên Docker, hàng đợi đệm bền vững khi restart, và kiểm thử DLL trên Windows) vẫn là các điều kiện tiên quyết cần được nghiệm thu tại hạ tầng thực tế.
+        ⚠️ <strong>Đánh giá thực tế (25/09/2026):</strong> Đã chạy 142/142 .NET, 25/25 Vitest, 6/6 Playwright Chromium và 39/39 Mobile Jest; 7 YAML Maestro là kịch bản chưa chạy vì thiếu adb/Android SDK. Production Agent có queue telemetry, nonce và biên lai chờ trong file mã hóa, còn Development mặc định dùng RAM. <strong>Chưa xác nhận hoàn thiện Production</strong> vì PostgreSQL runtime/restore drill và kiểm thử Agent sau restart trên host triển khai còn cần nghiệm thu.
       </p>
 
       <div class="section-head">
@@ -309,7 +309,7 @@
           <ul class="checklist">
             <li class="task"><span class="check"></span><div>Policy CRUD/assignment theo tenant (Global Query Filter)<span class="note">Đã có entity/service; cần nghiệm thu trên database thật và phân bổ tenant.</span></div></li>
             <li class="task done"><span class="check">✓</span><div>Command allow-list: ShowNotification, CollectTelemetryNow, RefreshPolicy, SimulateLock, SimulateNetworkIsolation, RestartService</div></li>
-            <li class="task done"><span class="check">✓</span><div>Reason + confirmation + expiry (mặc định 120s) + nonce + HMAC API/Agent + append-only audit</div></li>
+            <li class="task done"><span class="check">✓</span><div>Reason + confirmation + expiry (mặc định 120s) + nonce + HMAC API/Agent + DbContext AuditLog mutation guard</div></li>
             <li class="task done"><span class="check">✓</span><div>Wrong-device / expiry / replay checks trong Agent Core</div></li>
             <li class="task done"><span class="check">✓</span><div>Idempotent command result sau retry</div></li>
             <li class="task"><span class="check"></span><div>Lab flag cho phép Win32 P/Invoke LockWorkStation thật khi demo<span class="note">Code P/Invoke user32.dll có sẵn; chỉ bật khi có cờ SENTINELLAN_LAB_EXECUTION trên máy lab.</span></div></li>
@@ -339,9 +339,9 @@
           <ul class="checklist">
             <li class="task"><span class="check"></span><div>Tách Agent Core / Infrastructure / Worker<span class="note">Đã tách module; cần kiểm chứng độc lập hoàn toàn OS.</span></div></li>
             <li class="task"><span class="check"></span><div>Windows Service composition + safe simulated handlers<span class="note">Lưu ý bẫy Session 0 Isolation trên Windows đối với UI tương tác.</span></div></li>
-            <li class="task"><span class="check"></span><div>HTTP retry exponential + timeout/cancellation<span class="note">Cần random Jitter (±20%) chống bão kết nối (Thundering Herd).</span></div></li>
+            <li class="task"><span class="check"></span><div>HTTP retry exponential + timeout/cancellation<span class="note">Đã có exponential delay với jitter ±500 ms, clamp 2–60 giây; chưa phải Full Jitter. Cần kiểm chứng timeout/cancellation và retry trên host.</span></div></li>
             <li class="task"><span class="check"></span><div>Windows-protected credential store<span class="note">Dùng DPAPI crypt32.dll; lưu ý bẫy profile reset của tài khoản SYSTEM.</span></div></li>
-            <li class="task"><span class="check"></span><div>Encrypted durable bounded offline queue<span class="note">Cần lưu file SQLite/disk bền bỉ khi mất mạng, không chỉ giữ trong RAM.</span></div></li>
+            <li class="task"><span class="check"></span><div>Encrypted durable bounded offline queue<span class="note">Production có file queue mã hóa, giới hạn 50 mục/1 giờ; Development dùng RAM. Cần kiểm thử restart trên Windows/Linux và xác minh khóa Linux.</span></div></li>
             <li class="task"><span class="check"></span><div>Jitter, clock-skew, revoke/restart lifecycle tests</div></li>
             <li class="task"><span class="check"></span><div>Asymmetric signature + key rotation<span class="note">HMAC chia sẻ secret là bước đệm; production cần cặp khóa bất đối xứng.</span></div></li>
             <li class="task"><span class="check"></span><div>Install/upgrade/uninstall runbook<span class="note">Xác nhận Agent chạy với quyền tối thiểu (least privilege), không cần Admin cho MVP.</span></div></li>
@@ -377,29 +377,29 @@
           <div class="panel-body">
             <ol class="log">
               <li><time>Kiểm soát Vận hành & Bảo mật (24/09/2026)</time><p>Chặn demo credentials ở môi trường Production; Khóa tài khoản thu hồi phiên tức thì (IsLocked + SessionRevocation); SSH Host Key Pinning (SHA256); Two-Phase Nonce VPS Restart (dành trước nonce trong PostgreSQL); chuẩn hóa API QR Code, Incident và Work Order CMMS.</p></li>
-              <li><time>Bộ Kiểm thử Web & Mobile Đầy Đủ (24/09/2026)</time><p>Web: 25 unit tests Vitest và 6 kịch bản Playwright E2E xanh 100%; Mobile: 38 unit/component tests và 4 luồng Maestro E2E (Kích hoạt, Quét QR, Báo cáo sự cố, Mượn trả thiết bị); Backend: 79+ unit tests.</p></li>
-              <li><time>Cloud VPS SSH Governance</time><p>Triển khai toàn diện quản lý VPS từ xa: Zero-Knowledge Private Key Vault AES-256-GCM, kết nối SSH.NET thu thập metrics (CPU, RAM, Disk, Docker), Host Key Pinning và tự phục hồi dịch vụ an toàn.</p></li>
+              <li><time>Kiểm thử local (25/09/2026)</time><p>Build .NET sạch; 142/142 test .NET, 25/25 Vitest, 6/6 Playwright Chromium và 39/39 Mobile Jest đạt. Web/mobile typecheck và lint, web production build đạt. 7 Maestro YAML scripts chưa chạy do thiếu adb/Android SDK; PostgreSQL runtime và restore drill chưa kiểm chứng.</p></li>
+              <li><time>Cloud VPS SSH Governance</time><p>Quản lý VPS dùng Private Key Vault AES-256-GCM ở server, SSH.NET thu thập metrics, Host Key Pinning và thao tác restart có xác nhận/nonces. Đây không phải Zero-Knowledge vault.</p></li>
               <li><time>Release v1.0.0 Pipeline</time><p>Thiết lập GitHub Actions Release tự động, script đóng gói build-release.ps1 / build-release.sh, mã băm SHA256SUMS và tài liệu Release Notes.</p></li>
               <li><time>Enrollment Audit</time><p>Ghi AuditLog đầy đủ cho AgentEnrolled (Success) và AgentEnrollmentFailed (Token already used / Token expired) có gắn OrganizationId.</p></li>
               <li><time>Heartbeat Idempotency</time><p>Củng cố chống nhân đôi dữ liệu heartbeat và telemetry snapshot; hỗ trợ AgentApi truyền idempotency key khi retry.</p></li>
               <li><time>Web Real Data</time><p>Xóa bỏ hoàn toàn demoDashboard fallback trên Inventory và Detail; hỗ trợ các trạng thái loading, error, empty và loaded từ typed API client.</p></li>
               <li><time>Telemetry Contract</time><p>Thêm TelemetrySnapshotDto cho API /devices/{id}/telemetry và hiển thị % CPU, RAM, Disk trên trang chi tiết thiết bị.</p></li>
               <li><time>SignalR Realtime</time><p>Phát cập nhật trạng thái thiết bị và hỗ trợ anti-CSRF cho SignalR negotiate handshake.</p></li>
-              <li><time>Integration Tests</time><p>85/85 test backend xanh 100% (bao gồm VpsNodeServiceTests và VpsVaultIntegrationTests).</p></li>
-              <li><time>Browser E2E</time><p>Playwright chạy 2/2 bài test xanh: auth lifecycle và device telemetry SignalR (20.2s).</p></li>
+              <li><time>Historical integration test report</time><p>Một snapshot cũ từng ghi 85/85 test backend. Không dùng số này làm kết quả của working tree hiện tại; chưa chạy lại trong lần rà soát tài liệu này.</p></li>
+              <li><time>Historical Browser E2E report</time><p>Một snapshot cũ từng ghi 2/2 Playwright test; không xác nhận trạng thái của 6 test case hiện được khai báo trong repo.</p></li>
               <li><time>Tài liệu & Note</time><p>Cập nhật Release Notes v1.0.0, week-06 checklist, data dictionary, data-flow diagram, privacy disclosure và Project Board.</p></li>
             </ol>
           </div>
         </article>
         <article class="panel">
-          <div class="panel-head"><h3>Verification gates (Cổng nghiệm thu)</h3></div>
+          <div class="panel-head"><h3>Kiểm thử working tree ngày 25/09/2026</h3></div>
           <div class="panel-body">
-            <div class="gate pass"><b>Backend test suite</b><small>Đạt 85/85 test xanh 100% (VpsNodeService, VpsVault AES-256, Architecture, Device lifecycle, Agent Core).</small></div>
-            <div class="gate pass"><b>Web unit & API client</b><small>10/10 đạt: VPS management, session refresh, role routing, CSRF và logout.</small></div>
-            <div class="gate pass"><b>Playwright Chromium</b><small>2/2 đạt: auth lifecycle + device telemetry SignalR (20.2s).</small></div>
-            <div class="gate pass"><b>Web TypeScript & Lint</b><small>0 error, 0 warning (tsc strict + eslint 0 max-warnings).</small></div>
-            <div class="gate pass"><b>Web Production Build</b><small>Next.js 16 hoàn tất build 7/7 static pages sạch sẽ.</small></div>
-            <div class="gate pass"><b>Release Pipeline v1.0.0</b><small>GitHub Actions workflow + script build-release.ps1 + SHA256 checksums hoàn chỉnh.</small></div>
+            <div class="gate done"><b>.NET suite</b><small>dotnet test SentinelLAN.slnx --no-build: 142/142 pass (gồm 20 Agent, 50 integration); chạy ngoài sandbox để Windows DPAPI hoạt động.</small></div>
+            <div class="gate done"><b>Web unit tests</b><small>npm.cmd test: 25/25 Vitest pass; lint, typecheck và production build đạt.</small></div>
+            <div class="gate done"><b>Playwright Chromium</b><small>npm.cmd run test:e2e: 6/6 pass với API Debug DLL trong Development, chạy ngoài sandbox.</small></div>
+            <div class="gate done"><b>Mobile tests</b><small>npm.cmd run test:mobile: 39/39 Jest pass; lint và typecheck đạt.</small></div>
+            <div class="gate open"><b>Maestro</b><small>7 YAML flows are present; local README reports adb/Android SDK unavailable.</small></div>
+            <div class="gate open"><b>Production runtime gates</b><small>PostgreSQL restore drill and Windows/Linux Agent queue restart require target-host verification.</small></div>
           </div>
         </article>
       </div>

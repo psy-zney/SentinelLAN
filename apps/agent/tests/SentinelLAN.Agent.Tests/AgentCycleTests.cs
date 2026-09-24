@@ -32,6 +32,42 @@ public sealed class AgentCycleTests
     }
 
     [Fact]
+    public async Task ProtectedPendingResultSurvivesRestartAndRetriesWithoutPollingOrReexecutingIt()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"sentinellan_result_{Guid.NewGuid():N}");
+        var path = Path.Combine(tempDir, "pending-command-result.dat");
+        const string key = "test-agent-store-key-at-least-32-characters";
+        var command = Command();
+        var api = new FakeApi { FailResult = true, Command = command };
+        try
+        {
+            var firstCycle = new AgentCycle(new DeviceIdentity(DeviceId, "test"), new Collector(), api,
+                new CommandVerifier(), new Signatures(), TimeProvider.System,
+                pendingResultStore: new SentinelLAN.Agent.Infrastructure.ProtectedPendingCommandResultStore(path, key));
+
+            await Assert.ThrowsAsync<HttpRequestException>(() => firstCycle.RunAsync(default));
+            Assert.Equal(1, api.Polls);
+            Assert.Single(api.Results);
+            Assert.Equal(command.Id, api.Results[0].Id);
+
+            // A new process loads and resends the stored receipt before asking for another command.
+            var restartedCycle = new AgentCycle(new DeviceIdentity(DeviceId, "test"), new Collector(), api,
+                new CommandVerifier(), new Signatures(), TimeProvider.System,
+                pendingResultStore: new SentinelLAN.Agent.Infrastructure.ProtectedPendingCommandResultStore(path, key));
+            await restartedCycle.RunAsync(default);
+
+            Assert.Equal(2, api.Results.Count);
+            Assert.Equal(api.Results[0], api.Results[1]);
+            Assert.Equal(2, api.Polls);
+            Assert.Null(new SentinelLAN.Agent.Infrastructure.ProtectedPendingCommandResultStore(path, key).Load());
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task MissingKeyKeepsTelemetryActiveWithoutConsumingCommandsAndBadSignatureCannotExecute()
     {
         var api = new FakeApi { Command = Command() };
@@ -100,6 +136,67 @@ public sealed class AgentCycleTests
         finally
         {
             if (File.Exists(tempFile)) File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public void ProtectedOfflineTelemetryQueueSurvivesRestartAndPreservesIdempotencyKey()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"sentinellan_queue_{Guid.NewGuid():N}");
+        var path = Path.Combine(tempDir, "offline-telemetry.dat");
+        const string key = "test-agent-store-key-at-least-32-characters";
+        try
+        {
+            var firstQueue = new ResilientOfflineQueue<QueuedTelemetry>(
+                50, new SentinelLAN.Agent.Infrastructure.ProtectedOfflineTelemetryQueueStore(path, key));
+            var item = new QueuedTelemetry(new TelemetrySnapshot(10, 20, 30, "test-os", "test-agent"), "stable-idempotency-key");
+            firstQueue.Enqueue(item);
+
+            var restartedQueue = new ResilientOfflineQueue<QueuedTelemetry>(
+                50, new SentinelLAN.Agent.Infrastructure.ProtectedOfflineTelemetryQueueStore(path, key));
+
+            Assert.Equal(1, restartedQueue.Count);
+            Assert.True(restartedQueue.TryPeek(TimeSpan.FromHours(1), out var restored));
+            Assert.Equal(item, restored);
+            Assert.True(restartedQueue.TryDequeue(out _));
+            Assert.Empty(new ResilientOfflineQueue<QueuedTelemetry>(
+                50, new SentinelLAN.Agent.Infrastructure.ProtectedOfflineTelemetryQueueStore(path, key))
+                .Drain(TimeSpan.FromHours(1)));
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void OfflineQueueRecoveryRemovesExpiredEntriesAndEnforcesCapacity()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"sentinellan_queue_{Guid.NewGuid():N}");
+        var path = Path.Combine(tempDir, "offline-telemetry.dat");
+        const string key = "test-agent-store-key-at-least-32-characters";
+        try
+        {
+            var store = new SentinelLAN.Agent.Infrastructure.ProtectedOfflineTelemetryQueueStore(path, key);
+            var old = DateTimeOffset.UtcNow.AddHours(-2);
+            var now = DateTimeOffset.UtcNow;
+            store.Save([
+                new OfflineQueueEntry<QueuedTelemetry>(old, new(new(1, 1, 1, "old", "v"), "expired")),
+                new OfflineQueueEntry<QueuedTelemetry>(now, new(new(2, 2, 2, "a", "v"), "key-a")),
+                new OfflineQueueEntry<QueuedTelemetry>(now.AddTicks(1), new(new(3, 3, 3, "b", "v"), "key-b")),
+                new OfflineQueueEntry<QueuedTelemetry>(now.AddTicks(2), new(new(4, 4, 4, "c", "v"), "key-c"))
+            ]);
+
+            var queue = new ResilientOfflineQueue<QueuedTelemetry>(2, store);
+
+            Assert.Equal(2, queue.Count);
+            Assert.True(queue.TryPeek(TimeSpan.FromHours(1), out var first));
+            Assert.Equal("key-b", first!.IdempotencyKey);
+            Assert.Equal(["key-b", "key-c"], queue.Drain(TimeSpan.FromHours(1)).Select(value => value.IdempotencyKey));
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, recursive: true);
         }
     }
 

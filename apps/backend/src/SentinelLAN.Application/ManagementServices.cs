@@ -167,7 +167,7 @@ public sealed class UserManagementService(
                 CreatedByUserId = actor.UserId
             };
             store.AddActivationToken(activationToken);
-            activationUrl = $"/activate?token={rawToken}";
+            activationUrl = $"/activate#token={Uri.EscapeDataString(rawToken)}";
 
             store.AddAudit(new AuditLog
             {
@@ -239,7 +239,7 @@ public sealed class UserManagementService(
         if (!await store.TrySaveChangesAsync(cancellationToken))
             return (ManagementResultStatus.Conflict, null, "Could not reissue token due to concurrency conflict.");
 
-        return (ManagementResultStatus.Succeeded, new ReissueActivationTokenResponse(rawToken, $"/activate?token={rawToken}", expiresAt), "Token reissued successfully.");
+        return (ManagementResultStatus.Succeeded, new ReissueActivationTokenResponse(rawToken, $"/activate#token={Uri.EscapeDataString(rawToken)}", expiresAt), "Token reissued successfully.");
     }
 
     public async Task<(ManagementResultStatus Status, string Message)> RevokeActivationTokenAsync(

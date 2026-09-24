@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using SentinelLAN.Application;
 using SentinelLAN.Domain;
 
@@ -8,9 +9,6 @@ public sealed class AssetStore(SentinelDbContext dbContext) : IAssetStore
 {
     public async Task<Device?> FindDeviceAsync(Guid organizationId, Guid deviceId, CancellationToken cancellationToken = default) =>
         await dbContext.Devices.FirstOrDefaultAsync(x => x.OrganizationId == organizationId && x.Id == deviceId, cancellationToken);
-
-    public async Task<Device?> FindDevicePublicAsync(Guid deviceId, CancellationToken cancellationToken = default) =>
-        await dbContext.Devices.FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
 
     public async Task<User?> FindUserAsync(Guid organizationId, Guid userId, CancellationToken cancellationToken = default) =>
         await dbContext.Users.FirstOrDefaultAsync(x => x.OrganizationId == organizationId && x.Id == userId, cancellationToken);
@@ -54,11 +52,27 @@ public sealed class AssetStore(SentinelDbContext dbContext) : IAssetStore
     public async Task<IncidentTicket?> FindIncidentAsync(Guid organizationId, Guid incidentId, CancellationToken cancellationToken = default) =>
         await dbContext.Incidents.FirstOrDefaultAsync(x => x.OrganizationId == organizationId && x.Id == incidentId, cancellationToken);
 
-    public async Task<IncidentTicket> CreateIncidentAsync(IncidentTicket incident, CancellationToken cancellationToken = default)
+    public Task<IncidentTicket?> FindIncidentByIdempotencyKeyAsync(Guid organizationId, Guid reportedByUserId, string idempotencyKey, CancellationToken cancellationToken = default) =>
+        dbContext.Incidents.FirstOrDefaultAsync(x => x.OrganizationId == organizationId && x.ReportedByUserId == reportedByUserId && x.IdempotencyKey == idempotencyKey, cancellationToken);
+
+    public async Task<IncidentCreateResult> CreateIncidentAsync(IncidentTicket incident, AuditLog auditLog, CancellationToken cancellationToken = default)
     {
         dbContext.Incidents.Add(incident);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return incident;
+        dbContext.AuditLogs.Add(auditLog);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return new IncidentCreateResult(incident, false, false);
+        }
+        catch (DbUpdateException exception) when (incident.IdempotencyKey is not null &&
+            exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            dbContext.Entry(incident).State = EntityState.Detached;
+            dbContext.Entry(auditLog).State = EntityState.Detached;
+            var existing = await FindIncidentByIdempotencyKeyAsync(incident.OrganizationId, incident.ReportedByUserId, incident.IdempotencyKey, cancellationToken);
+            if (existing is null) throw;
+            return new IncidentCreateResult(existing, true, existing.RequestFingerprint != incident.RequestFingerprint);
+        }
     }
 
     public async Task UpdateIncidentAsync(IncidentTicket incident, CancellationToken cancellationToken = default)

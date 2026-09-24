@@ -263,8 +263,9 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
     {
         if (string.IsNullOrWhiteSpace(request.Title) || request.Title.Trim().Length is < 3 or > 200 ||
             request.Description?.Length > 4000 ||
-            request.Severity is not ("Low" or "Medium" or "High" or "Critical"))
-            return (ManagementResultStatus.Invalid, null, "A title of 3-200 characters, description of up to 4000 characters and valid severity are required.");
+            request.Severity is not ("Low" or "Medium" or "High" or "Critical") ||
+            !IncidentIdempotency.IsValidKey(request.IdempotencyKey))
+            return (ManagementResultStatus.Invalid, null, "A title of 3-200 characters, description of up to 4000 characters, valid severity and valid Idempotency-Key are required.");
 
         var device = await store.FindDeviceAsync(actor.OrganizationId, request.DeviceId, cancellationToken);
         if (device is null) return (ManagementResultStatus.NotFound, null, "Device not found.");
@@ -272,10 +273,22 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
         if (actor.Role == Roles.Employee && (device.AssignedUserId != actor.UserId || device.IsRevoked))
             return (ManagementResultStatus.Forbidden, null, "You can only report incidents for your assigned device.");
 
+        var fingerprint = IncidentIdempotency.Fingerprint(request.DeviceId, request.Title, request.Description, request.Severity);
+        var prior = await store.FindIncidentByIdempotencyKeyAsync(actor.OrganizationId, actor.UserId, request.IdempotencyKey!, cancellationToken);
+        if (prior is not null)
+        {
+            if (prior.RequestFingerprint != fingerprint)
+                return (ManagementResultStatus.Conflict, null, "Idempotency-Key was already used with a different incident payload.");
+            var replay = await ToIncidentDtoAsync(prior, device.Name, cancellationToken);
+            return (ManagementResultStatus.Succeeded, replay, "Incident was already reported.");
+        }
+
         var incident = new IncidentTicket
         {
             OrganizationId = actor.OrganizationId,
             DeviceId = request.DeviceId,
+            IdempotencyKey = request.IdempotencyKey!.Trim(),
+            RequestFingerprint = fingerprint,
             Title = request.Title.Trim(),
             Description = request.Description?.Trim(),
             Severity = request.Severity,
@@ -283,17 +296,18 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
             ReportedByUserId = actor.UserId
         };
 
-        var created = await store.CreateIncidentAsync(incident, cancellationToken);
-
-        await store.RecordAuditAsync(new AuditLog
+        var creation = await store.CreateIncidentAsync(incident, new AuditLog
         {
             OrganizationId = actor.OrganizationId,
             ActorId = actor.UserId,
             DeviceId = device.Id,
             Action = "IncidentReported",
-            Reason = $"Reported incident: {created.Title} ({created.Severity})",
+            Reason = $"Reported incident: {incident.Title} ({incident.Severity})",
             Outcome = "Success"
         }, cancellationToken);
+        if (creation.PayloadConflict)
+            return (ManagementResultStatus.Conflict, null, "Idempotency-Key was already used with a different incident payload.");
+        var created = creation.Incident;
 
         var reportedByName = await store.GetUserNameAsync(actor.OrganizationId, actor.UserId, cancellationToken);
         var dto = new IncidentDto(
@@ -314,6 +328,14 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
         );
 
         return (ManagementResultStatus.Succeeded, dto, "Incident reported successfully.");
+    }
+
+    private async Task<IncidentDto> ToIncidentDtoAsync(IncidentTicket incident, string deviceName, CancellationToken cancellationToken)
+    {
+        var reportedByName = await store.GetUserNameAsync(incident.OrganizationId, incident.ReportedByUserId, cancellationToken);
+        return new IncidentDto(incident.Id, incident.DeviceId, deviceName, incident.Title, incident.Description,
+            incident.Severity, incident.Status, incident.ReportedByUserId, reportedByName,
+            incident.AssignedTechnicianId, null, incident.ResolvedAt, incident.ResolutionNotes, incident.CreatedAt);
     }
 
     public async Task<(ManagementResultStatus Status, string Message)> UpdateIncidentStatusAsync(
@@ -674,40 +696,6 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
         }, cancellationToken);
 
         return (ManagementResultStatus.Succeeded, "Asset returned successfully.");
-    }
-
-    public async Task<PublicQrDeviceDto?> GetPublicQrDeviceAsync(Guid deviceId, CancellationToken cancellationToken = default)
-    {
-        var device = await store.FindDevicePublicAsync(deviceId, cancellationToken);
-        if (device is null) return null;
-
-        var now = DateTimeOffset.UtcNow;
-        var assignedUserName = await store.GetUserNameAsync(device.OrganizationId, device.AssignedUserId, cancellationToken);
-        var recentTelemetry = await store.GetRecentTelemetryAsync(device.OrganizationId, deviceId, 5, cancellationToken);
-        var incidents = await store.GetIncidentsAsync(device.OrganizationId, deviceId, cancellationToken);
-
-        var health = CalculateHealthScore(device, recentTelemetry, incidents, now);
-
-        var locParts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(device.LocationCampus)) locParts.Add(device.LocationCampus);
-        if (!string.IsNullOrWhiteSpace(device.LocationBuilding)) locParts.Add(device.LocationBuilding);
-        if (!string.IsNullOrWhiteSpace(device.LocationFloor)) locParts.Add(device.LocationFloor);
-        if (!string.IsNullOrWhiteSpace(device.LocationRoom)) locParts.Add(device.LocationRoom);
-
-        return new PublicQrDeviceDto(
-            device.Id,
-            device.Name,
-            device.SerialNumber,
-            device.Manufacturer,
-            device.Model,
-            device.AssetType,
-            locParts.Count > 0 ? string.Join(" - ", locParts) : "Chưa xác định",
-            device.AssetStatus,
-            device.IsOnline(now),
-            assignedUserName,
-            health.Score,
-            health.Grade
-        );
     }
 
     private static HealthScoreResultDto CalculateHealthScore(

@@ -96,6 +96,7 @@ describe('Zod Validation Schemas', () => {
         title: 'LAN cable broken',
         description: 'Unable to ping local gateway',
         severity: 'High',
+        idempotencyKey: '83cfc7d9-8d52-4b25-989d-5b17486f7bd1',
       };
       expect(() => ReportMyDeviceIncidentRequestSchema.parse(valid)).not.toThrow();
     });

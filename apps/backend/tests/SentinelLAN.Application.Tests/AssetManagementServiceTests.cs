@@ -102,12 +102,33 @@ public sealed class AssetManagementServiceTests
         var service = new AssetManagementService(store);
         var employeeActor = new ActorContext(employeeId, organizationId, Roles.Employee);
 
-        var allowed = await service.CreateIncidentAsync(employeeActor, new CreateIncidentRequest(myDevice.Id, "Keyboard broken", "Some keys do not work"));
-        var forbidden = await service.CreateIncidentAsync(employeeActor, new CreateIncidentRequest(otherDevice.Id, "Hacked", "Cannot report on other device"));
+        var allowed = await service.CreateIncidentAsync(employeeActor, new CreateIncidentRequest(myDevice.Id, "Keyboard broken", "Some keys do not work", IdempotencyKey: "asset-report-1"));
+        var forbidden = await service.CreateIncidentAsync(employeeActor, new CreateIncidentRequest(otherDevice.Id, "Hacked", "Cannot report on other device", IdempotencyKey: "asset-report-2"));
 
         Assert.Equal(ManagementResultStatus.Succeeded, allowed.Status);
         Assert.NotNull(allowed.Incident);
         Assert.Equal(ManagementResultStatus.Forbidden, forbidden.Status);
+    }
+
+    [Fact]
+    public async Task IncidentCreateIsIdempotentPerActorAndRejectsChangedPayload()
+    {
+        var store = new FakeAssetStore();
+        var device = new Device { OrganizationId = organizationId, Name = "IDEMPOTENT-PC", OsVersion = "Win11", AgentVersion = "1.0", AssignedUserId = employeeId };
+        store.Devices.Add(device);
+        var service = new AssetManagementService(store);
+        var actor = new ActorContext(employeeId, organizationId, Roles.Employee);
+        var request = new CreateIncidentRequest(device.Id, "Keyboard stopped", "Keys do not respond", "High", "idem-key-123");
+
+        var first = await service.CreateIncidentAsync(actor, request);
+        var replay = await service.CreateIncidentAsync(actor, request);
+        var conflict = await service.CreateIncidentAsync(actor, request with { Description = "Different description" });
+
+        Assert.Equal(ManagementResultStatus.Succeeded, first.Status);
+        Assert.Equal(first.Incident!.Id, replay.Incident!.Id);
+        Assert.Single(store.Incidents);
+        Assert.Single(store.Audits);
+        Assert.Equal(ManagementResultStatus.Conflict, conflict.Status);
     }
 
     [Fact]
@@ -283,9 +304,6 @@ internal sealed class FakeAssetStore : IAssetStore
     public Task<Device?> FindDeviceAsync(Guid organizationId, Guid deviceId, CancellationToken cancellationToken = default) =>
         Task.FromResult(Devices.FirstOrDefault(x => x.OrganizationId == organizationId && x.Id == deviceId));
 
-    public Task<Device?> FindDevicePublicAsync(Guid deviceId, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Devices.FirstOrDefault(x => x.Id == deviceId));
-
     public Task<User?> FindUserAsync(Guid organizationId, Guid userId, CancellationToken cancellationToken = default) =>
         Task.FromResult(Users.FirstOrDefault(x => x.OrganizationId == organizationId && x.Id == userId));
 
@@ -306,10 +324,17 @@ internal sealed class FakeAssetStore : IAssetStore
     public Task<IncidentTicket?> FindIncidentAsync(Guid organizationId, Guid incidentId, CancellationToken cancellationToken = default) =>
         Task.FromResult(Incidents.FirstOrDefault(x => x.OrganizationId == organizationId && x.Id == incidentId));
 
-    public Task<IncidentTicket> CreateIncidentAsync(IncidentTicket incident, CancellationToken cancellationToken = default)
+    public Task<IncidentTicket?> FindIncidentByIdempotencyKeyAsync(Guid organizationId, Guid reportedByUserId, string idempotencyKey, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Incidents.FirstOrDefault(x => x.OrganizationId == organizationId && x.ReportedByUserId == reportedByUserId && x.IdempotencyKey == idempotencyKey));
+
+    public Task<IncidentCreateResult> CreateIncidentAsync(IncidentTicket incident, AuditLog auditLog, CancellationToken cancellationToken = default)
     {
+        var existing = incident.IdempotencyKey is null ? null : Incidents.FirstOrDefault(x => x.OrganizationId == incident.OrganizationId && x.ReportedByUserId == incident.ReportedByUserId && x.IdempotencyKey == incident.IdempotencyKey);
+        if (existing is not null)
+            return Task.FromResult(new IncidentCreateResult(existing, true, existing.RequestFingerprint != incident.RequestFingerprint));
         Incidents.Add(incident);
-        return Task.FromResult(incident);
+        Audits.Add(auditLog);
+        return Task.FromResult(new IncidentCreateResult(incident, false, false));
     }
 
     public Task UpdateIncidentAsync(IncidentTicket incident, CancellationToken cancellationToken = default) => Task.CompletedTask;

@@ -52,23 +52,25 @@ public sealed class MyDeviceStore(SentinelDbContext db) : IMyDeviceStore
             .Take(limit)
             .ToListAsync(cancellationToken);
 
-    public void AddIncident(IncidentTicket incident) => db.Incidents.Add(incident);
-    public void AddAudit(AuditLog auditLog) => db.AuditLogs.Add(auditLog);
+    public Task<IncidentTicket?> FindIncidentByIdempotencyKeyAsync(Guid organizationId, Guid reportedByUserId, string idempotencyKey, CancellationToken cancellationToken) =>
+        db.Incidents.FirstOrDefaultAsync(x => x.OrganizationId == organizationId && x.ReportedByUserId == reportedByUserId && x.IdempotencyKey == idempotencyKey, cancellationToken);
 
-    public async Task<bool> TrySaveChangesAsync(CancellationToken cancellationToken)
+    public async Task<IncidentCreateResult> CreateIncidentAsync(IncidentTicket incident, AuditLog auditLog, CancellationToken cancellationToken)
     {
+        db.Incidents.Add(incident);
+        db.AuditLogs.Add(auditLog);
         try
         {
             await db.SaveChangesAsync(cancellationToken);
-            return true;
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            return false;
+            return new IncidentCreateResult(incident, false, false);
         }
         catch (DbUpdateException exception) when (exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
         {
-            return false;
+            db.Entry(incident).State = EntityState.Detached;
+            db.Entry(auditLog).State = EntityState.Detached;
+            var existing = await FindIncidentByIdempotencyKeyAsync(incident.OrganizationId, incident.ReportedByUserId, incident.IdempotencyKey!, cancellationToken);
+            if (existing is null) throw;
+            return new IncidentCreateResult(existing, true, existing.RequestFingerprint != incident.RequestFingerprint);
         }
     }
 }

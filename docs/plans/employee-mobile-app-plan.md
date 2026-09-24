@@ -232,8 +232,8 @@ Cookie HttpOnly hiện tại tiếp tục phục vụ web. Native app cần tran
 
 ### Activation deep link
 
-- Custom scheme cho development: `sentinellan://activate?token=...`.
-- Production dùng verified HTTPS App Link/Universal Link: `https://<trusted-host>/activate?token=...`.
+- Custom scheme cho development: `sentinellan://activate#token=...`.
+- Production dùng verified HTTPS App Link/Universal Link: `https://<trusted-host>/activate#token=...`; token nằm trong fragment, không gửi lên server trong HTTP request URL.
 - Host phục vụ `/.well-known/assetlinks.json` và `apple-app-site-association` đúng signing identity.
 - Parse và validate link bằng allow-list scheme/host/path; reject redirect hoặc parameter lạ.
 - Token chỉ tồn tại trong memory trong lúc activation, được xóa khỏi router state ngay sau parse và không đưa vào telemetry.
@@ -255,7 +255,7 @@ Cookie HttpOnly hiện tại tiếp tục phục vụ web. Native app cần tran
 - Persist duy nhất refresh token trong SecureStore, language/theme và acknowledgement không nhạy cảm.
 - TanStack Query cache mặc định chỉ trong memory. MVP không persist telemetry, incident descriptions hoặc asset profile xuống disk.
 - Khi offline, hiển thị banner và dữ liệu đang có trong memory kèm timestamp; không giả dữ liệu mới.
-- Mutation incident dùng client-generated idempotency key, disable double-submit và retry có giới hạn.
+- Mutation incident gửi client-generated Idempotency-Key; backend ràng buộc khóa theo tenant và reporter, lưu fingerprint payload và dùng unique index để xử lý replay/race. Replay cùng nội dung trả incident hiện có; dùng lại key với payload khác trả 409. Mobile vẫn disable double-submit và retry có giới hạn.
 - Không cho queue activation, login, logout-all hoặc QR authorization khi offline.
 - Nếu pha sau cần offline cache, phải mã hóa, đặt TTL và có data-erasure test trước khi bật.
 
@@ -410,7 +410,7 @@ Tổng ước lượng một người: 4–6 tuần cho Android MVP có chất l
 - Mobile lint, TypeScript strict, Jest/RNTL và Expo Doctor.
 - OpenAPI contract drift check.
 - Android development/preview build; production build chỉ từ protected branch/tag.
-- Maestro smoke E2E trên emulator.
+- 7 Maestro flow YAML được định nghĩa trong `apps/mobile/e2e`; chúng là test scripts, không phải bằng chứng đã chạy PASS. `apps/mobile/e2e/README.md` ghi máy hiện tại thiếu adb/Android SDK.
 - `npm audit`, secret scan và license review.
 - Backend restore/build/test Release và vulnerability check.
 - EAS secrets/credentials kiểm tra bằng metadata, không in giá trị.

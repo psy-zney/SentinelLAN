@@ -13,7 +13,7 @@ Tài liệu này ghi nhận và đánh giá toàn diện các lỗ hổng phụ 
 | **`expo install --check`** | **Dependencies up to date** | `0` | Phù hợp tuyệt đối ma trận phụ thuộc Expo SDK 57 |
 | **`mobile typecheck` (`tsc --noEmit`)** | **0 errors** | `0` | Toàn bộ TypeScript trong `apps/mobile` chuẩn hóa strict |
 | **`mobile lint` (`eslint`)** | **0 warnings, 0 errors** | `0` | Không vi phạm quy chuẩn linter |
-| **`mobile Jest`** | **6/6 suites, 38/38 tests passed** | `0` | Toàn bộ unit/component/security store tests pass 100% |
+| **`mobile Jest`** | Historical record: **38/38 passed**; current repo inventory: 39 test declarations, current run unverified | `—` | Số liệu pass là snapshot cũ, không xác nhận trạng thái working tree hiện tại |
 | **`expo export --platform android`** | **Bundle exported (1349 modules)** | `0` | Metro bundler tạo release JS bundle thành công |
 | **`git diff --check`** | **Clean** | `0` | Không có lỗi khoảng trắng thừa hay định dạng |
 | **`npm audit` (Toàn dự án)** | **13 moderate vulnerabilities** | `1` | Do 2 lỗ hổng bắc cầu (transitive) từ Expo ecosystem |

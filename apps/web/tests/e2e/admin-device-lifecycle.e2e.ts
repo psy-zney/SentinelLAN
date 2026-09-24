@@ -17,7 +17,7 @@ test("Admin can create an Employee, issue a one-time token, and open assignment 
   await page.locator("#user-reason").fill("E2E onboarding lifecycle");
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Lưu" }).click();
-  await expect(page.locator('input[readonly][value*="/activate?token="]')).toBeVisible();
+  await expect(page.locator('input[readonly][value*="/activate#token="]')).toBeVisible();
   await expect(page.getByRole("cell", { name: email, exact: true })).toBeVisible();
 
   await page.goto("/devices");

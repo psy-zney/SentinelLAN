@@ -68,12 +68,14 @@ describe("ITAM & CMMS ApiClient", () => {
     expect(init.headers).toHaveProperty("X-SentinelLAN-CSRF", "1");
   });
 
-  it("fetches public QR device info without requiring auth headers", async () => {
+  it("resolves a public QR code through the minimal public endpoint", async () => {
     const mockPublic = {
-      deviceId: "dev-123",
       deviceName: "EMPLOYEE-DEMO-PC",
-      serialNumber: "DELL-SN-742099",
-      healthScore: 95
+      assetTag: "AST-001",
+      assetStatus: "InUse",
+      contactPolicy: "Contact IT support",
+      isOnline: true,
+      isAssigned: true
     };
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify(mockPublic), { status: 200, headers: { "Content-Type": "application/json" } })
@@ -81,9 +83,9 @@ describe("ITAM & CMMS ApiClient", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const client = new ApiClient();
-    const result = await client.getPublicQrDevice("dev-123");
+    const result = await client.resolvePublicQr("signed-code/with unsafe chars");
 
     expect(result).toEqual(mockPublic);
-    expect(fetchMock.mock.calls[0][0]).toContain("/api/v1/public/qr/dev-123");
+    expect(fetchMock.mock.calls[0][0]).toContain("/api/v1/qr/signed-code%2Fwith%20unsafe%20chars/public");
   });
 });

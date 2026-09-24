@@ -23,7 +23,7 @@ public sealed class ActivationTokenServiceTests
         Assert.NotNull(result.User);
         Assert.Equal(UserStatuses.PendingActivation, result.User!.Status);
         Assert.NotNull(result.ActivationToken);
-        Assert.StartsWith("/activate?token=", result.ActivationUrl);
+        Assert.StartsWith("/activate#token=", result.ActivationUrl);
 
         var userInStore = store.Users.Single(u => u.Id == result.User.Id);
         Assert.Equal(UserStatuses.PendingActivation, userInStore.Status);
@@ -102,6 +102,7 @@ public sealed class ActivationTokenServiceTests
 
         Assert.Equal(ManagementResultStatus.Succeeded, reissued.Status);
         Assert.NotNull(reissued.Response);
+        Assert.StartsWith("/activate#token=", reissued.Response!.ActivationUrl);
 
         // Old token cannot validate
         var oldValidate = await service.ValidateActivationTokenAsync(created.ActivationToken!, CancellationToken.None);

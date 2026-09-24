@@ -79,6 +79,10 @@ public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> option
         modelBuilder.Entity<VpsNode>().HasIndex(x => new { x.OrganizationId, x.Host });
         modelBuilder.Entity<VpsActionReservation>().HasIndex(x => new { x.OrganizationId, x.Nonce }).IsUnique();
         modelBuilder.Entity<IncidentTicket>().HasIndex(x => new { x.OrganizationId, x.DeviceId });
+        modelBuilder.Entity<IncidentTicket>()
+            .HasIndex(x => new { x.OrganizationId, x.ReportedByUserId, x.IdempotencyKey })
+            .IsUnique()
+            .HasFilter("\"IdempotencyKey\" IS NOT NULL");
         modelBuilder.Entity<WorkOrder>().HasIndex(x => new { x.OrganizationId, x.DeviceId });
         modelBuilder.Entity<WorkOrder>().HasIndex(x => new { x.OrganizationId, x.WorkOrderNumber }).IsUnique();
         modelBuilder.Entity<AssetLoan>().HasIndex(x => new { x.OrganizationId, x.DeviceId });

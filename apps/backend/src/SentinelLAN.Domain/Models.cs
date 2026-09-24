@@ -202,11 +202,13 @@ public sealed class IncidentTicket : Entity, ITenantOwned
 {
     public Guid OrganizationId { get; init; }
     public Guid DeviceId { get; init; }
+    public Guid ReportedByUserId { get; init; }
+    public string? IdempotencyKey { get; init; }
+    public string? RequestFingerprint { get; init; }
     public required string Title { get; set; }
     public string? Description { get; set; }
     public string Severity { get; set; } = "Medium";
     public string Status { get; set; } = "Open";
-    public required Guid ReportedByUserId { get; init; }
     public Guid? AssignedTechnicianId { get; set; }
     public DateTimeOffset? ResolvedAt { get; set; }
     public string? ResolutionNotes { get; set; }

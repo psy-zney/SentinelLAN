@@ -18,6 +18,14 @@ describe('Deep Link Parser for Account Activation', () => {
     expect(result.token).toBe('secure-token-sample-123456789');
   });
 
+  it('parses activation tokens from URL fragments so the token is not sent in the HTTP request', () => {
+    const raw = 'https://sentinellan.local/activate#token=secure-token-sample-123456789';
+    const result = parseActivationUrl(raw);
+
+    expect(result.valid).toBe(true);
+    expect(result.token).toBe('secure-token-sample-123456789');
+  });
+
   it('parses valid LAN/VPN IP hosts', () => {
     const raw = 'https://192.168.1.100/activate?token=valid-lan-token-1234567890';
     const result = parseActivationUrl(raw);

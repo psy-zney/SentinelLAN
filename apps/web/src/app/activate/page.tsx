@@ -1,5 +1,10 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { ActivateView } from "@/components/activate-view";
+
+export const metadata: Metadata = {
+  referrer: "no-referrer"
+};
 
 export default function ActivatePage() {
   return (

@@ -24,6 +24,9 @@ public sealed class AuthenticationApiTests(SentinelApiFactory factory) : IClassF
         Assert.Contains("/api/v1/auth/refresh", document, StringComparison.Ordinal);
         Assert.Contains("/api/v1/auth/logout", document, StringComparison.Ordinal);
         using var json = JsonDocument.Parse(document);
+        var activationValidation = json.RootElement.GetProperty("paths").GetProperty("/api/v1/auth/activation/validate");
+        Assert.True(activationValidation.TryGetProperty("post", out _));
+        Assert.False(activationValidation.TryGetProperty("get", out _));
         var schemes = json.RootElement.GetProperty("components").GetProperty("securitySchemes");
         Assert.True(schemes.TryGetProperty("accessCookie", out _));
         Assert.True(schemes.TryGetProperty("refreshCookie", out _));

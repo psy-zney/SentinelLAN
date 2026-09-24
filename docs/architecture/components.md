@@ -8,11 +8,11 @@
  - **IdentityAccess**: Authentication, cookie/token issuance, session management, RBAC, and tenant membership.
  - **Organizations**: Multi-tenant boundaries, organization settings, and enterprise configuration.
  - **Devices**: Endpoint registration, enrollment token generation, cryptographic identity binding (`DeviceSecret`), and inventory management.
- - **Telemetry**: Ingestion of technical health metrics (CPU, RAM, Disk, Uptime), deduplication via idempotency keys, and offline queue recovery.
+- **Telemetry**: Ingestion of technical health metrics (CPU, RAM, Disk), heartbeat deduplication via idempotency keys, and recovery from the Agent's bounded offline queue. Production persists the queue in a protected file; Development defaults to memory.
  - **Policies**: Definition, validation, and assignment of compliance rules (working hours, telemetry thresholds).
- - **Commands**: Allow-listed command dispatch, cryptographic signing (HMAC-SHA256 / Ed25519), nonce tracking, expiry enforcement, and execution state machines.
+- **Commands**: Allow-listed command dispatch, HMAC-SHA256 signing, nonce tracking, expiry enforcement, and execution state machines. Production persists at most one short-lived pending result in a protected file for retry after restart. Asymmetric signing and key rotation remain future work.
  - **Alerts**: Real-time incident detection, threshold violations, and technician triage workflows.
- - **Audit**: Append-only, immutable tamper-evident activity ledger recording all actor and agent actions.
+- **Audit**: Application-level append-only guard for tracked `AuditLog` changes. It is not a database-level or externally tamper-evident ledger; WORM/SIEM integration remains future work.
  
  ```mermaid
  flowchart LR
@@ -34,11 +34,11 @@
  
  The SentinelLAN Agent follows Clean Architecture to ensure that the core telemetry, cryptographic verification, and state machine remain 100% platform-independent:
  
- - **SentinelLAN.Agent.Core**: Platform-agnostic domain logic. Manages device identity, enrollment handshake, heartbeat scheduling with jitter, offline SQLite queuing, command signature verification, and nonce replay validation.
+- **SentinelLAN.Agent.Core**: Platform-agnostic logic for device identity, enrollment, heartbeat delivery, bounded offline telemetry queuing, HMAC command verification, and nonce replay validation. Production composes protected file stores; Development defaults to in-memory queue and nonce stores.
  - **SentinelLAN.Agent.Infrastructure**: OS and transport adapters.
-   - *HTTP/SignalR Client*: Resilient connection manager with exponential backoff and jitter.
-   - *Windows Adapter*: WMI/CIM hardware telemetry, DPAPI secret storage, and Win32 P/Invoke (`LockWorkStation`).
-   - *Linux Adapter*: Linux `/proc` filesystem telemetry (`/proc/loadavg`, `/proc/meminfo`, `/proc/uptime`), protected filesystem secret store, and `systemd` service control (`systemctl restart`).
+  - *HTTP Client*: Retry delay grows exponentially with a small symmetric random adjustment (currently ±500 ms); this is not full jitter. Production persists up to 50 telemetry entries for one hour in a protected file; Development uses an in-memory queue.
+  - *Windows Adapter*: Win32 telemetry APIs and DPAPI secret storage. Lock behavior remains simulated in the current safe command executor.
+  - *Linux Adapter*: Linux `/proc` telemetry and platform secret storage. Real device lock and network isolation remain disabled; service restart is currently simulated by the Agent command executor.
  - **SentinelLAN.Agent.Worker**: Host entry point composing Core and Infrastructure. Supports hosting as a Windows Service (`builder.Services.AddWindowsService()`) or a Linux systemd daemon (`builder.Services.AddSystemd()`).
  
  ### Session 0 Isolation & Enterprise Topology
@@ -47,4 +47,3 @@
    1. `SentinelLAN.Service`: Runs as `NT AUTHORITY\SYSTEM` in Session 0 for continuous telemetry, security monitoring, and anti-tamper enforcement.
    2. `SentinelLAN.TrayApp`: Runs in the active user session (Session 1+) displaying notification alerts, employee transparency modals, and two-way consent dialogs.
    3. Both components communicate locally via secure IPC (Named Pipes with ACLs).
-

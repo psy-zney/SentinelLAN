@@ -91,7 +91,7 @@ Không tuyên bố phát minh QR hay endpoint management. Giá trị mới nằm
 - Admin nhập email, display name, role; backend chuẩn hóa email và chặn trùng trong tenant.
 - Không cho Admin đặt hoặc nhìn thấy mật khẩu lâu dài của user.
 - Backend sinh activation token ngẫu nhiên tối thiểu 256 bit; API trả plaintext đúng một lần, DB chỉ lưu SHA-256/HMAC hash.
-- Link dạng `/activate?token=...`; không ghi token vào log, analytics hoặc referrer.
+- Link dùng fragment `/activate#token=...`; ứng dụng đọc token từ fragment để tránh đưa secret vào request URL/query log. Không ghi token vào analytics hoặc referrer.
 - User nhập mật khẩu mới và xác nhận. Chính sách tối thiểu: 12 ký tự, cho phép passphrase dài, tối đa 1024 ký tự ở request boundary.
 - Token có `ExpiresAt`, `UsedAt`, `RevokedAt`, tenant/user binding và row/concurrency guard.
 - Thành công thì kích hoạt user, đánh dấu token đã dùng và thu hồi các activation token còn mở của user trong cùng transaction.
@@ -198,7 +198,8 @@ Nếu thay schema/contract:
 - `POST /api/v1/users`: Admin tạo pending user và nhận activation link/token đúng một lần.
 - `POST /api/v1/users/{id}/activation-token`: Admin reissue, bắt buộc reason + confirmation.
 - `DELETE /api/v1/users/{id}/activation-token`: Admin revoke.
-- `GET /api/v1/auth/activation/validate?token=...`: trả generic validity, không lộ identity không cần thiết.
+- `POST /api/v1/auth/activation/validate`: payload `{ token }` trả generic validity, tránh lộ token trên URL query/access logs; không hỗ trợ GET.
+- Activation links đặt token trong fragment `#token=...` để trình duyệt không gửi token trong HTTP request hoặc `Referer`.
 - `POST /api/v1/auth/activate`: token + new password; atomic single-use.
 - Giữ `POST /auth/login|refresh|logout` và `GET /auth/session`.
 

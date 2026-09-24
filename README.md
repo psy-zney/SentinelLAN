@@ -69,7 +69,7 @@ Không đưa API, PostgreSQL hoặc cổng Agent HTTP trực tiếp ra Internet.
 ## Luồng chức năng thật
 
 1. **Admin** đăng nhập, tạo tài khoản (link kích hoạt chỉ hiện một lần), cấp token enrollment 1–60 phút, xem inventory/telemetry/audit, gán hoặc thu hồi máy. API kiểm tra quyền, tenant, lý do và xác nhận; token/secret chỉ lưu dạng hash ở server.
-2. **Agent** dùng token đăng ký một lần, lưu credential riêng, gửi heartbeat/CPU/RAM/disk và nhận lệnh có chữ ký khi được cấu hình khóa. Telemetry lỗi mạng được giữ trong hàng đợi bộ nhớ giới hạn, thử lại với cùng idempotency key; hàng đợi **chưa bền qua restart**. Lệnh `SimulateLock`, `SimulateNetworkIsolation`, `RestartService`, `RefreshPolicy` và `ShowNotification` hiện chỉ trả kết quả mô phỏng, không thay đổi OS hoặc áp dụng policy.
+2. **Agent** dùng token đăng ký một lần, lưu credential riêng, gửi heartbeat/CPU/RAM/disk và nhận lệnh có chữ ký khi được cấu hình khóa. Production giữ tối đa 50 heartbeat trong file được mã hóa, tối đa một giờ, và khôi phục queue sau restart; Development mặc định dùng RAM. Retry giữ nguyên idempotency key. Production cũng lưu tối đa một kết quả lệnh đang chờ trong file bảo vệ; Agent gửi lại kết quả đó sau restart trước khi poll lệnh mới. Lệnh `SimulateLock`, `SimulateNetworkIsolation`, `RestartService`, `RefreshPolicy` và `ShowNotification` hiện chỉ trả kết quả mô phỏng, không thay đổi OS hoặc áp dụng policy.
 3. **Technician** xem thiết bị, xử lý cảnh báo, incident, work order và loan trong tenant. Work order đang mở được xếp theo Critical → High → Medium → Low, hạn đến rồi thời điểm tạo. Tham chiếu người dùng, incident và thiết bị được kiểm tra cùng tenant.
 4. **Employee** xem `/my-device`, telemetry được công bố, chính sách gán và sự cố của máy mình; báo sự cố qua web/mobile. Khi Admin thu hồi máy, quyền xem máy và credential Agent bị từ chối.
 
@@ -94,7 +94,7 @@ dotnet publish apps/agent/src/SentinelLAN.Agent/SentinelLAN.Agent.csproj -c Rele
 ./deploy/agent/install-windows-agent.ps1 -ServerUrl 'https://sentinel.example.com'
 ```
 
-Installer Windows hỏi token mà không cần truyền trên command line và xóa biến token toàn máy sau khi identity được ghi. Với Linux, publish `-r linux-x64 -o publish/linux-x64`, sau đó chạy `sudo bash deploy/agent/install-linux-agent.sh --server https://sentinel.example.com`. Linux installer tạo user dịch vụ riêng và khóa mã hóa identity cục bộ; lần cài lại giữ khóa cũ. Không chuyển khóa này sang máy khác. Hướng dẫn thêm: [Agent enrollment](docs/guides/agent-enrollment-guide.md).
+Installer Windows hỏi token mà không cần truyền trên command line và xóa biến token toàn máy sau khi identity được ghi. Với Linux, publish `-r linux-x64 -o publish/linux-x64`, sau đó chạy `sudo bash deploy/agent/install-linux-agent.sh --server https://sentinel.example.com`. Installer tạo user dịch vụ riêng và tự sinh `SENTINELLAN_AGENT_STORE_KEY` ngẫu nhiên, lưu trong `/etc/sentinellan/agent.env` với quyền đọc/ghi hạn chế; cài lại giữ khóa cũ. Khóa này bảo vệ identity, queue và nonce store bằng AES-GCM, không chuyển sang máy khác. Khi tự triển khai không dùng installer, phải cấp một khóa riêng tối thiểu 32 ký tự cho service environment. Hướng dẫn thêm: [Agent enrollment](docs/guides/agent-enrollment-guide.md).
 
 ## Sao lưu, khôi phục và ứng phó
 

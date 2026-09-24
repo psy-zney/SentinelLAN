@@ -1,6 +1,6 @@
 # Data dictionary
 
-All IDs are UUIDs and timestamps are UTC. Tenant records include `OrganizationId`; organizations also have a unique login `Code`. User passwords use versioned PBKDF2-SHA256 hashes. Refresh tokens, enrollment tokens, and device credentials store hashes only.
+All IDs are UUIDs and timestamps are UTC. Tenant records include `OrganizationId`; organizations also have a unique login `Code`. User passwords use salted, versioned PBKDF2-SHA256 hashes with 600,000 iterations for new hashes; older hashes are rehashed after successful login. Refresh tokens, enrollment tokens, and device credentials store hashes only.
 
 `RefreshSession` records the user, tenant, token family, expiry, revocation/replacement state and an optimistic-concurrency version. A rotated-token reuse revokes all active sessions in that family. `Device.AssignedUserId` is nullable and limits Employee access to the assigned device.
 

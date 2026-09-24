@@ -48,7 +48,8 @@ export function parseActivationUrl(rawUrl: string): ActivationLinkParseResult {
     }
 
     // 4. Extract token
-    const token = url.searchParams.get('token');
+    const fragmentParams = new URLSearchParams(url.hash.replace(/^#/, ''));
+    const token = url.searchParams.get('token') ?? fragmentParams.get('token');
     if (!token || token.trim().length < 16 || token.trim().length > 512) {
       return { valid: false, error: 'Missing or malformed activation token' };
     }

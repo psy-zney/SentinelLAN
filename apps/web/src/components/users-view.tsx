@@ -59,7 +59,7 @@ export function UsersView() {
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       const fullUrl = res.activationUrl?.startsWith("http")
         ? res.activationUrl
-        : `${origin}${res.activationUrl ?? `/activate?token=${res.activationToken}`}`;
+        : `${origin}${res.activationUrl ?? `/activate#token=${encodeURIComponent(res.activationToken ?? "")}`}`;
 
       setForm(emptyForm);
       setOpen(false);

@@ -261,11 +261,11 @@ mobile.MapGet("/bootstrap", (HttpContext http) =>
     ));
 }).AllowAnonymous();
 
-v1.MapGet("/auth/activation/validate", async ([FromQuery] string? token, UserManagementService users, HttpContext http, CancellationToken ct) =>
+v1.MapPost("/auth/activation/validate", async (ValidateActivationTokenRequest req, UserManagementService users, HttpContext http, CancellationToken ct) =>
 {
     http.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
     http.Response.Headers.Pragma = "no-cache";
-    var result = await users.ValidateActivationTokenAsync(token, ct);
+    var result = await users.ValidateActivationTokenAsync(req.Token, ct);
     return Results.Ok(result);
 }).AllowAnonymous().RequireRateLimiting("sensitive");
 
@@ -482,16 +482,18 @@ v1.MapGet("/my-device/incidents", async (HttpContext http, IMyDeviceService myDe
     return Results.Ok(incidents);
 }).RequireAuthorization(AuthorizationPolicies.ViewAssignedDevice).RequireRateLimiting("sensitive");
 
-v1.MapPost("/my-device/incidents", async (ReportMyDeviceIncidentRequest req, HttpContext http, IMyDeviceService myDeviceService, CancellationToken ct) =>
+v1.MapPost("/my-device/incidents", async (ReportMyDeviceIncidentRequest req, [FromHeader(Name = "Idempotency-Key")] string idempotencyKey, HttpContext http, IMyDeviceService myDeviceService, CancellationToken ct) =>
 {
     http.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
     http.Response.Headers.Pragma = "no-cache";
     var actor = http.User.ToActorContext()!.Value;
-    var (status, incident, message) = await myDeviceService.ReportIncidentAsync(actor, req, ct);
+    var (status, incident, message) = await myDeviceService.ReportIncidentAsync(actor, req with { IdempotencyKey = idempotencyKey }, ct);
     return status switch
     {
         ManagementResultStatus.Succeeded => Results.Created($"/api/v1/my-device/incidents/{incident!.Id}", incident),
         ManagementResultStatus.NotFound => Results.NotFound(new ProblemDetails { Title = "Device not found", Detail = message, Status = 404 }),
+        ManagementResultStatus.Conflict => Results.Conflict(new ProblemDetails { Title = "Idempotency conflict", Detail = message, Status = 409 }),
+        ManagementResultStatus.Invalid => Results.BadRequest(new ProblemDetails { Title = "Invalid incident request", Detail = message, Status = 400 }),
         _ => Results.BadRequest(new ProblemDetails { Title = "Failed to report incident", Detail = message, Status = 400 })
     };
 }).RequireAuthorization(AuthorizationPolicies.ViewAssignedDevice).RequireRateLimiting("sensitive");
@@ -870,10 +872,13 @@ v1.MapPost("/vps-nodes/{id:guid}/restart-service", async (Guid id, RestartVpsSer
 // --- ITAM & CMMS Asset Management Endpoints ---
 v1.MapGet("/devices/{id:guid}/asset-detail", async (Guid id, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
 {
-    var actor = http.User.ToActorContext()!.Value;
+    if (http.User.ToActorContext() is not { } actor)
+    {
+        return Results.Unauthorized();
+    }
     var detail = await assetService.GetDeviceAssetDetailAsync(actor, id, ct);
     return detail is null ? Results.NotFound() : Results.Ok(detail);
-});
+}).RequireAuthorization();
 
 v1.MapPut("/devices/{id:guid}/asset-profile", async (Guid id, UpdateAssetProfileRequest req, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
 {
@@ -890,30 +895,40 @@ v1.MapPut("/devices/{id:guid}/asset-profile", async (Guid id, UpdateAssetProfile
 
 v1.MapGet("/devices/{id:guid}/timeline", async (Guid id, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
 {
-    var actor = http.User.ToActorContext()!.Value;
+    if (http.User.ToActorContext() is not { } actor)
+    {
+        return Results.Unauthorized();
+    }
     var timeline = await assetService.GetDeviceTimelineAsync(actor, id, ct);
     return Results.Ok(timeline);
-});
+}).RequireAuthorization();
 
 v1.MapGet("/incidents", async (Guid? deviceId, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
 {
-    var actor = http.User.ToActorContext()!.Value;
+    if (http.User.ToActorContext() is not { } actor)
+    {
+        return Results.Unauthorized();
+    }
     var incidents = await assetService.GetIncidentsAsync(actor, deviceId, ct);
     return Results.Ok(incidents);
-});
+}).RequireAuthorization();
 
-v1.MapPost("/incidents", async (CreateIncidentRequest req, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
+v1.MapPost("/incidents", async (CreateIncidentRequest req, [FromHeader(Name = "Idempotency-Key")] string idempotencyKey, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
 {
-    var actor = http.User.ToActorContext()!.Value;
-    var (status, incident, message) = await assetService.CreateIncidentAsync(actor, req, ct);
+    if (http.User.ToActorContext() is not { } actor)
+    {
+        return Results.Unauthorized();
+    }
+    var (status, incident, message) = await assetService.CreateIncidentAsync(actor, req with { IdempotencyKey = idempotencyKey }, ct);
     return status switch
     {
         ManagementResultStatus.Succeeded => Results.Created($"/api/v1/incidents/{incident!.Id}", incident),
         ManagementResultStatus.NotFound => Results.NotFound(new { message }),
         ManagementResultStatus.Forbidden => Results.Forbid(),
+        ManagementResultStatus.Conflict => Results.Conflict(new ProblemDetails { Title = "Idempotency conflict", Detail = message, Status = 409 }),
         _ => Results.BadRequest(new ProblemDetails { Title = "Failed to report incident", Detail = message })
     };
-});
+}).RequireAuthorization();
 
 v1.MapPut("/incidents/{id:guid}/status", async (Guid id, UpdateIncidentStatusRequest req, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
 {
@@ -930,10 +945,13 @@ v1.MapPut("/incidents/{id:guid}/status", async (Guid id, UpdateIncidentStatusReq
 
 v1.MapGet("/work-orders", async (Guid? deviceId, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
 {
-    var actor = http.User.ToActorContext()!.Value;
+    if (http.User.ToActorContext() is not { } actor)
+    {
+        return Results.Unauthorized();
+    }
     var workOrders = await assetService.GetWorkOrdersAsync(actor, deviceId, ct);
     return Results.Ok(workOrders);
-});
+}).RequireAuthorization();
 
 v1.MapPost("/work-orders", async (CreateWorkOrderRequest req, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
 {
@@ -992,13 +1010,6 @@ v1.MapPut("/asset-loans/{id:guid}/return", async (Guid id, ReturnLoanRequest req
         ManagementResultStatus.Forbidden => Results.Forbid(),
         _ => Results.BadRequest(new ProblemDetails { Title = "Failed to process asset return", Detail = message })
     };
-}).RequireAuthorization(AuthorizationPolicies.Technician);
-
-// Legacy GUID lookup retained for authenticated support tooling only.
-v1.MapGet("/public/qr/{id:guid}", async (Guid id, IAssetManagementService assetService, CancellationToken ct) =>
-{
-    var info = await assetService.GetPublicQrDeviceAsync(id, ct);
-    return info is null ? Results.NotFound() : Results.Ok(info);
 }).RequireAuthorization(AuthorizationPolicies.Technician);
 
 // --- Device QR Label Lifecycle & Scoped Resolution Endpoints ---

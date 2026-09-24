@@ -9,9 +9,10 @@ import { useTranslation } from "@/lib/i18n";
 export function ActivateView() {
   const { t, lang, setLang } = useTranslation();
   const searchParams = useSearchParams();
-  const token = searchParams.get("token") ?? "";
+  const queryToken = searchParams.get("token") ?? "";
 
-  const [validating, setValidating] = useState(() => Boolean(token));
+  const [token, setToken] = useState(queryToken);
+  const [validating, setValidating] = useState(true);
   const [tokenInfo, setTokenInfo] = useState<{
     valid: boolean;
     email?: string;
@@ -27,11 +28,26 @@ export function ActivateView() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (!token) {
-      return;
+    let active = true;
+    const fragmentToken = new URLSearchParams(window.location.hash.slice(1)).get("token") ?? "";
+    const activationToken = queryToken || fragmentToken;
+    if (window.location.search || window.location.hash) {
+      window.history.replaceState(null, "", window.location.pathname);
     }
+    // Read the browser-only fragment after hydration, then update UI state asynchronously.
+    queueMicrotask(() => {
+      if (!active) return;
+      setToken(activationToken);
+      if (!activationToken) {
+        setTokenInfo({ valid: false });
+        setValidating(false);
+      }
+    });
+    return () => { active = false; };
+  }, [queryToken]);
 
-    window.history.replaceState(null, "", "/activate");
+  useEffect(() => {
+    if (!token) return;
 
     let active = true;
     new ApiClient()

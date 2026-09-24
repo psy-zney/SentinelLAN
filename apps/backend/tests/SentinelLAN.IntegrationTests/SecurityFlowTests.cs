@@ -1,6 +1,8 @@
 using SentinelLAN.Application;
 using SentinelLAN.Domain;
 using SentinelLAN.Infrastructure;
+using System.Globalization;
+using System.Security.Cryptography;
 
 namespace SentinelLAN.IntegrationTests;
 
@@ -34,9 +36,16 @@ public sealed class SecurityFlowTests
         var second = hasher.Hash("correct-password");
 
         Assert.NotEqual(first, second);
+        Assert.StartsWith("pbkdf2-sha256$600000$", first);
         Assert.Equal(PasswordVerificationResult.Success, hasher.Verify("correct-password", first));
         Assert.Equal(PasswordVerificationResult.Failed, hasher.Verify("wrong-password", first));
         Assert.Equal(PasswordVerificationResult.SuccessNeedsRehash, hasher.Verify("legacy", SecretHash.Create("legacy")));
+
+        var oldSalt = RandomNumberGenerator.GetBytes(16);
+        var oldHash = Rfc2898DeriveBytes.Pbkdf2("old-password", oldSalt, 210_000, HashAlgorithmName.SHA256, 32);
+        var oldEncoded = string.Join('$', "pbkdf2-sha256", 210_000.ToString(CultureInfo.InvariantCulture),
+            Convert.ToBase64String(oldSalt), Convert.ToBase64String(oldHash));
+        Assert.Equal(PasswordVerificationResult.SuccessNeedsRehash, hasher.Verify("old-password", oldEncoded));
     }
 
     [Fact]

@@ -75,7 +75,7 @@ public sealed class MyDeviceServiceTests
         var service = new MyDeviceService(store);
         var actor = new ActorContext(employeeId, orgId, Roles.Employee);
 
-        var result = await service.ReportIncidentAsync(actor, new ReportMyDeviceIncidentRequest("Blue screen on boot", "Error code 0x0000001", "High"), CancellationToken.None);
+        var result = await service.ReportIncidentAsync(actor, new ReportMyDeviceIncidentRequest("Blue screen on boot", "Error code 0x0000001", "High", "employee-report-1"), CancellationToken.None);
 
         Assert.Equal(ManagementResultStatus.Succeeded, result.Status);
         Assert.NotNull(result.Incident);
@@ -88,15 +88,38 @@ public sealed class MyDeviceServiceTests
     }
 
     [Fact]
+    public async Task ReportIncidentReplaysSameKeyAndRejectsChangedPayload()
+    {
+        var device = new Device { OrganizationId = orgId, Name = "WORKSTATION-02", OsVersion = "Win11", AgentVersion = "1.0", AssignedUserId = employeeId };
+        store.Devices.Add(device);
+        var service = new MyDeviceService(store);
+        var actor = new ActorContext(employeeId, orgId, Roles.Employee);
+        var request = new ReportMyDeviceIncidentRequest("Blue screen on boot", "Error code 0x0000001", "High", "retry-key-1");
+
+        var first = await service.ReportIncidentAsync(actor, request, CancellationToken.None);
+        var replay = await service.ReportIncidentAsync(actor, request, CancellationToken.None);
+        var conflict = await service.ReportIncidentAsync(actor, request with { Title = "Different incident title" }, CancellationToken.None);
+
+        Assert.Equal(ManagementResultStatus.Succeeded, first.Status);
+        Assert.Equal(first.Incident!.Id, replay.Incident!.Id);
+        Assert.Single(store.Incidents);
+        Assert.Single(store.Audits);
+        Assert.Equal(ManagementResultStatus.Conflict, conflict.Status);
+    }
+
+    [Fact]
     public async Task ReportIncidentRejectsMissingAssignmentOrInvalidTitle()
     {
         var service = new MyDeviceService(store);
         var actor = new ActorContext(Guid.NewGuid(), orgId, Roles.Employee);
 
-        var noDevice = await service.ReportIncidentAsync(actor, new ReportMyDeviceIncidentRequest("Valid title", "desc"), CancellationToken.None);
+        var noDevice = await service.ReportIncidentAsync(actor, new ReportMyDeviceIncidentRequest("Valid title", "desc", IdempotencyKey: "missing-device-key"), CancellationToken.None);
         Assert.Equal(ManagementResultStatus.NotFound, noDevice.Status);
 
-        var invalidTitle = await service.ReportIncidentAsync(actor, new ReportMyDeviceIncidentRequest("a", "desc"), CancellationToken.None);
+        var missingKey = await service.ReportIncidentAsync(actor, new ReportMyDeviceIncidentRequest("Valid title", "desc"), CancellationToken.None);
+        Assert.Equal(ManagementResultStatus.Invalid, missingKey.Status);
+
+        var invalidTitle = await service.ReportIncidentAsync(actor, new ReportMyDeviceIncidentRequest("a", "desc", IdempotencyKey: "invalid-title-key"), CancellationToken.None);
         Assert.Equal(ManagementResultStatus.Invalid, invalidTitle.Status);
     }
 
@@ -126,8 +149,17 @@ public sealed class MyDeviceServiceTests
         public Task<IReadOnlyList<AuditLog>> GetDeviceAuditActionsAsync(Guid organizationId, Guid deviceId, int limit, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<AuditLog>>(Audits.Where(a => a.OrganizationId == organizationId && a.DeviceId == deviceId).Take(limit).ToList());
 
-        public void AddIncident(IncidentTicket incident) => Incidents.Add(incident);
-        public void AddAudit(AuditLog auditLog) => Audits.Add(auditLog);
-        public Task<bool> TrySaveChangesAsync(CancellationToken cancellationToken) => Task.FromResult(true);
+        public Task<IncidentTicket?> FindIncidentByIdempotencyKeyAsync(Guid organizationId, Guid reportedByUserId, string idempotencyKey, CancellationToken cancellationToken) =>
+            Task.FromResult(Incidents.FirstOrDefault(x => x.OrganizationId == organizationId && x.ReportedByUserId == reportedByUserId && x.IdempotencyKey == idempotencyKey));
+
+        public Task<IncidentCreateResult> CreateIncidentAsync(IncidentTicket incident, AuditLog auditLog, CancellationToken cancellationToken)
+        {
+            var existing = Incidents.FirstOrDefault(x => x.OrganizationId == incident.OrganizationId && x.ReportedByUserId == incident.ReportedByUserId && x.IdempotencyKey == incident.IdempotencyKey);
+            if (existing is not null)
+                return Task.FromResult(new IncidentCreateResult(existing, true, existing.RequestFingerprint != incident.RequestFingerprint));
+            Incidents.Add(incident);
+            Audits.Add(auditLog);
+            return Task.FromResult(new IncidentCreateResult(incident, false, false));
+        }
     }
 }

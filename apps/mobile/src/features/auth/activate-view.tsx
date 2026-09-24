@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { useAuth } from './auth-context';
 import { useI18n } from '../../lib/i18n';
 import { useAppColors, AppButton, AppInput, AppCard } from '../../components/common';
@@ -21,6 +22,7 @@ export function ActivateView() {
   const router = useRouter();
   const { apiClient } = useAuth();
   const params = useLocalSearchParams<{ token?: string; link?: string }>();
+  const incomingUrl = Linking.useURL();
 
   // Secure token retention in local memory only
   const [token, setToken] = useState<string | null>(null);
@@ -48,6 +50,10 @@ export function ActivateView() {
       if (parsed.valid && parsed.token) {
         rawToken = parsed.token;
       }
+    }
+    if (!rawToken && incomingUrl) {
+      const parsed = parseActivationUrl(incomingUrl);
+      if (parsed.valid && parsed.token) rawToken = parsed.token;
     }
 
     if (!rawToken) {
@@ -84,7 +90,7 @@ export function ActivateView() {
     return () => {
       active = false;
     };
-  }, [params.token, params.link, apiClient, router]);
+  }, [params.token, params.link, incomingUrl, apiClient, router]);
 
   const handleSubmit = async () => {
     if (submitting || !token) return; // Guard double submit

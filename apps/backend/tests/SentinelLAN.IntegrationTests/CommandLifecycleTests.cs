@@ -129,7 +129,7 @@ public sealed class CommandLifecycleTests(SentinelApiFactory factory) : IClassFi
         var duplicateEnvelope = JsonSerializer.Deserialize<RemoteCommand>(JsonSerializer.Serialize(duplicateNonce))!;
         Assert.True(signatures.Verify(duplicateEnvelope));
         Assert.False(verifier.TryAccept(duplicateEnvelope, remote.DeviceId, now, signatures.Verify, out var replayReason));
-        Assert.Equal("Replay detected", replayReason);
+        Assert.Equal("Replay detected or nonce capacity reached", replayReason);
         Assert.False(new CommandVerifier().TryAccept(remote, remote.DeviceId, remote.ExpiresAt, signatures.Verify, out _));
     }
 

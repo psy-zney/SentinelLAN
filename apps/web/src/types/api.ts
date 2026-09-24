@@ -202,6 +202,7 @@ export type CreateIncidentRequest = {
   title: string;
   description?: string | null;
   severity?: string;
+  idempotencyKey: string;
 };
 
 export type UpdateIncidentStatusRequest = {
@@ -290,21 +291,6 @@ export type AssetTimelineItem = {
   description: string;
   severity: "info" | "warning" | "critical" | "success";
   actor?: string | null;
-};
-
-export type PublicQrDevice = {
-  deviceId: string;
-  deviceName: string;
-  serialNumber: string | null;
-  manufacturer: string | null;
-  model: string | null;
-  assetType: string | null;
-  location: string | null;
-  assetStatus: string;
-  isOnline: boolean;
-  assignedUserName: string | null;
-  healthScore: number;
-  healthGrade: string;
 };
 
 // --- Account Activation ---
@@ -437,6 +423,7 @@ export type ReportMyDeviceIncidentRequest = {
   title: string;
   description?: string;
   severity?: string;
+  idempotencyKey: string;
 };
 
 export type ReportMyDeviceIncidentResponse = IncidentSummaryDto;

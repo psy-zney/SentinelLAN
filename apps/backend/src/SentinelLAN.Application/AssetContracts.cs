@@ -70,8 +70,11 @@ public record CreateIncidentRequest(
     Guid DeviceId,
     string Title,
     string? Description,
-    string Severity = "Medium"
+    string Severity = "Medium",
+    string? IdempotencyKey = null
 );
+
+public sealed record IncidentCreateResult(IncidentTicket Incident, bool IsReplay, bool PayloadConflict);
 
 public record UpdateIncidentStatusRequest(
     string Status,
@@ -182,21 +185,6 @@ public record RepairVsReplaceResultDto(
     string AnalysisSummary
 );
 
-public record PublicQrDeviceDto(
-    Guid DeviceId,
-    string DeviceName,
-    string? SerialNumber,
-    string? Manufacturer,
-    string? Model,
-    string? AssetType,
-    string? Location,
-    string AssetStatus,
-    bool IsOnline,
-    string? AssignedUserName,
-    int HealthScore,
-    string HealthGrade
-);
-
 public interface IAssetManagementService
 {
     Task<DeviceAssetDetailDto?> GetDeviceAssetDetailAsync(ActorContext actor, Guid deviceId, CancellationToken cancellationToken = default);
@@ -211,13 +199,11 @@ public interface IAssetManagementService
     Task<IReadOnlyList<AssetLoanDto>> GetAssetLoansAsync(ActorContext actor, Guid? deviceId = null, CancellationToken cancellationToken = default);
     Task<(ManagementResultStatus Status, AssetLoanDto? Loan, string Message)> CreateAssetLoanAsync(ActorContext actor, CreateLoanRequest request, CancellationToken cancellationToken = default);
     Task<(ManagementResultStatus Status, string Message)> ReturnAssetLoanAsync(ActorContext actor, Guid loanId, ReturnLoanRequest request, CancellationToken cancellationToken = default);
-    Task<PublicQrDeviceDto?> GetPublicQrDeviceAsync(Guid deviceId, CancellationToken cancellationToken = default);
 }
 
 public interface IAssetStore
 {
     Task<Device?> FindDeviceAsync(Guid organizationId, Guid deviceId, CancellationToken cancellationToken = default);
-    Task<Device?> FindDevicePublicAsync(Guid deviceId, CancellationToken cancellationToken = default);
     Task<User?> FindUserAsync(Guid organizationId, Guid userId, CancellationToken cancellationToken = default);
     Task<string?> GetUserNameAsync(Guid organizationId, Guid? userId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TelemetrySnapshot>> GetRecentTelemetryAsync(Guid organizationId, Guid deviceId, int limit, CancellationToken cancellationToken = default);
@@ -225,7 +211,8 @@ public interface IAssetStore
     Task UpdateDeviceAsync(Device device, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<IncidentTicket>> GetIncidentsAsync(Guid organizationId, Guid? deviceId = null, CancellationToken cancellationToken = default);
     Task<IncidentTicket?> FindIncidentAsync(Guid organizationId, Guid incidentId, CancellationToken cancellationToken = default);
-    Task<IncidentTicket> CreateIncidentAsync(IncidentTicket incident, CancellationToken cancellationToken = default);
+    Task<IncidentCreateResult> CreateIncidentAsync(IncidentTicket incident, AuditLog auditLog, CancellationToken cancellationToken = default);
+    Task<IncidentTicket?> FindIncidentByIdempotencyKeyAsync(Guid organizationId, Guid reportedByUserId, string idempotencyKey, CancellationToken cancellationToken = default);
     Task UpdateIncidentAsync(IncidentTicket incident, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<WorkOrder>> GetWorkOrdersAsync(Guid organizationId, Guid? deviceId = null, CancellationToken cancellationToken = default);
     Task<WorkOrder?> FindWorkOrderAsync(Guid organizationId, Guid workOrderId, CancellationToken cancellationToken = default);
@@ -237,4 +224,3 @@ public interface IAssetStore
     Task UpdateAssetLoanAsync(AssetLoan loan, CancellationToken cancellationToken = default);
     Task RecordAuditAsync(AuditLog auditLog, CancellationToken cancellationToken = default);
 }
-

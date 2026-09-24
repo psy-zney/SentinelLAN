@@ -10,9 +10,8 @@ public interface IMyDeviceStore
     Task<IReadOnlyList<IncidentTicket>> GetUserDeviceIncidentsAsync(Guid organizationId, Guid deviceId, Guid userId, CancellationToken cancellationToken);
     Task<IReadOnlyList<TelemetrySnapshot>> GetDeviceTelemetryHistoryAsync(Guid organizationId, Guid deviceId, int limit, CancellationToken cancellationToken);
     Task<IReadOnlyList<AuditLog>> GetDeviceAuditActionsAsync(Guid organizationId, Guid deviceId, int limit, CancellationToken cancellationToken);
-    void AddIncident(IncidentTicket incident);
-    void AddAudit(AuditLog auditLog);
-    Task<bool> TrySaveChangesAsync(CancellationToken cancellationToken);
+    Task<IncidentTicket?> FindIncidentByIdempotencyKeyAsync(Guid organizationId, Guid reportedByUserId, string idempotencyKey, CancellationToken cancellationToken);
+    Task<IncidentCreateResult> CreateIncidentAsync(IncidentTicket incident, AuditLog auditLog, CancellationToken cancellationToken);
 }
 
 public interface IMyDeviceService
@@ -163,19 +162,30 @@ public sealed class MyDeviceService(IMyDeviceStore store) : IMyDeviceService
         ActorContext actor, ReportMyDeviceIncidentRequest request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.Title) || request.Title.Trim().Length is < 3 or > 200 ||
-            request.Description?.Length > 4000 || request.Severity is not ("Low" or "Medium" or "High" or "Critical"))
-            return (ManagementResultStatus.Invalid, null, "Incident title, description or severity is invalid.");
+            request.Description?.Length > 4000 || request.Severity is not ("Low" or "Medium" or "High" or "Critical") ||
+            !IncidentIdempotency.IsValidKey(request.IdempotencyKey))
+            return (ManagementResultStatus.Invalid, null, "Incident title, description, severity or Idempotency-Key is invalid.");
 
         var device = await store.FindAssignedDeviceAsync(actor.OrganizationId, actor.UserId, cancellationToken);
         if (device is null || device.IsRevoked)
             return (ManagementResultStatus.NotFound, null, "No active device is currently assigned to your account.");
 
         var severity = request.Severity;
+        var fingerprint = IncidentIdempotency.Fingerprint(device.Id, request.Title, request.Description, severity);
+        var prior = await store.FindIncidentByIdempotencyKeyAsync(actor.OrganizationId, actor.UserId, request.IdempotencyKey!, cancellationToken);
+        if (prior is not null)
+        {
+            if (prior.RequestFingerprint != fingerprint)
+                return (ManagementResultStatus.Conflict, null, "Idempotency-Key was already used with a different incident payload.");
+            return (ManagementResultStatus.Succeeded, ToIncidentDto(prior, device.Name), "Incident was already reported.");
+        }
 
         var incident = new IncidentTicket
         {
             OrganizationId = actor.OrganizationId,
             DeviceId = device.Id,
+            IdempotencyKey = request.IdempotencyKey!.Trim(),
+            RequestFingerprint = fingerprint,
             Title = request.Title.Trim(),
             Description = request.Description?.Trim(),
             Severity = severity,
@@ -183,9 +193,7 @@ public sealed class MyDeviceService(IMyDeviceStore store) : IMyDeviceService
             ReportedByUserId = actor.UserId
         };
 
-        store.AddIncident(incident);
-
-        store.AddAudit(new AuditLog
+        var creation = await store.CreateIncidentAsync(incident, new AuditLog
         {
             OrganizationId = actor.OrganizationId,
             ActorId = actor.UserId,
@@ -193,28 +201,18 @@ public sealed class MyDeviceService(IMyDeviceStore store) : IMyDeviceService
             Action = "IncidentReportedByEmployee",
             Reason = $"Employee reported incident: {incident.Title}",
             Outcome = "Success"
-        });
+        }, cancellationToken);
+        if (creation.PayloadConflict)
+            return (ManagementResultStatus.Conflict, null, "Idempotency-Key was already used with a different incident payload.");
+        incident = creation.Incident;
 
-        if (!await store.TrySaveChangesAsync(cancellationToken))
-            return (ManagementResultStatus.Conflict, null, "Failed to record incident due to concurrency conflict.");
+        var dto = ToIncidentDto(incident, device.Name);
 
-        var dto = new IncidentDto(
-            incident.Id,
-            incident.DeviceId,
-            device.Name,
-            incident.Title,
-            incident.Description,
-            incident.Severity,
-            incident.Status,
-            incident.ReportedByUserId,
-            null,
-            null,
-            null,
-            null,
-            null,
-            incident.CreatedAt
-        );
-
-        return (ManagementResultStatus.Succeeded, dto, "Incident reported successfully.");
+        return (ManagementResultStatus.Succeeded, dto, creation.IsReplay ? "Incident was already reported." : "Incident reported successfully.");
     }
+
+    private static IncidentDto ToIncidentDto(IncidentTicket incident, string deviceName) => new(
+        incident.Id, incident.DeviceId, deviceName, incident.Title, incident.Description, incident.Severity,
+        incident.Status, incident.ReportedByUserId, null, incident.AssignedTechnicianId, null,
+        incident.ResolvedAt, incident.ResolutionNotes, incident.CreatedAt);
 }

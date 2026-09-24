@@ -40,12 +40,17 @@ public sealed class ActivationAndQrIntegrationTests(SentinelApiFactory factory) 
         var pendingLoginRes = await unauthClient.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest("demo", "newemp@sentinellan.local", "SomePassword123!"));
         Assert.Equal(HttpStatusCode.Unauthorized, pendingLoginRes.StatusCode);
 
-        // 4. Validate activation token anonymously
-        var validateRes = await unauthClient.GetAsync($"/api/v1/auth/activation/validate?token={createResult.ActivationToken}");
+        // 4. Validate activation token anonymously via POST (prevents URL query string leakage)
+        var validateReq = new ValidateActivationTokenRequest(createResult.ActivationToken);
+        var validateRes = await unauthClient.PostAsJsonAsync("/api/v1/auth/activation/validate", validateReq);
         Assert.Equal(HttpStatusCode.OK, validateRes.StatusCode);
         var validateResult = await validateRes.Content.ReadFromJsonAsync<ValidateActivationTokenResponse>(JsonOptions);
         Assert.NotNull(validateResult);
         Assert.True(validateResult.Valid);
+
+        // Query-string validation is no longer supported because proxies can log the token.
+        var validateGetRes = await unauthClient.GetAsync($"/api/v1/auth/activation/validate?token={createResult.ActivationToken}");
+        Assert.Equal(HttpStatusCode.MethodNotAllowed, validateGetRes.StatusCode);
 
         // 5. Activate account with new strong password
         var activateReq = new ActivateAccountRequest(createResult.ActivationToken!, "SuperSecretPass123!");
@@ -179,12 +184,13 @@ public sealed class ActivationAndQrIntegrationTests(SentinelApiFactory factory) 
         Assert.Equal(HttpStatusCode.OK, telemetryRes.StatusCode);
 
         // 3. POST /api/v1/my-device/incidents reports incident for employee's assigned device
-        var reportReq = new ReportMyDeviceIncidentRequest("Display flickers on dock disconnect", "Tested on two monitors", "Medium");
+        var reportReq = new ReportMyDeviceIncidentRequest("Display flickers on dock disconnect", "Tested on two monitors", "Medium", "employee-incident-integration-1");
         var reportMsg = new HttpRequestMessage(HttpMethod.Post, "/api/v1/my-device/incidents")
         {
             Content = JsonContent.Create(reportReq)
         };
         reportMsg.Headers.Add("X-SentinelLAN-CSRF", "1");
+        reportMsg.Headers.Add("Idempotency-Key", "employee-incident-integration-1");
         var reportRes = await empClient.SendAsync(reportMsg);
         Assert.Equal(HttpStatusCode.Created, reportRes.StatusCode);
 
@@ -193,11 +199,62 @@ public sealed class ActivationAndQrIntegrationTests(SentinelApiFactory factory) 
         Assert.NotEqual(Guid.Empty, reportResult.Id);
         Assert.Equal("Display flickers on dock disconnect", reportResult.Title);
 
+        using var replayMsg = new HttpRequestMessage(HttpMethod.Post, "/api/v1/my-device/incidents")
+        {
+            Content = JsonContent.Create(reportReq)
+        };
+        replayMsg.Headers.Add("X-SentinelLAN-CSRF", "1");
+        replayMsg.Headers.Add("Idempotency-Key", "employee-incident-integration-1");
+        var replayRes = await empClient.SendAsync(replayMsg);
+        Assert.Equal(HttpStatusCode.Created, replayRes.StatusCode);
+        var replayResult = await replayRes.Content.ReadFromJsonAsync<IncidentDto>(JsonOptions);
+        Assert.NotNull(replayResult);
+        Assert.Equal(reportResult.Id, replayResult.Id);
+
+        using var conflictMsg = new HttpRequestMessage(HttpMethod.Post, "/api/v1/my-device/incidents")
+        {
+            Content = JsonContent.Create(reportReq with { Title = "Different incident" })
+        };
+        conflictMsg.Headers.Add("X-SentinelLAN-CSRF", "1");
+        conflictMsg.Headers.Add("Idempotency-Key", "employee-incident-integration-1");
+        var conflictRes = await empClient.SendAsync(conflictMsg);
+        Assert.Equal(HttpStatusCode.Conflict, conflictRes.StatusCode);
+
         // 4. GET /api/v1/my-device/incidents includes the reported incident
         var listIncRes = await empClient.GetAsync("/api/v1/my-device/incidents");
         Assert.Equal(HttpStatusCode.OK, listIncRes.StatusCode);
         var incidents = await listIncRes.Content.ReadFromJsonAsync<IncidentDto[]>(JsonOptions);
         Assert.NotNull(incidents);
         Assert.Contains(incidents, inc => inc.Title == "Display flickers on dock disconnect");
+    }
+
+    [Fact]
+    public async Task AnonymousAccessToItamRoutesReturnsUnauthorized()
+    {
+        using var unauthClient = factory.CreateClient();
+        var randomId = Guid.NewGuid();
+
+        var routes = new (HttpMethod Method, string Path)[]
+        {
+            (HttpMethod.Get, $"/api/v1/devices/{randomId}/asset-detail"),
+            (HttpMethod.Get, $"/api/v1/devices/{randomId}/timeline"),
+            (HttpMethod.Get, "/api/v1/incidents"),
+            (HttpMethod.Post, "/api/v1/incidents"),
+            (HttpMethod.Get, "/api/v1/work-orders")
+        };
+
+        foreach (var (method, path) in routes)
+        {
+            using var req = new HttpRequestMessage(method, path);
+            if (method == HttpMethod.Post)
+            {
+                req.Content = JsonContent.Create(new { DeviceId = randomId, Title = "Test Incident", Severity = "Low" });
+            }
+            var res = await unauthClient.SendAsync(req);
+            Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
+        }
+
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await unauthClient.GetAsync($"/api/v1/public/qr/{randomId}")).StatusCode);
     }
 }

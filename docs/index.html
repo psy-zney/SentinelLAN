@@ -810,15 +810,15 @@
     <div class="stats-bar">
       <div class="stat-pill">
         <div class="stat-label">Kiểm thử Backend</div>
-        <div class="stat-val green">79+ Unit .NET PASS</div>
+        <div class="stat-val">142/142 .NET tests pass · 25/09/2026</div>
       </div>
       <div class="stat-pill">
         <div class="stat-label">Web Dashboard</div>
-        <div class="stat-val blue">25 Unit + 6 E2E (0 Lint)</div>
+        <div class="stat-val">25/25 Vitest · 6/6 Playwright pass</div>
       </div>
       <div class="stat-pill">
         <div class="stat-label">Mobile App</div>
-        <div class="stat-val green">38 Tests + 4 Maestro Flows</div>
+        <div class="stat-val amber">39/39 Jest pass · 7 Maestro scripts chưa chạy</div>
       </div>
       <div class="stat-pill">
         <div class="stat-label">Luồng Kỹ Thuật E2E</div>
@@ -938,7 +938,7 @@
           <h4>🔒 Security & Mật Mã</h4>
           <div class="tech-tags">
             <span class="tech-tag highlight">PBKDF2-SHA256</span>
-            <span class="tech-tag">HMAC-SHA256 10 tham số</span>
+            <span class="tech-tag">HMAC-SHA256 trên JSON array 10 giá trị</span>
             <span class="tech-tag">AES-256-GCM Vault</span>
             <span class="tech-tag">HttpOnly SameSite Cookie</span>
           </div>
@@ -1050,8 +1050,8 @@
             <!-- POSTGRESQL -->
             <rect x="860" y="30" width="230" height="100" rx="10" fill="#141a20" stroke="#10b981" stroke-width="1.5"/>
             <text x="880" y="60" fill="#10b981" font-weight="700" font-size="13">PostgreSQL 18.1</text>
-            <text x="880" y="80" fill="#94a3b8" font-size="11">EF Core 10 · Global Query Filter</text>
-            <text x="880" y="100" fill="#f59e0b" font-size="11">Append-Only Immutable Audit</text>
+            <text x="880" y="80" fill="#94a3b8" font-size="11">EF Core 10 · Explicit Tenant Scopes</text>
+            <text x="880" y="100" fill="#f59e0b" font-size="11">SaveChanges Audit Guard</text>
 
             <!-- MANAGED ENDPOINT AGENT -->
             <rect x="860" y="150" width="230" height="120" rx="10" fill="#141a20" stroke="#38bdf8" stroke-width="1.5"/>
@@ -1059,7 +1059,7 @@
             <text x="880" y="195" fill="#fff" font-size="11">Windows Service / Linux Daemon</text>
             <text x="880" y="215" fill="#94a3b8" font-size="10">P/Invoke GetSystemTimes / /proc</text>
             <text x="880" y="235" fill="#10b981" font-size="10">Outbound HTTPS Only (No Inbound)</text>
-            <text x="880" y="255" fill="#f59e0b" font-size="10">DPAPI Key · Offline SQLite Queue</text>
+            <text x="880" y="255" fill="#f59e0b" font-size="10">DPAPI / AES-GCM · Protected Queue File</text>
 
             <!-- CLOUD VPS NODES -->
             <rect x="860" y="290" width="230" height="100" rx="10" fill="#141a20" stroke="#a855f7" stroke-width="1.5"/>
@@ -1132,7 +1132,7 @@
               <td>ASP.NET Core API</td>
               <td><span class="badge badge-blue">HTTPS / 8080/443</span></td>
               <td>Outbound Polling</td>
-              <td>Header X-Device-Id, Idempotency-Key</td>
+              <td>Headers X-SentinelLAN-Device-Id/Secret; heartbeat JSON includes Idempotency-Key</td>
               <td>Heartbeat định kỳ 30s, gửi Telemetry Snapshot, poll lệnh pending.</td>
             </tr>
             <tr>
@@ -1148,8 +1148,8 @@
               <td>PostgreSQL DB</td>
               <td><span class="badge badge-amber">TCP / 5432</span></td>
               <td>Internal LAN / Docker</td>
-              <td>Npgsql Connection Pooling, Scoped Tenant Filter</td>
-              <td>Lưu trữ dữ liệu định danh, cấu hình, telemetry và audit log bất biến.</td>
+              <td>Npgsql Connection Pooling, tenant-scoped queries</td>
+              <td>Lưu dữ liệu định danh, cấu hình, telemetry và audit log; DbContext chặn cập nhật/xóa AuditLog.</td>
             </tr>
             <tr>
               <td><strong>ASP.NET Core API</strong></td>
@@ -1216,7 +1216,7 @@
             </li>
             <li>
               <span class="file-item-name">AssetManagementService.cs / QrManagementService.cs</span>
-              <span class="file-item-desc">Vòng đời tài sản ITAM, sinh nhãn QR có chữ ký & hạn dùng, mượn/trả thiết bị, xử lý sự cố an ninh & phiếu sửa chữa CMMS.</span>
+              <span class="file-item-desc">Vòng đời tài sản ITAM; nhãn QR dùng mã ngẫu nhiên opaque, chỉ lưu hash và hỗ trợ hạn dùng/thu hồi; mượn/trả thiết bị, xử lý sự cố & phiếu sửa chữa CMMS.</span>
             </li>
             <li>
               <span class="file-item-name">PolicyService.cs / AlertService.cs</span>
@@ -1231,7 +1231,7 @@
           <ul class="file-tree-list">
             <li>
               <span class="file-item-name">SentinelDbContext.cs</span>
-              <span class="file-item-desc">Cấu hình quan hệ EF Core, Partial Unique Index, Global Query Filter cho Multi-Tenant và Interceptor chặn xóa AuditLog.</span>
+              <span class="file-item-desc">Cấu hình quan hệ EF Core, Partial Unique Index và index tenant; `SaveChanges` từ chối sửa/xóa AuditLog. Tenant scope hiện được áp dụng tường minh ở truy vấn, chưa có Global Query Filter.</span>
             </li>
             <li>
               <span class="file-item-name">ManagementStore.cs / VpsNodeStore.cs / AssetStore.cs</span>
@@ -1277,11 +1277,11 @@
           <ul class="file-tree-list">
             <li>
               <span class="file-item-name dir">SentinelLAN.Agent.Core/</span>
-              <span class="file-item-desc">Mô hình dữ liệu độc lập hệ điều hành, máy trạng thái chu kỳ thu thập (Collector Loop) và trình xác minh chữ ký HMAC.</span>
+              <span class="file-item-desc">Mô hình dữ liệu độc lập hệ điều hành, chu kỳ thu thập, xác minh chữ ký HMAC và queue API cho telemetry offline.</span>
             </li>
             <li>
               <span class="file-item-name dir">SentinelLAN.Agent.Infrastructure/</span>
-              <span class="file-item-desc">P/Invoke Win32 API (GetSystemTimes, GlobalMemoryStatusEx), Linux /proc parser, Windows DPAPI secret store và HTTP Client có hàng đợi offline.</span>
+              <span class="file-item-desc">P/Invoke Win32 API, Linux /proc parser, Windows DPAPI secret store và HTTP Client; Production có queue file được bảo vệ, Development mặc định dùng RAM.</span>
             </li>
             <li>
               <span class="file-item-name dir">SentinelLAN.Agent/Worker.cs</span>
@@ -1323,7 +1323,7 @@
             </li>
             <li>
               <span class="file-item-name dir">apps/mobile/e2e/</span>
-              <span class="file-item-desc">4 luồng kiểm thử tự động Maestro E2E: <code>01-activate-device.yaml</code>, <code>02-scan-qr-asset.yaml</code>, <code>03-report-incident.yaml</code>, <code>04-loan-asset.yaml</code>.</span>
+              <span class="file-item-desc">7 Maestro YAML scripts đã có trong repo; trạng thái thực thi chưa xác minh. README ghi môi trường hiện tại thiếu adb/Android SDK.</span>
             </li>
           </ul>
         </div>
@@ -1502,7 +1502,7 @@
           <div class="wf-pane" id="wf-offline">
             <div class="wf-header">
               <h3>Luồng 4: Hàng Đợi Ngoại Tuyến & Tự Phục Hồi Khi Mất Mạng (Offline Queue Resilience)</h3>
-              <p>Cơ chế lưu trữ đệm cục bộ khi mất kết nối mạng và tái truyền thông minh với thuật toán Exponential Backoff + Jitter chống nghẽn Thundering Herd.</p>
+              <p>Production giữ tối đa 50 heartbeat trong file mã hóa (DPAPI trên Windows, AES-GCM trên Linux) và khôi phục queue sau restart. Development mặc định dùng RAM. Retry dùng exponential delay với jitter ±500 ms, clamp 2–60 giây.</p>
             </div>
             <div class="flow-steps-grid">
               <div class="flow-step-card">
@@ -1516,26 +1516,26 @@
               <div class="flow-step-card">
                 <div>
                   <div class="step-number">02</div>
-                  <div class="step-title">Ghi Đệm SQLite Mã Hóa</div>
-                  <div class="step-desc">Các gói tin TelemetrySnapshot được ghi vào file SQLite đệm cục bộ (hoặc hàng đợi RAM giới hạn 1,000 bản ghi). Tự động xoay vòng FIFO để không tràn đĩa.</div>
+                  <div class="step-title">Queue Có Giới Hạn và Lưu Bền Trong Production</div>
+                  <div class="step-desc">Production lưu tối đa 50 heartbeat trong file được bảo vệ: DPAPI trên Windows, AES-GCM trên Linux. Queue loại mục quá một giờ; Development mặc định giữ queue trong RAM.</div>
                 </div>
-                <div class="step-code-badge">SQLite Buffer Store (FIFO)</div>
+                <div class="step-code-badge">ProtectedOfflineTelemetryQueueStore · capacity 50</div>
               </div>
               <div class="flow-step-card">
                 <div>
                   <div class="step-number">03</div>
-                  <div class="step-title">Exponential Backoff + Jitter</div>
-                  <div class="step-desc">Agent thử kết nối lại theo công thức: <code>T = min(300s, 2^attempt * 2s) ± random_jitter</code>. Phân tán hàng nghìn máy trạm gửi gói tin cùng một lúc.</div>
+                  <div class="step-title">Exponential Delay + Jitter Nhỏ</div>
+                  <div class="step-desc">Worker bắt đầu với delay 5 giây; sau lỗi mạng tăng gấp đôi mỗi lần, cộng/trừ tối đa 500 ms rồi giới hạn trong 2–60 giây. Đây không phải Full Jitter.</div>
                 </div>
-                <div class="step-code-badge">Algorithm: Full Jitter Backoff</div>
+                <div class="step-code-badge">Worker retry · clamp 2–60s · ±500ms</div>
               </div>
               <div class="flow-step-card">
                 <div>
                   <div class="step-number">04</div>
                   <div class="step-title">Xả Hàng Đợi (Drain Queue)</div>
-                  <div class="step-desc">Khi kết nối phục hồi thành công, Agent gửi tuần tự các bản ghi cũ kèm cờ <code>IsBuffered=true</code>. Server lưu trữ toàn vẹn lịch sử không bị đứt đoạn.</div>
+                  <div class="step-desc">Khi gửi thành công, Agent lấy lần lượt các mục trong hàng đợi và gửi như heartbeat thông thường kèm Idempotency-Key. Không có endpoint bulk hoặc cờ IsBuffered trong luồng này.</div>
                 </div>
-                <div class="step-code-badge">POST /api/v1/agent/telemetry/bulk</div>
+                <div class="step-code-badge">POST /api/v1/agent/heartbeat</div>
               </div>
             </div>
           </div>
@@ -1575,9 +1575,9 @@
                 <div>
                   <div class="step-number">04</div>
                   <div class="step-title">Thực Thi & Trả Biên Lai</div>
-                  <div class="step-desc">Lệnh chạy ở chế độ mô phỏng an toàn (0 P/Invoke phá hoại, chỉ mô phỏng trừ khi có cờ Lab). Agent gửi lại Receipt có ký số xác nhận hoàn thành cho Server.</div>
+                <div class="step-desc">Lệnh hiện trả kết quả mô phỏng. Agent gửi trạng thái thành công/thất bại và message qua Device ID/Secret authentication; receipt không có chữ ký HMAC riêng.</div>
                 </div>
-                <div class="step-code-badge">POST /api/v1/agent/commands/{id}/receipt</div>
+                <div class="step-code-badge">POST /api/v1/agent/commands/{id}/result</div>
               </div>
             </div>
           </div>
@@ -1635,7 +1635,7 @@
                 <div>
                   <div class="step-number">01</div>
                   <div class="step-title">Đăng Ký Tài Sản & Nhãn QR</div>
-                  <div class="step-desc">IT tạo tài sản phần cứng (Asset Tag, Serial, CPU/RAM specs). Hệ thống sinh mã QR định danh chuẩn: <code>SL-QR-{Org}-{AssetTag}-{Signature}</code>.</div>
+                  <div class="step-desc">IT tạo nhãn QR với mã opaque ngẫu nhiên. Server chỉ lưu hash, cùng tenant, thiết bị, hạn dùng tùy chọn và trạng thái thu hồi; payload QR không được ký HMAC.</div>
                 </div>
                 <div class="step-code-badge">POST /api/v1/asset-management</div>
               </div>
@@ -1651,7 +1651,7 @@
                 <div>
                   <div class="step-number">03</div>
                   <div class="step-title">Xác Thực Nhãn & Tra Cứu</div>
-                  <div class="step-desc">Gửi Token lên server tra cứu hồ sơ tài sản, lịch sử bảo dưỡng và người đang sở hữu. Hỗ trợ tạo phiếu sửa chữa CMMS tại chỗ.</div>
+                  <div class="step-desc">Resolver công khai trả về thẻ thông tin tối thiểu; resolver đã xác thực kiểm tra tenant/assignment. QR công khai không trả serial, người sở hữu hay telemetry.</div>
                 </div>
                 <div class="step-code-badge">GET /api/v1/qr/{token}</div>
               </div>
@@ -1671,24 +1671,24 @@
           <div class="wf-pane" id="wf-incident">
             <div class="wf-header">
               <h3>Luồng 8: Báo Cáo Sự Cố An Ninh & Phiếu Bảo Trì CMMS (Incident & Work Order Lifecycle)</h3>
-              <p>Quy trình tiếp nhận báo cáo sự cố kỹ thuật từ nhân viên, khử trùng lặp qua Idempotency Token, phân loại mức độ nghiêm trọng và tạo phiếu sửa chữa bảo trì CMMS cho kỹ thuật viên.</p>
+              <p>Nhân viên gửi incident với Idempotency-Key. Backend dedupe theo tenant và reporter; cùng payload trả incident đã tạo, còn tái sử dụng khóa cho payload khác trả 409.</p>
             </div>
             <div class="flow-steps-grid">
               <div class="flow-step-card">
                 <div>
                   <div class="step-number">01</div>
-                  <div class="step-title">Báo Cáo Sự Cố Có Idempotency</div>
-                  <div class="step-desc">Nhân viên gửi báo cáo qua Web hoặc Mobile App kèm IdempotencyToken, mô tả hiện tượng, loại sự cố (Phần cứng, Mạng, Bảo mật) và mức độ khẩn cấp.</div>
+                  <div class="step-title">Gửi Báo Cáo Sự Cố</div>
+                  <div class="step-desc">Nhân viên gửi tiêu đề, mô tả và mức độ cùng Idempotency-Key qua header. Backend ràng buộc khóa với tenant/reporter và fingerprint payload.</div>
                 </div>
-                <div class="step-code-badge">POST /api/v1/incidents</div>
+                <div class="step-code-badge">POST /api/v1/my-device/incidents</div>
               </div>
               <div class="flow-step-card">
                 <div>
                   <div class="step-number">02</div>
-                  <div class="step-title">Khử Trùng Lặp & Gán Trạng Thái</div>
-                  <div class="step-desc">Server kiểm tra IdempotencyToken trong tenant. Nếu đã tồn tại bản ghi tương tự trong 5 phút -> trả kết quả đã lưu, tránh spam ticket khi mạng chập chờn.</div>
+                  <div class="step-title">Dedupe & Ghi Audit</div>
+                  <div class="step-desc">Service kiểm tra máy được gán, so fingerprint payload và dùng unique index để chống race. Cùng khóa/cùng payload trả ticket cũ; cùng khóa/payload khác trả 409.</div>
                 </div>
-                <div class="step-code-badge">IncidentReport (Status: Reported)</div>
+                <div class="step-code-badge">IncidentTicket · Status: Open</div>
               </div>
               <div class="flow-step-card">
                 <div>
@@ -1755,42 +1755,43 @@
           <div class="wf-pane" id="wf-mobile">
             <div class="wf-header">
               <h3>Luồng 10: Ứng Dụng Di Động Mobile App (React Native / Expo & Maestro E2E)</h3>
-              <p>Trải nghiệm người dùng di động mượt mà cho nhân viên và kỹ thuật viên với 4 luồng nghiệp vụ kiểm thử tự động bằng Maestro.</p>
+              <p>Có 7 YAML Maestro flow trong repository. Đây là test scripts; README ghi môi trường hiện tại thiếu adb/Android SDK nên kết quả chạy chưa được xác minh.</p>
             </div>
             <div class="flow-steps-grid">
               <div class="flow-step-card">
                 <div>
                   <div class="step-number">01</div>
                   <div class="step-title">Flow 1: Kích Hoạt & Liên Kết</div>
-                  <div class="step-desc">Nhân viên mở app, quét QR kích hoạt hoặc nhập token 1 lần. Ứng dụng liên kết thiết bị với tài khoản nhân viên an toàn qua HTTPS cookie.</div>
+                  <div class="step-desc">Flow script mô tả kích hoạt tài khoản và đăng nhập qua ứng dụng mobile.</div>
                 </div>
-                <div class="step-code-badge">Maestro: 01-activate-device.yaml</div>
+                <div class="step-code-badge">01-activate-and-login.yaml</div>
               </div>
               <div class="flow-step-card">
                 <div>
                   <div class="step-number">02</div>
-                  <div class="step-title">Flow 2: Quét QR Tem Tài Sản</div>
-                  <div class="step-desc">Kỹ thuật viên dùng camera quét tem QR trên thân máy tính -> hiển thị ngay lập tức thông số cấu hình, lịch sử bảo dưỡng và tình trạng mượn trả.</div>
+                  <div class="step-title">Flow 2: Quét QR Máy Được Gán</div>
+                  <div class="step-desc">Flow script quét/nhập QR, gọi resolver và mở trang My Device theo quyền được cấp; không khẳng định hiển thị dữ liệu sở hữu/lịch sử đầy đủ.</div>
                 </div>
-                <div class="step-code-badge">Maestro: 02-scan-qr-asset.yaml</div>
+                <div class="step-code-badge">02-scan-qr-my-device.yaml</div>
               </div>
               <div class="flow-step-card">
                 <div>
                   <div class="step-number">03</div>
                   <div class="step-title">Flow 3: Báo Cáo Sự Cố Tại Chỗ</div>
-                  <div class="step-desc">Gặp sự cố phần cứng, người dùng gửi báo cáo kèm ảnh chụp từ camera điện thoại. Có bộ đệm lưu offline nếu khu vực phòng máy mất sóng Wi-Fi.</div>
+                <div class="step-desc">Flow script gửi báo cáo sự cố với khóa idempotency. API lưu khóa theo tenant/reporter và xử lý replay an toàn; không có đính kèm ảnh hoặc queue offline trong luồng này.</div>
                 </div>
-                <div class="step-code-badge">Maestro: 03-report-incident.yaml</div>
+                <div class="step-code-badge">03-report-incident.yaml</div>
               </div>
               <div class="flow-step-card">
                 <div>
                   <div class="step-number">04</div>
-                  <div class="step-title">Flow 4: Bàn Giao & Mượn Thiết Bị</div>
-                  <div class="step-desc">Thao tác mượn/trả nhanh chóng ngay trên thiết bị cầm tay giữa IT và nhân viên, ký nhận điện tử và lưu vết kiểm toán tức thì.</div>
+                  <div class="step-title">Flow 4: Khôi Phục Phiên & Logout</div>
+                  <div class="step-desc">Flow script thứ tư kiểm tra cold start, khôi phục phiên, refresh token và logout; không phải luồng mượn/trả tài sản.</div>
                 </div>
-                <div class="step-code-badge">Maestro: 04-loan-asset.yaml</div>
+                <div class="step-code-badge">04-cold-start-refresh-and-logout.yaml</div>
               </div>
             </div>
+            <p class="step-desc">Ba scripts còn lại: <code>05-forbidden-qr.yaml</code>, <code>06-deny-camera-fallback.yaml</code>, <code>07-cold-start-offline.yaml</code>.</p>
           </div>
 
           <!-- WORKFLOW 11: DISASTER RECOVERY -->
@@ -1869,10 +1870,10 @@
               <div class="flow-step-card">
                 <div>
                   <div class="step-number">04</div>
-                  <div class="step-title">Audit Log Bất Biến</div>
-                  <div class="step-desc">Mọi thao tác quản trị được ghi sổ cái <code>AuditLogs</code>. EF Core SaveChangesInterceptor ném ngoại lệ chặn đứng mọi lệnh SQL UPDATE hoặc DELETE trên bảng audit.</div>
+                  <div class="step-title">Audit Log Chỉ Ghi Thêm Qua EF</div>
+                  <div class="step-desc">`SentinelDbContext.SaveChanges` từ chối entity AuditLog ở trạng thái Modified/Deleted. Đây không phải interceptor hoặc ràng buộc DB; chưa có kho WORM/SIEM ngoài.</div>
                 </div>
-                <div class="step-code-badge">Append-Only EF Interceptor</div>
+                <div class="step-code-badge">SentinelDbContext.SaveChanges guard</div>
               </div>
             </div>
           </div>
@@ -1886,7 +1887,7 @@
         <div class="section-title-wrap">
           <span class="section-badge">Packet Specifications</span>
           <h2>Đặc Tả Gói Tin & Ping Telemetry Hệ Thống</h2>
-          <p>Chi tiết cấu trúc Header, JSON Payload và phản hồi thực tế của từng loại gói tin truyền qua mạng.</p>
+          <p>Ví dụ cấu trúc Header, JSON Payload và phản hồi theo các contract đang triển khai; dữ liệu minh họa không phải packet capture.</p>
         </div>
       </div>
 
@@ -1995,11 +1996,11 @@ Content-Type: application/json
         <div class="pkt-body" id="pkt-command">
           <div class="pkt-meta">
             <span class="badge badge-amber">GET /api/v1/agent/commands/pending</span>
-            <span class="badge badge-green">Chữ ký: HMAC-SHA256 (10 tham số)</span>
+            <span class="badge badge-green">HMAC-SHA256 over JSON array (10 values)</span>
             <span class="badge badge-blue">Chống phát lại: Nonce + TTL</span>
           </div>
           <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 12px;">
-            Gói tin trả về khi Agent thăm dò lệnh cần thực thi. Chứa chữ ký HMAC bảo vệ toàn vẹn từng tham số.
+            Ví dụ gói trả về khi Agent thăm dò lệnh. Mã nguồn ký HMAC trên JSON serialization của mảng 10 giá trị, gồm cả Parameter.
           </p>
           <div class="code-container">
             <div class="code-header">
@@ -2025,24 +2026,20 @@ Content-Type: application/json
         <!-- PKT 4: RECEIPT -->
         <div class="pkt-body" id="pkt-receipt">
           <div class="pkt-meta">
-            <span class="badge badge-green">POST /api/v1/agent/commands/{id}/receipt</span>
+            <span class="badge badge-green">POST /api/v1/agent/commands/{id}/result</span>
             <span class="badge badge-purple">Execution Receipt</span>
           </div>
           <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 12px;">
-            Gói tin biên lai gửi từ Agent xác nhận đã thực thi thành công lệnh mô phỏng, kèm mã thoát và nhật ký ngắn.
+            Kết quả Agent gửi bằng Device ID/Secret authentication; body chỉ gồm Succeeded và Message. Không có receiptNonce, exit code hoặc chữ ký riêng.
           </p>
           <div class="code-container">
             <div class="code-header">
-              <span>REQUEST RECEIPT BODY</span>
+              <span>REQUEST RESULT BODY</span>
               <span>JSON Payload</span>
             </div>
             <pre class="code-body"><code>{
-  "commandId": "c01921f6-a8b9-7c12-9e34-56789abcdef1",
-  "executionStatus": "Completed",
-  "exitCode": 0,
-  "outputSummary": "Simulated lock workstation executed safely. User notified on desktop.",
-  "executedAtUtc": "2026-09-22T09:30:15Z",
-  "receiptNonce": "f9e8d7c6b5a43210"
+  "succeeded": true,
+  "message": "Lock simulated; operating system unchanged"
 }</code></pre>
           </div>
         </div>
@@ -2149,14 +2146,14 @@ docker ps --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.Image}}"</code></pre>
             <span class="badge badge-green">GET /api/v1/qr/{token}</span>
           </div>
           <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 12px;">
-            Cấu trúc chuỗi định danh chứa trong mã QR dán trên thân vỏ máy tính và gói tin phản hồi khi camera điện thoại quét thành công.
+            Ví dụ mã opaque QR và thẻ phản hồi công khai tối thiểu sau khi resolver tra cứu.
           </p>
           <div class="code-container">
             <div class="code-header">
               <span>QR CODE CONTENT STRING FORMAT</span>
               <span>Plaintext in 2D Barcode</span>
             </div>
-            <pre class="code-body"><code>SL-QR-DEMO-AST-2026-0042-7a8b9c0d1e2f3a4b</code></pre>
+            <pre class="code-body"><code>qr-opaque-random-code (stored server-side as a hash)</code></pre>
           </div>
           <div class="code-container">
             <div class="code-header">
@@ -2164,17 +2161,12 @@ docker ps --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.Image}}"</code></pre>
               <span>200 OK</span>
             </div>
             <pre class="code-body"><code>{
-  "assetTag": "AST-2026-0042",
-  "serialNumber": "SN-DELL-LATITUDE-5420-X89",
-  "model": "Dell Latitude 5420 i7 16GB",
-  "assignedUserName": "Nguyen Van A (nguyen.a@congty.local)",
-  "status": "InUse",
-  "lastMaintenanceUtc": "2026-08-15T00:00:00Z",
-  "specs": {
-    "cpu": "Intel Core i7-1185G7 @ 3.00GHz",
-    "ram": "16 GB DDR4",
-    "storage": "512 GB NVMe SSD"
-  }
+  "name": "WORKSTATION-01",
+  "assetTag": "TAG-SERIAL01",
+  "status": "InService",
+  "contactMessage": "Please contact IT support",
+  "isOnline": true,
+  "hasAssignedUser": true
 }</code></pre>
           </div>
         </div>
@@ -2186,7 +2178,7 @@ docker ps --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.Image}}"</code></pre>
         <div class="pkt-body" id="pkt-incident">
           <div class="pkt-meta">
             <span class="badge badge-rose">POST /api/v1/incidents</span>
-            <span class="badge badge-green">Idempotency-Key Protected</span>
+            <span class="badge badge-green">Idempotency-Key enforced server-side</span>
             <span class="badge badge-blue">CMMS Integration</span>
           </div>
           <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 12px;">
@@ -2197,18 +2189,16 @@ docker ps --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.Image}}"</code></pre>
               <span>REQUEST PAYLOAD</span>
               <span>HTTP/1.1 TLS 1.3</span>
             </div>
-            <pre class="code-body"><code>POST /api/v1/incidents HTTP/1.1
+            <pre class="code-body"><code>POST /api/v1/my-device/incidents HTTP/1.1
 Host: api.sentinellan.local
 Content-Type: application/json
+Idempotency-Key: 3c6c6494-4e44-4a7f-a028-9f3f08b75567
 X-SentinelLAN-CSRF: 1
 
 {
-  "idempotencyToken": "inc-token-01923a4b-5c6d-7e8f",
   "title": "Màn hình laptop Dell nhấp nháy liên tục sau khi cập nhật driver",
   "description": "Sau khi khởi động lại máy sáng nay, màn hình bị chớp đen mỗi 10 giây.",
-  "category": "Hardware",
-  "severity": "Warning",
-  "deviceId": "8f9b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"
+  "severity": "High"
 }</code></pre>
           </div>
         </div>
@@ -2303,18 +2293,18 @@ X-SentinelLAN-CSRF: 1
           <ul class="pillar-features" style="margin-top: 14px;">
             <li><strong>Lớp 1:</strong> Context nhận diện Tenant qua Cookie / Subdomain.</li>
             <li><strong>Lớp 2:</strong> RBAC Authorization Policy phân quyền Admin / Tech / Employee.</li>
-            <li><strong>Lớp 3:</strong> EF Core Global Query Filter tự động chèn <code>WHERE OrganizationId = currentTenant</code>.</li>
+            <li><strong>Lớp 3:</strong> Store/service truyền organization scope tường minh vào truy vấn; hiện chưa có EF Core Global Query Filter.</li>
             <li><strong>Lớp 4:</strong> Partial Unique Index ở mức Engine DB ngăn chặn chồng chéo dữ liệu.</li>
           </ul>
         </div>
 
         <div class="algo-card">
-          <h4>📜 3. Append-Only Immutable Audit</h4>
+          <h4>📜 3. Application-Level Append-Only Audit Guard</h4>
           <p style="color: var(--text-muted); font-size: 0.92rem;">
             Nhật ký kiểm toán bất biến chống chối bỏ (Repudiation Prevention):
           </p>
           <ul class="pillar-features" style="margin-top: 14px;">
-            <li>Sử dụng EF Core <code>SaveChangesInterceptor</code> chặn đứng mọi thao tác <code>EntityState.Modified</code> hoặc <code>EntityState.Deleted</code> trên bảng AuditLogs.</li>
+            <li><code>SentinelDbContext.SaveChanges</code> từ chối entity AuditLog ở trạng thái <code>Modified</code> hoặc <code>Deleted</code> qua DbContext này.</li>
             <li>Bất kỳ cố gắng sửa hay xóa nhật ký đều kích hoạt <code>InvalidOperationException</code>.</li>
             <li>Ghi nhận định danh Actor, Target Device, Action, Nonce và UTC Timestamp.</li>
           </ul>
@@ -2395,11 +2385,11 @@ X-SentinelLAN-CSRF: 1
               Bảo vệ tính toàn vẹn của lệnh điều khiển gửi tới Agent, chống can thiệp (Tampering) và chống phát lại (Replay Attack).
             </p>
             <div class="algo-formula">
-              Signature = HMAC-SHA256(Key, CanonicalString)
+              Signature = HMAC-SHA256(Key, UTF8(JsonSerialize([10 values])) )
             </div>
-            <p style="color: var(--text-dim); font-size: 0.8rem; margin: 8px 0;">Chuỗi chuẩn hóa ghép 10 tham số:</p>
+            <p style="color: var(--text-dim); font-size: 0.8rem; margin: 8px 0;">JSON serialization của mảng 10 giá trị:</p>
             <div style="font-family: var(--font-mono); font-size: 0.76rem; background: rgba(0,0,0,0.5); padding: 8px; border-radius: 4px; color: var(--blue);">
-              $"{CommandId}|{OrgId}|{DeviceId}|{UserId}|{Type}|{Reason}|{IssuedAtUtc:O}|{ExpiresAtUtc:O}|{Nonce}|{Parameter}"
+              JSON array: [CommandId, OrganizationId, DeviceId, IssuedByUserId, Type, Reason, IssuedAtMs, ExpiresAtMs, Nonce, Parameter]
             </div>
             <ul class="pillar-features" style="margin-top: 10px;">
               <li>Nếu bất kỳ 1 byte nào trong 10 tham số bị thay đổi, chữ ký sẽ không khớp.</li>
@@ -2429,17 +2419,17 @@ X-SentinelLAN-CSRF: 1
         <!-- ALGO 4: BACKOFF JITTER -->
         <div class="algo-card">
           <div>
-            <h4>📈 4. Exponential Backoff với Full Jitter</h4>
+            <h4>📈 4. Exponential Delay với Jitter Nhỏ</h4>
             <p style="color: var(--text-muted); font-size: 0.9rem;">
               Thuật toán lùi thời gian kết nối lại khi mạng gặp sự cố, loại bỏ hiện tượng "Thundering Herd" làm sập máy chủ.
             </p>
             <div class="algo-formula">
-              T_sleep = random(0, min(T_max, T_base * 2^attempt))
+              delay = clamp(previousDelay * 2 ± random(0..500ms), 2s, 60s)
             </div>
             <ul class="pillar-features" style="margin-top: 10px;">
-              <li><strong>T_base:</strong> 2 giây khởi đầu.</li>
-              <li><strong>T_max:</strong> 300 giây (5 phút) trần tối đa.</li>
-              <li><strong>Full Jitter:</strong> Trộn số ngẫu nhiên giúp các máy tính không gửi request đồng loạt cùng 1 giây.</li>
+              <li><strong>Delay ban đầu:</strong> 5 giây.</li>
+              <li><strong>Giới hạn:</strong> Delay được clamp trong khoảng 2–60 giây.</li>
+              <li><strong>Giới hạn hiện tại:</strong> Worker chỉ cộng/trừ ngẫu nhiên tối đa 500 ms quanh exponential delay; chưa triển khai Full Jitter.</li>
             </ul>
           </div>
         </div>
@@ -2513,7 +2503,7 @@ X-SentinelLAN-CSRF: 1
               <strong>Khóa Tài Khoản Hiệu Lực Tức Thì:</strong> Khi tài khoản bị khóa (IsLocked), toàn bộ phiên làm việc của người dùng bị thu hồi ngay lập tức qua bảng <code>SessionRevocations</code>, vô hiệu hóa Access Token đang dùng.
             </li>
             <li>
-              <strong>Chuẩn Hóa Luồng QR Theo API Thật:</strong> Mã QR gốc chỉ hiển thị đúng một lần khi phát hành, được gắn chữ ký số HMAC và thời hạn hiệu lực, không thể đoán mò hoặc tái tạo từ tiền tố.
+              <strong>Luồng QR Theo API Thật:</strong> Mã opaque ngẫu nhiên chỉ trả khi phát hành; database lưu hash, tiền tố, hạn dùng tùy chọn và trạng thái thu hồi. Payload QR không có chữ ký HMAC.
             </li>
             <li>
               <strong>SSH Host Key Verification (Pinning):</strong> Quản trị Cloud VPS bắt buộc nhập vân tay SHA-256 Host Key đã xác minh; mọi phiên SSH so khớp byte-for-byte; các node cũ thiếu pin bị từ chối kết nối.
@@ -2525,7 +2515,7 @@ X-SentinelLAN-CSRF: 1
               <strong>Sửa Nhãn Lệnh Mô Phỏng Trung Thực:</strong> Các nhãn mô tả lệnh của Agent thể hiện rõ ràng bản chất mô phỏng an toàn (SimulateLock, SimulateNetworkIsolation), không gây hiểu nhầm là đã can thiệp OS thật.
             </li>
             <li>
-              <strong>Bộ Test Tự Động Xanh Toàn Diện:</strong> Web có 25 unit test và 6 Playwright E2E; Mobile có 38 test và 4 Maestro flows; Backend .NET có 79+ unit test nghiệp vụ; lint và typecheck đều đạt 100%.
+              <strong>Kiểm thử local ngày 25/09/2026:</strong> 142/142 .NET, 25/25 Vitest, 6/6 Playwright Chromium và 39/39 Mobile Jest đạt; web/mobile lint và typecheck, web production build cũng đạt. 7 Maestro YAML vẫn là kịch bản chưa chạy vì máy này thiếu adb/Android SDK. Kết quả này chưa thay thế nghiệm thu PostgreSQL, backup restore và Agent trên host triển khai.
             </li>
             <li>
               <strong>Hoàn Thiện .gitignore & Chống Rò Rỉ:</strong> Bổ sung quy tắc bỏ qua tài liệu, chứng chỉ, khóa bí mật, file backup cục bộ và cơ sở dữ liệu chỉ mục <code>.codegraph/</code>.
@@ -2538,7 +2528,7 @@ X-SentinelLAN-CSRF: 1
           <h4>⚠️ Các Giới Hạn Cần Kiểm Chứng Trước Production</h4>
           <ul class="readiness-list">
             <li>
-              <strong>Hàng Đợi Agent Còn Ở Bộ Nhớ (In-Memory):</strong> Hàng đợi telemetry và nonce cache của Agent hiện vẫn chỉ lưu trong RAM. Nếu Agent bị tắt hoặc khởi động lại máy, dữ liệu đệm chưa gửi sẽ bị mất (Cần nâng cấp lên SQLite bền vững trên đĩa).
+              <strong>Hàng Đợi Bền Vững Cần Kiểm Chứng Trên Host:</strong> Production code lưu queue giới hạn 50 mục và nonce cache vào file được mã hóa, Development dùng RAM. Linux cần khóa riêng SENTINELLAN_AGENT_STORE_KEY; cần xác minh restore sau restart trên từng OS/runtime triển khai.
             </li>
             <li>
               <strong>Lệnh Khóa / Cô Lập OS Vẫn Cố Ý Chỉ Mô Phỏng:</strong> Các lệnh <code>SimulateLock</code> và <code>SimulateNetworkIsolation</code> vẫn cố ý không can thiệp Win32 thật để bảo đảm an toàn môi trường dev. Cần nghiệm thu riêng trên máy lab chuyên dụng.
@@ -2553,7 +2543,7 @@ X-SentinelLAN-CSRF: 1
               <strong>Chưa Có Xác Thực Đa Yếu Tố (MFA):</strong> Hệ thống hiện mới hỗ trợ mật khẩu PBKDF2 và session cookie HttpOnly; luồng xác thực MFA (TOTP / FIDO2) là hạng mục cần bổ sung tiếp theo.
             </li>
             <li>
-              <strong>Chưa Có Kho Lưu Trữ Audit Bất Biến Bên Ngoài:</strong> AuditLog hiện được bảo vệ bằng EF Core SaveChangesInterceptor (không cho UPDATE/DELETE); chưa tích hợp kho lưu trữ WORM (Write Once Read Many) hoặc SIEM bên ngoài.
+              <strong>Giới Hạn Bảo Vệ Audit:</strong> SentinelDbContext.SaveChanges chặn entity AuditLog Modified/Deleted khi ghi qua DbContext này. Đây không phải interceptor hoặc bảo vệ DB-level; chưa có kho WORM hoặc SIEM bên ngoài.
             </li>
             <li>
               <strong>Chưa Tự Động Luân Chuyển Khóa (Key Rotation):</strong> Master Vault Key của VPS và Device Secret của Agent hiện là khóa tĩnh; chưa có cơ chế xoay vòng khóa tự động theo chu kỳ 90 ngày.
@@ -2575,21 +2565,17 @@ X-SentinelLAN-CSRF: 1
 
       <div class="code-container">
         <div class="code-header">
-          <span>VERIFICATION SUITE SUMMARY · STATUS: ALL GATES PASSED</span>
-          <span>CI PIPELINE GREEN</span>
+          <span>TEST INVENTORY · EXECUTION STATUS NOT VERIFIED HERE</span>
+          <span>RUN EACH GATE IN TARGET ENVIRONMENT</span>
         </div>
-        <pre class="code-body"><code>[✓] dotnet restore SentinelLAN.slnx                    --> Tất cả package up-to-date (NuGet audit: 0 vulnerabilities)
-[✓] dotnet build SentinelLAN.slnx                     --> 0 compile errors, 0 warnings (.NET 10 / C# 14)
-[✓] dotnet test SentinelLAN.slnx                      --> 79+ Unit & Business Logic Tests PASS (Domain, Agent, Application)
-[✓] npm run lint (apps/web)                           --> 0 errors, 0 warnings (React 19 Hooks compliant)
-[✓] npm run typecheck (apps/web)                      --> 0 TypeScript errors (Strict Mode TS 5.9)
-[✓] npm test (apps/web)                               --> 25/25 Vitest tests PASS (Components, hooks, api-client)
-[✓] npm run test:e2e (apps/web)                       --> 6/6 Playwright E2E tests PASS (Admin, Auth, SignalR, QR Lifecycle)
-[✓] npm run build (apps/web)                          --> Next.js 16 Turbopack production build thành công
-[✓] npm test (apps/mobile)                            --> 38/38 Mobile Tests PASS (React Native / Expo)
-[✓] maestro test (apps/mobile/e2e)                    --> 4/4 Maestro E2E Flows PASS (Activate, Scan, Incident, Loan)
-[✓] git diff --check                                  --> Không có conflict markers hay whitespace errors
-[!] Environment Gates Pending                         --> PostgreSQL runtime thật, Docker daemon & Windows WDAC DLL loading</code></pre>
+        <pre class="code-body"><code>[inventory] Backend .NET                     --> 109 khai báo [Fact]/[Theory] trong apps/backend/tests
+[inventory] Web Vitest                         --> 25 khai báo test
+[inventory] Web Playwright                     --> 4 E2E spec files; execution not verified here
+[inventory] Mobile Jest                         --> 39 khai báo test
+[inventory] Maestro                             --> 7 YAML flows; README ghi máy này thiếu adb/Android SDK
+[implemented] Agent retry                      --> Exponential delay với jitter ±500 ms, clamp 2–60 giây
+[implemented] Agent offline queue              --> Production protected file (capacity 50, 1h retention); Development RAM
+[pending] PostgreSQL runtime, restore drill, Windows WDAC DLL loading</code></pre>
       </div>
     </section>
 

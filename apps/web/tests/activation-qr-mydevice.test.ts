@@ -25,8 +25,10 @@ describe("Account Activation & Invitation Client", () => {
 
     expect(res.valid).toBe(true);
     expect(res.email).toBe("employee@sentinellan.local");
-    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toContain("/api/v1/auth/activation/validate?token=test-token-123");
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("/api/v1/auth/activation/validate");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({ token: "test-token-123" });
   });
 
   it("submits password activation request with single-use token", async () => {
@@ -63,7 +65,7 @@ describe("Account Activation & Invitation Client", () => {
       new Response(
         JSON.stringify({
           token: "new-token-456",
-          activationUrl: "/activate?token=new-token-456",
+          activationUrl: "/activate#token=new-token-456",
           expiresAt: "2026-09-23T12:00:00Z",
           userEmail: "emp@corp.local"
         }),
@@ -286,9 +288,11 @@ describe("My Device Personal Management Client", () => {
     const incidentRes = await client.reportMyDeviceIncident({
       title: "Screen flickering",
       description: "HDMI port loose",
-      severity: "Medium"
+      severity: "Medium",
+      idempotencyKey: "web-report-incident-test-1"
     });
     expect(incidentRes.id).toBe("inc-101");
     expect((fetchMock.mock.calls[1][1] as RequestInit).headers).toHaveProperty("X-SentinelLAN-CSRF", "1");
+    expect((fetchMock.mock.calls[1][1] as RequestInit).headers).toHaveProperty("Idempotency-Key", "web-report-incident-test-1");
   });
 });

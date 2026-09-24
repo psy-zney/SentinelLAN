@@ -1,11 +1,34 @@
-using System.Collections.Concurrent;
-
 namespace SentinelLAN.Agent.Core;
 
 public record DeviceIdentity(Guid DeviceId, string DeviceSecret);
 public record RemoteCommand(Guid Id, Guid DeviceId, string Type, string Reason, string Nonce, string Signature, DateTimeOffset IssuedAt, DateTimeOffset ExpiresAt, Guid OrganizationId = default, Guid IssuedByUserId = default, string? Parameter = null);
 public interface ICommandSignatureVerifier { bool IsConfigured { get; } bool Verify(RemoteCommand command); }
+public interface ICommandNonceStore { bool TryAdd(string nonce, DateTimeOffset expiresAt, DateTimeOffset now); }
+public sealed class InMemoryCommandNonceStore : ICommandNonceStore
+{
+    private readonly object _gate = new();
+    private readonly Dictionary<string, DateTimeOffset> _nonces = new(StringComparer.Ordinal);
+
+    public bool TryAdd(string nonce, DateTimeOffset expiresAt, DateTimeOffset now)
+    {
+        lock (_gate)
+        {
+            foreach (var expired in _nonces.Where(pair => pair.Value <= now).Select(pair => pair.Key).ToArray())
+                _nonces.Remove(expired);
+            if (_nonces.ContainsKey(nonce)) return false;
+            _nonces.Add(nonce, expiresAt);
+            return true;
+        }
+    }
+}
 public record ExecutionResult(bool Succeeded, string Message);
+public sealed record PendingCommandResult(Guid CommandId, DateTimeOffset ExpiresAt, ExecutionResult Result);
+public interface IPendingCommandResultStore
+{
+    PendingCommandResult? Load();
+    void Save(PendingCommandResult pending);
+    void Clear();
+}
 
 public interface IDeviceIdentityStore { Task<DeviceIdentity?> LoadAsync(CancellationToken cancellationToken); Task SaveAsync(DeviceIdentity identity, CancellationToken cancellationToken); }
 public interface ITelemetryCollector { TelemetrySnapshot Collect(); }
@@ -23,7 +46,9 @@ public interface IAgentApi
 public sealed class CommandVerifier
 {
     private static readonly HashSet<string> Allowed = ["ShowNotification", "CollectTelemetryNow", "RefreshPolicy", "SimulateLock", "SimulateNetworkIsolation", "RestartService"];
-    private readonly ConcurrentDictionary<string, byte> _seenNonces = new();
+    private readonly ICommandNonceStore _nonceStore;
+
+    public CommandVerifier(ICommandNonceStore? nonceStore = null) => _nonceStore = nonceStore ?? new InMemoryCommandNonceStore();
 
     public bool TryAccept(RemoteCommand command, Guid expectedDeviceId, DateTimeOffset now, Func<RemoteCommand, bool> verifySignature, out string reason)
     {
@@ -32,7 +57,7 @@ public sealed class CommandVerifier
         if (string.IsNullOrWhiteSpace(command.Nonce) || string.IsNullOrWhiteSpace(command.Signature) || command.ExpiresAt <= command.IssuedAt || command.ExpiresAt - command.IssuedAt > TimeSpan.FromMinutes(15)) { reason = "Invalid command envelope"; return false; }
         if (now < command.IssuedAt.AddMinutes(-1) || now >= command.ExpiresAt) { reason = "Expired or issued in the future"; return false; }
         if (!verifySignature(command)) { reason = "Invalid signature"; return false; }
-        if (!_seenNonces.TryAdd(command.Nonce, 0)) { reason = "Replay detected"; return false; }
+        if (!_nonceStore.TryAdd(command.Nonce, command.ExpiresAt, now)) { reason = "Replay detected or nonce capacity reached"; return false; }
         reason = string.Empty;
         return true;
     }
@@ -70,52 +95,97 @@ public static class SafeCommandExecutor
 }
 
 
-public class ResilientOfflineQueue<T>(int capacity = 100)
+public sealed record OfflineQueueEntry<T>(DateTimeOffset CreatedAt, T Value);
+
+public interface IOfflineQueueStore<T>
 {
-    private readonly ConcurrentQueue<(DateTimeOffset CreatedAt, T Value)> _items = new();
-    public int Count => _items.Count;
+    IReadOnlyList<OfflineQueueEntry<T>> Load();
+    void Save(IReadOnlyList<OfflineQueueEntry<T>> entries);
+}
+
+public class ResilientOfflineQueue<T>
+{
+    private readonly object _gate = new();
+    private readonly List<OfflineQueueEntry<T>> _items;
+    private readonly IOfflineQueueStore<T>? _store;
+    private readonly int _capacity;
+    private readonly TimeSpan _maxRetention;
+
+    public ResilientOfflineQueue(int capacity = 50, IOfflineQueueStore<T>? store = null, TimeSpan? maxRetention = null)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(capacity, 1);
+        _capacity = capacity;
+        _store = store;
+        _maxRetention = maxRetention ?? TimeSpan.FromHours(1);
+        if (_maxRetention <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(maxRetention));
+        _items = store?.Load().ToList() ?? [];
+        if (Prune(DateTimeOffset.UtcNow - _maxRetention)) _store?.Save(_items);
+    }
+    public int Count { get { lock (_gate) return _items.Count; } }
 
     public void Enqueue(T value)
     {
-        _items.Enqueue((DateTimeOffset.UtcNow, value));
-        while (_items.Count > capacity) _items.TryDequeue(out _);
+        lock (_gate)
+        {
+            var previous = _items.ToArray();
+            Prune(DateTimeOffset.UtcNow - _maxRetention);
+            _items.Add(new OfflineQueueEntry<T>(DateTimeOffset.UtcNow, value));
+            while (_items.Count > _capacity) _items.RemoveAt(0);
+            try { _store?.Save(_items); }
+            catch { _items.Clear(); _items.AddRange(previous); throw; }
+        }
     }
 
     public bool TryPeek(TimeSpan retention, out T? value)
     {
-        var minimum = DateTimeOffset.UtcNow - retention;
-        while (_items.TryPeek(out var item))
+        lock (_gate)
         {
-            if (item.CreatedAt >= minimum)
+            var previous = _items.ToArray();
+            if (Prune(DateTimeOffset.UtcNow - Min(retention, _maxRetention)))
             {
-                value = item.Value;
-                return true;
+                try { _store?.Save(_items); }
+                catch { _items.Clear(); _items.AddRange(previous); throw; }
             }
-            _items.TryDequeue(out _);
+            if (_items.Count > 0) { value = _items[0].Value; return true; }
+            value = default;
+            return false;
         }
-        value = default;
-        return false;
     }
 
     public bool TryDequeue(out T? value)
     {
-        if (_items.TryDequeue(out var item))
+        lock (_gate)
         {
-            value = item.Value;
+            if (_items.Count == 0) { value = default; return false; }
+            var first = _items[0];
+            _items.RemoveAt(0);
+            try { _store?.Save(_items); }
+            catch { _items.Insert(0, first); throw; }
+            value = first.Value;
             return true;
         }
-        value = default;
-        return false;
     }
 
     public IReadOnlyList<T> Drain(TimeSpan retention)
     {
-        var minimum = DateTimeOffset.UtcNow - retention;
-        var values = new List<T>();
-        while (_items.TryDequeue(out var item))
+        lock (_gate)
         {
-            if (item.CreatedAt >= minimum) values.Add(item.Value);
+            var minimum = DateTimeOffset.UtcNow - Min(retention, _maxRetention);
+            var previous = _items.ToArray();
+            var values = _items.Where(item => item.CreatedAt >= minimum).Select(item => item.Value).ToArray();
+            _items.Clear();
+            try { _store?.Save(_items); }
+            catch { _items.AddRange(previous); throw; }
+            return values;
         }
-        return values;
     }
+
+    private bool Prune(DateTimeOffset minimum)
+    {
+        var removed = _items.RemoveAll(item => item.CreatedAt < minimum) > 0;
+        while (_items.Count > _capacity) { _items.RemoveAt(0); removed = true; }
+        return removed;
+    }
+
+    private static TimeSpan Min(TimeSpan left, TimeSpan right) => left < right ? left : right;
 }

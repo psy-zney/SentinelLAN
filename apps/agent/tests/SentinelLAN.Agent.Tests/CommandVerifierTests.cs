@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Diagnostics;
 using SentinelLAN.Agent.Core;
 using SentinelLAN.Agent.Infrastructure;
 
@@ -8,6 +9,91 @@ namespace SentinelLAN.Agent.Tests;
 
 public sealed class CommandVerifierTests
 {
+    private const string StoreKey = "unit-test-only-agent-store-key-32-bytes-min";
+
+    [Fact]
+    public async Task ProtectedNonceCacheRejectsReplayAcrossProcessRestart()
+    {
+        var path = Environment.GetEnvironmentVariable("SENTINELLAN_NONCE_PROBE_PATH");
+        if (Environment.GetEnvironmentVariable("SENTINELLAN_NONCE_RESTART_PROBE") == "1")
+        {
+            Assert.False(string.IsNullOrWhiteSpace(path));
+            var nonce = Environment.GetEnvironmentVariable("SENTINELLAN_NONCE_PROBE_VALUE")!;
+            var store = new ProtectedCommandNonceStore(path!, StoreKey);
+            var command = Command("SimulateLock") with { Nonce = nonce };
+            Assert.False(new CommandVerifier(store).TryAccept(command, command.DeviceId, DateTimeOffset.UtcNow, _ => true, out _));
+            return;
+        }
+
+        var tempDirectory = Path.Combine(Path.GetTempPath(), $"sentinellan-nonce-restart-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDirectory);
+        var storePath = Path.Combine(tempDirectory, "command-nonces.dat");
+        var nonceValue = Guid.NewGuid().ToString("N");
+        try
+        {
+            var now = DateTimeOffset.UtcNow;
+            Assert.True(new ProtectedCommandNonceStore(storePath, StoreKey).TryAdd(nonceValue, now.AddMinutes(10), now));
+
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo("dotnet")
+                {
+                    WorkingDirectory = FindRepositoryRoot(),
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false
+                }
+            };
+            process.StartInfo.ArgumentList.Add("test");
+            process.StartInfo.ArgumentList.Add(Path.Combine(FindRepositoryRoot(), "apps/agent/tests/SentinelLAN.Agent.Tests/SentinelLAN.Agent.Tests.csproj"));
+            process.StartInfo.ArgumentList.Add("--no-build");
+            process.StartInfo.ArgumentList.Add("--no-restore");
+            process.StartInfo.ArgumentList.Add("--configuration");
+            process.StartInfo.ArgumentList.Add(new DirectoryInfo(AppContext.BaseDirectory).Parent?.Name ?? "Development");
+            process.StartInfo.ArgumentList.Add("--filter");
+            process.StartInfo.ArgumentList.Add("FullyQualifiedName~ProtectedNonceCacheRejectsReplayAcrossProcessRestart");
+            process.StartInfo.ArgumentList.Add("--verbosity");
+            process.StartInfo.ArgumentList.Add("quiet");
+            process.StartInfo.Environment["SENTINELLAN_NONCE_RESTART_PROBE"] = "1";
+            process.StartInfo.Environment["SENTINELLAN_NONCE_PROBE_PATH"] = storePath;
+            process.StartInfo.Environment["SENTINELLAN_NONCE_PROBE_VALUE"] = nonceValue;
+            Assert.True(process.Start(), "Could not start the child test process.");
+
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(90));
+            var stdout = process.StandardOutput.ReadToEndAsync(timeout.Token);
+            var stderr = process.StandardError.ReadToEndAsync(timeout.Token);
+            await process.WaitForExitAsync(timeout.Token);
+            var output = await stdout;
+            var error = await stderr;
+            Assert.True(process.ExitCode == 0, $"Child process rejected replay test failed. stdout: {output}\nstderr: {error}");
+        }
+        finally
+        {
+            if (Directory.Exists(tempDirectory)) Directory.Delete(tempDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ProtectedNonceCacheFailsClosedWhenCiphertextIsCorrupt()
+    {
+        var tempDirectory = Path.Combine(Path.GetTempPath(), $"sentinellan-nonce-corrupt-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDirectory);
+        var path = Path.Combine(tempDirectory, "command-nonces.dat");
+        try
+        {
+            var now = DateTimeOffset.UtcNow;
+            Assert.True(new ProtectedCommandNonceStore(path, StoreKey).TryAdd(Guid.NewGuid().ToString("N"), now.AddMinutes(5), now));
+            var ciphertext = File.ReadAllBytes(path);
+            ciphertext[^1] ^= 0x80;
+            File.WriteAllBytes(path, ciphertext);
+            Assert.ThrowsAny<Exception>(() => new ProtectedCommandNonceStore(path, StoreKey));
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, recursive: true);
+        }
+    }
+
     [Fact]
     public void RejectsExpiredAndReplayedCommands()
     {
@@ -103,6 +189,14 @@ public sealed class CommandVerifierTests
 
     private static RemoteCommand Command(string type, string? parameter = null) =>
         new(Guid.NewGuid(), Guid.NewGuid(), type, "Demo", Guid.NewGuid().ToString("N"), "sig", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(1), Parameter: parameter);
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "SentinelLAN.slnx")))
+            directory = directory.Parent;
+        return directory?.FullName ?? throw new DirectoryNotFoundException("Could not locate SentinelLAN.slnx from the test output directory.");
+    }
 
     private static string Sign(RemoteCommand command, string key)
     {
