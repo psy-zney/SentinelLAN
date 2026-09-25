@@ -133,7 +133,7 @@ public sealed class AuthenticationApiTests(SentinelApiFactory factory) : IClassF
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<SentinelDbContext>();
         var demo = await db.Organizations.SingleAsync(organization => organization.Code == "demo");
-        var employee = await db.Users.SingleAsync(user => user.OrganizationId == demo.Id && user.Role == Roles.Employee);
+        var employee = await db.Users.SingleAsync(user => user.OrganizationId == demo.Id && user.Email == "employee@sentinellan.local");
         var other = await db.Organizations.SingleOrDefaultAsync(organization => organization.Code == "other-test");
         if (other is null)
         {

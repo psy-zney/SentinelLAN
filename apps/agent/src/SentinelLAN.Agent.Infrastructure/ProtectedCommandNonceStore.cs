@@ -93,9 +93,7 @@ public sealed class ProtectedCommandNonceStore : ICommandNonceStore
             throw new InvalidDataException("The protected Agent command nonce cache exceeds its storage limit.");
 
         var directory = Path.GetDirectoryName(_path) ?? throw new InvalidOperationException("The Agent data directory is not configured.");
-        Directory.CreateDirectory(directory);
-        if (!OperatingSystem.IsWindows())
-            File.SetUnixFileMode(directory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        ProtectedStoreDirectory.Ensure(directory);
         var temporaryPath = Path.Combine(directory, $".command-nonces-{Guid.NewGuid():N}.tmp");
         try
         {

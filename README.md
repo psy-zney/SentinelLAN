@@ -18,7 +18,7 @@ SentinelLAN quản lý thiết bị đầu cuối được tổ chức cho phép
 | `deploy` | Dockerfile, reverse proxy và bộ cài Agent |
 | `scripts` | Khởi tạo, kiểm thử, sao lưu và diễn tập khôi phục |
 
-Ranh giới kiến trúc và luồng chi tiết nằm trong [bản đồ hệ thống HTML](docs/system-map.html), [tổng quan dự án](docs/project-overview.md) và [ADR](docs/adr/0002-modular-monolith.md). [SQL PostgreSQL](docs/database/schema.postgresql.sql) được sinh từ EF Core migrations. Tài liệu trong `docs/local/`, `docs/private/`, chứng chỉ, dump, `.env` và ghi chú hạ tầng cá nhân không được đưa vào Git hoặc Docker build context.
+Ranh giới kiến trúc và luồng chi tiết nằm trong [bản đồ hệ thống HTML](docs/system-map.html), [trang giới thiệu và tải về](docs/site/index.html), [tổng quan dự án](docs/project-overview.md) và [ADR](docs/adr/0002-modular-monolith.md). [SQL PostgreSQL](docs/database/schema.postgresql.sql) được sinh từ EF Core migrations. Tài liệu trong `docs/local/`, `docs/private/`, chứng chỉ, dump, `.env` và ghi chú hạ tầng cá nhân không được đưa vào Git hoặc Docker build context.
 
 ## Chạy cục bộ bằng Docker Compose
 
@@ -93,14 +93,14 @@ Tem QR chứa mã ngẫu nhiên chỉ trả một lần khi phát hành. Hãy in
 
 ## Cài Agent
 
-Admin cấp enrollment token trên dashboard, sau đó publish Agent tương ứng:
+Admin cấp enrollment token trên dashboard. Windows ưu tiên MSI; cài MSI và cấu hình service bằng script tải từ cùng GitHub Release:
 
 ```powershell
-dotnet publish apps/agent/src/SentinelLAN.Agent/SentinelLAN.Agent.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish/win-x64
-./deploy/agent/install-windows-agent.ps1 -ServerUrl 'https://sentinel.example.com'
+msiexec /i .\SentinelLAN.Agent.msi
+.\configure-windows-agent.ps1 -ServerUrl 'https://sentinel.example.com'
 ```
 
-Installer Windows hỏi token mà không cần truyền trên command line và xóa biến token toàn máy sau khi identity được ghi. Với Linux, publish `-r linux-x64 -o publish/linux-x64`, sau đó chạy `sudo bash deploy/agent/install-linux-agent.sh --server https://sentinel.example.com`. Installer tạo user dịch vụ riêng và tự sinh `SENTINELLAN_AGENT_STORE_KEY` ngẫu nhiên, lưu trong `/etc/sentinellan/agent.env` với quyền đọc/ghi hạn chế; cài lại giữ khóa cũ. Khóa này bảo vệ identity, queue và nonce store bằng AES-GCM, không chuyển sang máy khác. Khi tự triển khai không dùng installer, phải cấp một khóa riêng tối thiểu 32 ký tự cho service environment. Hướng dẫn thêm: [Agent enrollment](docs/guides/agent-enrollment-guide.md).
+Script hỏi token qua prompt, không truyền token trên dòng lệnh MSI. EXE cùng script `install-windows-agent.ps1` là lựa chọn phụ cho triển khai thủ công; không chạy script EXE sau khi cài MSI. Với Linux, publish `-r linux-x64 -o publish/linux-x64`, sau đó chạy `sudo bash deploy/agent/install-linux-agent.sh --server https://sentinel.example.com`. Installer tạo user dịch vụ riêng và tự sinh `SENTINELLAN_AGENT_STORE_KEY` ngẫu nhiên, lưu trong `/etc/sentinellan/agent.env` với quyền đọc/ghi hạn chế; cài lại giữ khóa cũ. Khóa này bảo vệ identity, queue và nonce store bằng AES-GCM, không chuyển sang máy khác. Khi tự triển khai không dùng installer, phải cấp một khóa riêng tối thiểu 32 ký tự cho service environment. Hướng dẫn thêm: [Agent enrollment](docs/guides/agent-enrollment-guide.md).
 
 ## Sao lưu, khôi phục và ứng phó
 

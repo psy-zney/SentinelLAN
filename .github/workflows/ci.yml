@@ -41,6 +41,19 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Validate VPS Compose Configuration
+        env:
+          PUBLIC_DOMAIN: sentinel.example.test
+          POSTGRES_PASSWORD: ci-only-password
+          BOOTSTRAP_ORG_CODE: ci-org
+          BOOTSTRAP_ORG_NAME: CI Organization
+          BOOTSTRAP_ADMIN_EMAIL: admin@example.test
+          BOOTSTRAP_ADMIN_PASSWORD: ci-only-admin-password
+          SIGNING_KEY: ci-command-signing-key-at-least-32-characters
+          ACCESS_TOKEN_SIGNING_KEY: ci-access-token-key-at-least-32-characters
+          SERVER_VAULT_KEY: ci-server-vault-key-at-least-32-characters
+        run: docker compose -f deploy/vps/docker-compose.prod.yaml config --quiet
+
       - name: Setup .NET 10 SDK
         uses: actions/setup-dotnet@v4
         with:
@@ -97,11 +110,22 @@ jobs:
           npx expo export --platform android --output-dir ../../dist/mobile-android
           npx expo export --platform ios --output-dir ../../dist/mobile-ios
 
+      - name: Install Chromium for E2E
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Browser E2E Tests
+        run: npm run test:e2e
+        env:
+          ConnectionStrings__SentinelLAN: ""
+
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: test-results
-          path: "**/TestResults/**"
+          path: |
+            **/TestResults/**
+            apps/web/playwright-report/**
+            apps/web/test-results/**
           if-no-files-found: ignore
           retention-days: 7

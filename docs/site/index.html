@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="SentinelLAN: quản lý và giám sát endpoint được ủy quyền trong mạng LAN. Tải Agent, xem hướng dẫn triển khai và luồng hệ thống.">
+  <title>SentinelLAN · Giới thiệu và tải về</title>
+  <link rel="stylesheet" href="site.css">
+  <script src="downloads.js" defer></script>
+</head>
+<body>
+  <header class="topbar wrap">
+    <a class="brand" href="./" aria-label="SentinelLAN, trang chủ"><span class="mark">S</span><span>SentinelLAN<small>Endpoint management</small></span></a>
+    <nav aria-label="Điều hướng chính">
+      <a href="#gioi-thieu">Giới thiệu</a><a href="#tai-ve">Tải về</a><a href="#huong-dan">Hướng dẫn</a><a href="system-map.html">Sơ đồ luồng</a>
+    </nav>
+  </header>
+  <main>
+    <section class="hero wrap" id="gioi-thieu">
+      <div>
+        <p class="eyebrow">Quản lý thiết bị trong mạng nội bộ</p>
+        <h1>Một luồng rõ ràng cho quản trị viên, nhân viên và từng máy trạm.</h1>
+        <p class="lead">SentinelLAN kết nối Agent trên thiết bị đã được tổ chức cho phép với API trên VPS. Quản trị viên cấp quyền và theo dõi trạng thái; nhân viên xem thiết bị được gán và báo sự cố. Hệ thống thu thập chỉ số kỹ thuật như CPU, RAM, ổ đĩa và nhịp kết nối.</p>
+        <div class="actions"><a class="button primary" href="#tai-ve">Chọn gói tải về</a><a class="button light" href="system-map.html">Xem toàn bộ luồng</a></div>
+      </div>
+      <aside class="diagram" aria-label="Các chủ thể trong hệ thống">
+        <p class="diagram-title">Sơ lược kiến trúc</p>
+        <div>Máy admin <span>Web dashboard</span></div>
+        <div>Máy nhân viên <span>Agent / Web / Mobile</span></div>
+        <div class="line">Mạng LAN · HTTPS ra ngoài</div>
+        <div>VPS <span>API · PostgreSQL · Web</span></div>
+        <p>Agent chủ động gửi heartbeat và telemetry. VPS không cần mở cổng điều khiển vào máy trạm.</p>
+      </aside>
+    </section>
+
+    <section class="band" id="cach-hoat-dong"><div class="wrap">
+      <div class="section-head"><p class="eyebrow">Cách hoạt động</p><h2>Từ đăng ký tới xử lý sự cố</h2></div>
+      <div class="steps">
+        <article><span>01</span><h3>Đăng ký thiết bị</h3><p>Admin tạo token một lần. Agent dùng HTTPS để đăng ký và lưu định danh được bảo vệ trên máy.</p></article>
+        <article><span>02</span><h3>Gửi trạng thái</h3><p>Agent gửi heartbeat và chỉ số kỹ thuật định kỳ; khi mất mạng, telemetry chờ gửi lại trong giới hạn.</p></article>
+        <article><span>03</span><h3>Phân quyền</h3><p>Admin gán thiết bị cho nhân viên. Web hiển thị theo vai trò; mobile hiện phục vụ nhân viên.</p></article>
+        <article><span>04</span><h3>Xử lý và kiểm toán</h3><p>Nhân viên báo sự cố; thao tác nhạy cảm cần quyền phù hợp và được ghi vào nhật ký kiểm toán.</p></article>
+      </div>
+      <p class="note">SentinelLAN hiện không cung cấp packet sniffing, remote desktop hay khóa máy thật trong Agent mặc định. Xem <a href="system-map.html">sơ đồ chủ thể, bảo mật, truyền tệp và database</a>.</p>
+    </div></section>
+
+    <section class="wrap downloads" id="tai-ve">
+      <div class="section-head"><p class="eyebrow">Tải về</p><h2>Chọn đúng gói cho thiết bị</h2><p id="release-status" role="status">Đang kiểm tra bản phát hành công khai…</p></div>
+      <div class="download-grid">
+        <article class="card featured"><span class="badge">Ưu tiên cho Windows</span><h3>Windows Installer <small>.msi · x64</small></h3><p>Cài Agent thành Windows Service để quản lý bằng công cụ triển khai của tổ chức. Sau khi cài, admin chạy bước cấu hình riêng để nhập URL máy chủ và token.</p><a class="button primary asset-link" data-asset="SentinelLAN.Agent.msi" href="https://github.com/psy-zney/SentinelLAN/releases">Xem bản phát hành MSI</a></article>
+        <article class="card"><span class="badge neutral">Lựa chọn phụ</span><h3>Windows binary <small>.exe · x64</small></h3><p>File chạy độc lập cho kiểm tra hoặc triển khai thủ công bởi IT. File EXE không tự đăng ký service.</p><a class="button light asset-link" data-asset="SentinelLAN.Agent.exe" href="https://github.com/psy-zney/SentinelLAN/releases">Xem bản phát hành EXE</a></article>
+        <article class="card"><span class="badge neutral">Linux</span><h3>Agent binary <small>linux-x64</small></h3><p>Dùng cùng script cài systemd và hướng dẫn cấp token cho máy Linux được ủy quyền.</p><a class="button light asset-link" data-asset="SentinelLAN.Agent" href="https://github.com/psy-zney/SentinelLAN/releases">Xem bản phát hành Linux</a></article>
+        <article class="card"><span class="badge neutral">Máy chủ</span><h3>VPS bundle <small>.tar.gz</small></h3><p>Mã nguồn và cấu hình mẫu để tự triển khai API, Web và PostgreSQL. Mỗi môi trường cần tự cấp domain, chứng chỉ và biến bí mật.</p><a class="button light asset-link" data-asset="sentinellan-vps-deployment.tar.gz" href="https://github.com/psy-zney/SentinelLAN/releases">Xem gói VPS</a></article>
+      </div>
+      <p class="note">Ứng dụng mobile nhân viên hiện được kiểm tra dưới dạng Expo source; chưa có APK hoặc IPA phát hành. Mobile Admin chưa có app riêng. <a href="https://github.com/psy-zney/SentinelLAN/tree/main/apps/mobile">Xem mã nguồn mobile</a>. Kiểm tra <a class="asset-link" data-asset="SHA256SUMS.txt" href="https://github.com/psy-zney/SentinelLAN/releases">SHA256SUMS.txt</a> trước khi cài.</p>
+    </section>
+
+    <section class="band" id="huong-dan"><div class="wrap guide">
+      <div><p class="eyebrow">Hướng dẫn nhanh</p><h2>Cài Windows bằng MSI</h2><ol><li>Admin triển khai VPS và xác nhận API có chứng chỉ HTTPS hợp lệ.</li><li>Admin tạo enrollment token một lần trên dashboard cho máy được phép.</li><li>Tải MSI từ Release, kiểm tra SHA-256 rồi cài với quyền Administrator.</li><li>Tải script cấu hình cùng Release; mở PowerShell Administrator và chạy lệnh bên dưới. Script hỏi token qua prompt, bật service và xóa token khỏi file cấu hình sau khi đăng ký.</li><li>Kiểm tra service <code>SentinelLANAgent</code> và heartbeat trong dashboard.</li></ol></div>
+      <div class="command"><p>PowerShell · chạy tại thư mục có script</p><pre><code>./configure-windows-agent.ps1 -ServerUrl 'https://sentinel.example.com'</code></pre><a class="asset-link" data-asset="configure-windows-agent.ps1" href="https://github.com/psy-zney/SentinelLAN/releases">Lấy script cấu hình từ Release →</a><hr><p>Muốn cài im lặng qua công cụ quản trị?</p><pre><code>msiexec /i SentinelLAN.Agent.msi /qn</code></pre><small>Cấu hình URL và token bằng script riêng trên từng máy; không đặt token trên dòng lệnh MSI.</small></div>
+    </div></section>
+    <section class="wrap closing"><h2>Release công khai có phù hợp?</h2><p>Có, cho bộ cài và mã triển khai không chứa bí mật. GitHub Release không mang theo <code>.env</code>, dữ liệu PostgreSQL, chứng chỉ hoặc khóa của VPS. Người vận hành tự cấp các giá trị này theo <a href="https://github.com/psy-zney/SentinelLAN/blob/main/docs/deployment/saas-vps-guide.md">hướng dẫn triển khai VPS</a>. Mỗi máy trạm cần token đăng ký riêng do admin tạo trong hệ thống đang chạy.</p></section>
+  </main>
+  <footer class="wrap"><span>© SentinelLAN · Dự án quản lý endpoint được ủy quyền</span><a href="https://github.com/psy-zney/SentinelLAN">Mã nguồn trên GitHub</a></footer>
+</body>
+</html>

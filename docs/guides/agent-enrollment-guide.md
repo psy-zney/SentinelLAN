@@ -4,6 +4,17 @@ Admin tạo token enrollment 1–60 phút trong dashboard, ghi lý do và xác n
 
 ## Windows
 
+Windows MSI là lựa chọn chính. Tải `SentinelLAN.Agent.msi`, `configure-windows-agent.ps1` và `SHA256SUMS.txt` từ cùng một GitHub Release; kiểm tra SHA-256 trước khi cài. Mở PowerShell Administrator:
+
+```powershell
+msiexec /i .\SentinelLAN.Agent.msi
+.\configure-windows-agent.ps1 -ServerUrl 'https://sentinel.example.com'
+```
+
+MSI chỉ cài binary và đăng ký service LocalService ở trạng thái chờ. Script cấu hình hỏi token qua prompt, lưu tạm trong thư mục ProgramData chỉ dành cho SYSTEM, Administrators và tài khoản service, chạy service và xóa token khỏi file cấu hình sau khi đăng ký hoặc khi xảy ra lỗi. Không đưa token vào tham số `msiexec`, log, issue hay trang tải. Kiểm tra `Get-Service SentinelLANAgent` và heartbeat sau khi cấu hình. Không gỡ MSI khi chỉ cần đổi URL; chạy lại script với URL mới.
+
+EXE là lựa chọn phụ để triển khai thủ công hoặc kiểm tra. Quy trình dưới đây dành riêng cho EXE và không dùng sau khi đã cài MSI vì sẽ đăng ký service chồng lên bộ cài. Nếu máy đã có service cài bằng script EXE cũ, hãy gỡ service cũ theo quy trình vận hành, thu hồi định danh thiết bị cũ rồi cài MSI và đăng ký lại bằng token mới; không sao chép file identity giữa tài khoản dịch vụ.
+
 ```powershell
 dotnet publish apps/agent/src/SentinelLAN.Agent/SentinelLAN.Agent.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish/win-x64
 ```
@@ -23,7 +34,7 @@ dotnet publish apps/agent/src/SentinelLAN.Agent/SentinelLAN.Agent.csproj -c Rele
 sudo bash deploy/agent/install-linux-agent.sh --server https://sentinel.example.com
 ```
 
-Script hỏi token, tạo user dịch vụ `sentinellan`, khóa identity riêng trong `/etc/sentinellan/agent.env` và dữ liệu trong `/var/lib/sentinellan-agent`. Khóa Linux phải được giữ khi cài lại; mất khóa thì cần thu hồi device cũ rồi đăng ký lại. Có thể truyền `--signing-key-file <root-only-file>` nếu vận hành luồng lệnh có chữ ký; khóa phải khớp server và phải phân phối bằng kênh riêng. Không bật lệnh khóa/cô lập thật; mã hiện chỉ mô phỏng.
+Script hỏi token, tạo user dịch vụ `sentinellan`, khóa identity riêng trong `/etc/sentinellan/agent.env` và dữ liệu trong `/var/lib/sentinellan-agent`. Thư mục dữ liệu Linux phải chỉ chủ sở hữu truy cập (mode 0700); Agent từ chối ghi vào thư mục có quyền nhóm/người khác thay vì tự đổi quyền thư mục dùng chung. Khóa Linux phải được giữ khi cài lại; mất khóa thì cần thu hồi device cũ rồi đăng ký lại. Có thể truyền `--signing-key-file <root-only-file>` nếu vận hành luồng lệnh có chữ ký; khóa phải khớp server và phải phân phối bằng kênh riêng. Không bật lệnh khóa/cô lập thật; mã hiện chỉ mô phỏng.
 
 ## Kiểm tra và xử lý lỗi
 

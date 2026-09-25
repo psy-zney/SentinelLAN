@@ -61,9 +61,7 @@ public sealed class ProtectedPendingCommandResultStore(string path, string? nonW
                 throw new InvalidDataException("The protected Agent command result exceeds its storage limit.");
 
             var directory = Path.GetDirectoryName(path) ?? throw new InvalidOperationException("The Agent data directory is not configured.");
-            Directory.CreateDirectory(directory);
-            if (!OperatingSystem.IsWindows())
-                File.SetUnixFileMode(directory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            ProtectedStoreDirectory.Ensure(directory);
 
             var temporaryPath = Path.Combine(directory, $".command-result-{Guid.NewGuid():N}.tmp");
             try

@@ -1,0 +1,28 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="SentinelLAN Endpoint Agent" Manufacturer="SentinelLAN"
+           Version="$(var.ProductVersion)" UpgradeCode="A8F534F6-65F9-417A-B985-055721867CD4"
+           Scope="perMachine">
+    <SummaryInformation Description="Authorized SentinelLAN endpoint agent" />
+    <MajorUpgrade DowngradeErrorMessage="A newer SentinelLAN Agent is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="COMPANYFOLDER" Name="SentinelLAN">
+        <Directory Id="INSTALLFOLDER" Name="Agent" />
+      </Directory>
+    </StandardDirectory>
+    <ComponentGroup Id="AgentComponents" Directory="INSTALLFOLDER">
+      <Component Id="AgentService" Guid="3F875D35-30FE-41E3-8E54-EBC002F419B8">
+        <File Id="AgentExe" Source="$(var.AgentExe)" KeyPath="yes" />
+        <ServiceInstall Id="ServiceInstaller" Type="ownProcess" Name="SentinelLANAgent"
+                        DisplayName="SentinelLAN Endpoint Agent"
+                        Description="Authorized endpoint telemetry and management agent."
+                        Start="demand" Account="NT AUTHORITY\LocalService" ErrorControl="normal" />
+        <ServiceControl Id="ServiceController" Name="SentinelLANAgent"
+                        Stop="both" Remove="uninstall" Wait="yes" />
+      </Component>
+    </ComponentGroup>
+    <Feature Id="MainFeature" Title="SentinelLAN Agent" Level="1">
+      <ComponentGroupRef Id="AgentComponents" />
+    </Feature>
+  </Package>
+</Wix>

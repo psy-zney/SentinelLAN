@@ -23,7 +23,7 @@ Write-Host "`n[*] Publishing Windows Agent x64 SingleFile..." -ForegroundColor Y
 dotnet publish "$root\apps\agent\src\SentinelLAN.Agent\SentinelLAN.Agent.csproj" `
     -c Release `
     -r win-x64 `
-    --self-contained false `
+    --self-contained true `
     -p:PublishSingleFile=true `
     -o "$releaseDir\agents\windows"
 Copy-Item "$releaseDir\agents\windows\SentinelLAN.Agent.exe" "$releaseDir\agents\SentinelLAN.Agent.exe"
@@ -33,7 +33,7 @@ Write-Host "`n[*] Publishing Linux Agent x64 Binary..." -ForegroundColor Yellow
 dotnet publish "$root\apps\agent\src\SentinelLAN.Agent\SentinelLAN.Agent.csproj" `
     -c Release `
     -r linux-x64 `
-    --self-contained false `
+    --self-contained true `
     -p:PublishSingleFile=true `
     -o "$releaseDir\agents\linux"
 Copy-Item "$releaseDir\agents\linux\SentinelLAN.Agent" "$releaseDir\agents\SentinelLAN.Agent"

@@ -50,9 +50,7 @@ public sealed class ProtectedDeviceIdentityStore : IDeviceIdentityStore
     public async Task SaveAsync(DeviceIdentity identity, CancellationToken cancellationToken)
     {
         var directory = Path.GetDirectoryName(path)!;
-        Directory.CreateDirectory(directory);
-        if (!OperatingSystem.IsWindows())
-            File.SetUnixFileMode(directory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        ProtectedStoreDirectory.Ensure(directory);
         var plainBytes = JsonSerializer.SerializeToUtf8Bytes(identity);
         var protectedBytes = Protect(plainBytes);
         var temporaryPath = Path.Combine(directory, $".identity-{Guid.NewGuid():N}.tmp");

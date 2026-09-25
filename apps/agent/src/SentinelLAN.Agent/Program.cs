@@ -6,6 +6,13 @@ var builder = Host.CreateApplicationBuilder(args);
 if (OperatingSystem.IsWindows())
 {
     builder.Services.AddWindowsService(options => options.ServiceName = "SentinelLAN Agent");
+    if (builder.Environment.IsProduction())
+    {
+        var settingsPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "SentinelLAN", "Agent", "agent-settings.json");
+        builder.Configuration.AddJsonFile(settingsPath, optional: true, reloadOnChange: false);
+    }
 }
 
 var baseUrl = builder.Configuration["SENTINELLAN_API_URL"] ?? "http://localhost:8080";

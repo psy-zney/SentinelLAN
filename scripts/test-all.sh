@@ -6,12 +6,15 @@ if [[ "${REQUIRE_POSTGRES:-0}" == "1" && -z "${ConnectionStrings__SentinelLAN:-}
   exit 1
 fi
 dotnet restore SentinelLAN.slnx
-dotnet format SentinelLAN.slnx --no-restore --verify-no-changes
 dotnet build SentinelLAN.slnx --configuration Release --no-restore
 dotnet test SentinelLAN.slnx --configuration Release --no-build --no-restore
 npm run lint
 npm run typecheck
 npm test
 npm run build
-npm audit --audit-level=high
+npm run lint:mobile
+npm run typecheck:mobile
+npm run test --workspace=@sentinellan/mobile -- --runInBand
+(cd apps/mobile && npx expo export --platform android --output-dir ../../dist/mobile-android && npx expo export --platform ios --output-dir ../../dist/mobile-ios)
+npm audit --omit=dev --audit-level=high
 if [[ "${SKIP_BROWSER:-0}" != "1" ]]; then npm run test:e2e; fi

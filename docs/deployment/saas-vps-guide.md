@@ -2,6 +2,8 @@
 
 Đọc [README](../../README.md) để xem luồng khởi tạo và kiểm thử. Stack Production ở `deploy/vps/docker-compose.prod.yaml`: PostgreSQL nội bộ, API, web và Nginx TLS. Redis đã bỏ vì ứng dụng hiện không dùng; command Pending và audit nằm trong PostgreSQL. Không có demo seed ở Production.
 
+Nếu dùng `sentinellan-vps-deployment.tar.gz` từ GitHub Release, giải nén vào một thư mục riêng và giữ nguyên cấu trúc gốc `apps/`, `packages/`, `deploy/`, `scripts/`, `package-lock.json`. Chạy các lệnh bên dưới từ thư mục gốc đó; Compose cần mã nguồn và Dockerfile để build. Release Agent Windows/Linux là bản self-contained, không cần cài .NET runtime riêng trên máy đích.
+
 ## Chuẩn bị
 
 - Một tên DNS trỏ tới VPS và chứng chỉ TLS tin cậy cho tên đó. Đặt `fullchain.pem`, `privkey.pem` tại `deploy/vps/certs/`; giữ private key chỉ root đọc. Kiểm tra chuỗi chứng chỉ và hạn hết hạn trước khi chuyển lưu lượng.

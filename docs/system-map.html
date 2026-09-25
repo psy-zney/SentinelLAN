@@ -91,6 +91,8 @@
     .erd-hint { color:var(--muted); font-size:.85rem; margin-top:16px; }
     .links { display:flex; flex-wrap:wrap; gap:11px; margin-top:19px; }
     .links a { display:inline-block; background:#e9f4f6; padding:9px 13px; border-radius:9px; font-weight:700; text-decoration:none; }
+    .btn-msi { display:inline-flex; align-items:center; justify-content:center; gap:8px; background:var(--teal); color:#fff!important; padding:14px 20px; border-radius:10px; font-weight:700; text-decoration:none; margin-top:14px; }
+    .btn-msi:hover { background:#0a6b67; }
     footer { color:#d3e4ed; background:#0b2135; padding:30px 0; font-size:.88rem; }
     footer a { color:#9de3dd; }
     @media(max-width:880px) { .topology-grid { grid-template-columns:1fr; } .actor-stack { grid-template-columns:repeat(2,1fr); } .network { min-height:130px; } .network .arrow { margin:2px; } .cards,.erd { grid-template-columns:repeat(2,1fr); } .flow { grid-template-columns:repeat(2,1fr); } }
@@ -107,7 +109,7 @@
       <div class="hero-meta"><span class="pill">Quản lý endpoint trong LAN</span><span class="pill">Dữ liệu kỹ thuật tối thiểu</span><span class="pill">VPS là nơi triển khai hoặc phần mở rộng SSH</span></div>
     </div>
   </header>
-  <nav class="jump" aria-label="Mục lục"><div class="wrap"><a href="#subjects">Chủ thể</a><a href="#journey">Cách hoạt động</a><a href="#security">Bảo mật</a><a href="#transfer">Dữ liệu và tệp</a><a href="#database">Database và SQL</a><a href="#status">Ranh giới hiện tại</a></div></nav>
+  <nav class="jump" aria-label="Mục lục"><div class="wrap"><a href="#subjects">Chủ thể</a><a href="#journey">Cách hoạt động</a><a href="#security">Bảo mật</a><a href="#transfer">Dữ liệu và tệp</a><a href="#database">Database và SQL</a><a href="#status">Ranh giới hiện tại</a><a href="#download">Tải về Agent</a></div></nav>
   <main>
     <section id="subjects"><div class="wrap">
       <span class="eyebrow">01 / Bối cảnh thống nhất</span><h2>Các chủ thể liên kết thế nào?</h2>
@@ -203,7 +205,15 @@
       </tbody></table></div>
       <p style="margin-top:20px">Trọng tâm sản phẩm là quản lý vòng đời endpoint được ủy quyền trong LAN. Không có packet sniffing, IDS/IPS, remote desktop, đọc tệp cá nhân hay cô lập/khóa máy thật trong luồng Agent hiện tại.</p>
     </div></section>
+
+    <section id="download"><div class="wrap">
+      <span class="eyebrow">07 / Tải về &amp; cài đặt</span>
+      <h2>Gói Agent cho máy trạm được ủy quyền</h2>
+      <p class="section-intro">Windows MSI là lựa chọn cài đặt chính. MSI đăng ký service ở trạng thái chờ cấu hình; admin dùng script riêng để nhập URL HTTPS và token một lần. EXE là file chạy độc lập cho IT, còn Linux dùng binary cùng script systemd.</p>
+      <p><a class="btn-msi" href="./index.html">Mở trang giới thiệu, hướng dẫn và tải về</a></p>
+      <p style="font-size:.86rem;color:var(--muted)">Các file cài đặt chỉ được tải trực tiếp khi GitHub Release đã xuất bản asset tương ứng. Không truyền token qua tham số <code>msiexec</code>.</p>
+    </div></section>
   </main>
-  <footer><div class="wrap">SentinelLAN · tài liệu kiến trúc theo chủ thể. Nguồn chi tiết: <a href="project-overview.md">tổng quan</a>, <a href="architecture/data-flow.md">luồng dữ liệu</a>, <a href="security/threat-model.md">mô hình đe dọa</a>, <a href="deployment/saas-vps-guide.md">triển khai VPS</a>.</div></footer>
+  <footer><div class="wrap">SentinelLAN · tài liệu kiến trúc theo chủ thể. Nguồn chi tiết: <a href="https://github.com/psy-zney/SentinelLAN/blob/main/docs/project-overview.md">tổng quan</a>, <a href="https://github.com/psy-zney/SentinelLAN/blob/main/docs/architecture/data-flow.md">luồng dữ liệu</a>, <a href="https://github.com/psy-zney/SentinelLAN/blob/main/docs/security/threat-model.md">mô hình đe dọa</a>, <a href="https://github.com/psy-zney/SentinelLAN/blob/main/docs/deployment/saas-vps-guide.md">triển khai VPS</a>.</div></footer>
 </body>
 </html>

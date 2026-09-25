@@ -121,7 +121,8 @@ public sealed class AgentCycleTests
     [Fact]
     public async Task ProtectedDeviceIdentityStoreRoundtripSucceeds()
     {
-        var tempFile = Path.Combine(Path.GetTempPath(), $"sentinellan_test_{Guid.NewGuid():N}.dat");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"sentinellan_test_{Guid.NewGuid():N}");
+        var tempFile = Path.Combine(tempDir, "identity.dat");
         try
         {
             var store = new SentinelLAN.Agent.Infrastructure.ProtectedDeviceIdentityStore(tempFile, "test-agent-store-key-at-least-32-characters");
@@ -135,7 +136,32 @@ public sealed class AgentCycleTests
         }
         finally
         {
-            if (File.Exists(tempFile)) File.Delete(tempFile);
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ProtectedDeviceIdentityStoreRejectsSharedDirectoryWithoutChangingItsPermissions()
+    {
+        if (OperatingSystem.IsWindows()) return;
+
+        var tempDir = Path.Combine(Path.GetTempPath(), $"sentinellan_shared_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var sharedMode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute;
+            File.SetUnixFileMode(tempDir, sharedMode);
+            var store = new SentinelLAN.Agent.Infrastructure.ProtectedDeviceIdentityStore(
+                Path.Combine(tempDir, "identity.dat"), "test-agent-store-key-at-least-32-characters");
+
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => store.SaveAsync(
+                new DeviceIdentity(Guid.NewGuid(), "secret"), default));
+            Assert.Equal(sharedMode, File.GetUnixFileMode(tempDir));
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
         }
     }
 

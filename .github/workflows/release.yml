@@ -5,20 +5,40 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
-    inputs:
-      version:
-        description: "Release version tag (e.g. v1.0.0)"
-        required: true
-        default: "v1.0.0"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   verify:
     name: Run Quality Gates & Tests
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18.1-alpine
+        env:
+          POSTGRES_DB: sentinellan_test
+          POSTGRES_USER: sentinellan
+          POSTGRES_PASSWORD: test-only-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sentinellan -d sentinellan_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      CI: true
+      ConnectionStrings__SentinelLAN: Host=localhost;Port=5432;Database=sentinellan_test;Username=sentinellan;Password=test-only-password
     steps:
+      - name: Validate Release Tag
+        run: |
+          if [[ ! "$GITHUB_REF" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Run releases from an existing vX.Y.Z tag." >&2
+            exit 1
+          fi
+
       - name: Checkout Repository
         uses: actions/checkout@v4
 
@@ -39,22 +59,49 @@ jobs:
           node-version: "24.x"
           cache: npm
 
-      - name: Install Web Dependencies
-        run: npm.cmd ci
+      - name: Install Dependencies
+        run: npm ci
 
-      - name: Web Lint & Typecheck
-        run: |
-          npm.cmd run lint
-          npm.cmd run typecheck
+      - name: Audit Dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Lint Web Code
+        run: npm run lint
+
+      - name: Typecheck Web Code
+        run: npm run typecheck
 
       - name: Web Unit Tests
-        run: npm.cmd test
+        run: npm test
 
       - name: Build Web Production
-        run: npm.cmd run build
+        run: npm run build
+
+      - name: Lint Mobile Code
+        run: npm run lint:mobile
+
+      - name: Typecheck Mobile Code
+        run: npm run typecheck:mobile
+
+      - name: Run Mobile Unit Tests
+        run: npm run test --workspace=@sentinellan/mobile -- --runInBand
+
+      - name: Bundle Mobile JavaScript
+        working-directory: apps/mobile
+        run: |
+          npx expo export --platform android --output-dir ../../dist/mobile-android
+          npx expo export --platform ios --output-dir ../../dist/mobile-ios
+
+      - name: Install Chromium for E2E
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Browser E2E Tests
+        run: npm run test:e2e
+        env:
+          ConnectionStrings__SentinelLAN: ""
 
   build-windows-agent:
-    name: Build Windows Agent (.exe)
+    name: Build Windows Agent (MSI and EXE)
     needs: verify
     runs-on: windows-latest
     steps:
@@ -66,20 +113,23 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
-      - name: Publish Windows x64 Executable
+      - name: Build Windows Agent MSI and EXE
         run: |
-          dotnet publish apps/agent/src/SentinelLAN.Agent/SentinelLAN.Agent.csproj `
-            -c Release `
-            -r win-x64 `
-            --self-contained false `
-            -p:PublishSingleFile=true `
-            -o dist/windows-x64
+          $version = $env:GITHUB_REF_NAME.TrimStart('v').Split('-')[0]
+          ./deploy/agent/build-msi.ps1 -Version $version
+
+      - name: Stage Windows Release Files
+        run: |
+          New-Item -ItemType Directory -Force dist/release-windows | Out-Null
+          Copy-Item dist/windows-x64/SentinelLAN.Agent.exe dist/release-windows/
+          Copy-Item dist/windows-x64/SentinelLAN.Agent.msi dist/release-windows/
+          Copy-Item deploy/agent/configure-windows-agent.ps1 dist/release-windows/
 
       - name: Upload Windows Agent Artifact
         uses: actions/upload-artifact@v4
         with:
           name: sentinellan-agent-windows-x64
-          path: dist/windows-x64/SentinelLAN.Agent.exe
+          path: dist/release-windows/
 
   build-linux-agent:
     name: Build Linux Agent (Daemon Binary)
@@ -99,7 +149,7 @@ jobs:
           dotnet publish apps/agent/src/SentinelLAN.Agent/SentinelLAN.Agent.csproj \
             -c Release \
             -r linux-x64 \
-            --self-contained false \
+            --self-contained true \
             -p:PublishSingleFile=true \
             -o dist/linux-x64
 
@@ -113,6 +163,8 @@ jobs:
     name: Create GitHub Release & Package Distribution
     needs: [build-windows-agent, build-linux-agent]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -132,28 +184,55 @@ jobs:
       - name: Package VPS Deployment Bundle
         run: |
           mkdir -p release-assets/vps-deployment
-          cp -r deploy/vps/* release-assets/vps-deployment/
-          cp -r deploy/agent/* release-assets/vps-deployment/
-          tar -czvf release-assets/sentinellan-vps-deployment.tar.gz -C release-assets/vps-deployment .
-          rm -rf release-assets/vps-deployment
+          cp -a apps packages deploy scripts docs README.md package.json package-lock.json SentinelLAN.slnx .dockerignore release-assets/vps-deployment/
+          mkdir -p release-assets/vps-deployment/deploy/vps/certs
+          cp release-assets/SentinelLAN.Agent release-assets/vps-deployment/deploy/agent/SentinelLAN.Agent
+          cp release-assets/SentinelLAN.Agent.exe release-assets/vps-deployment/deploy/agent/SentinelLAN.Agent.exe
+          test -f release-assets/vps-deployment/deploy/docker/api.Dockerfile
+          test -f release-assets/vps-deployment/deploy/docker/web.Dockerfile
+          test -f release-assets/vps-deployment/apps/web/package.json
+          test -f release-assets/vps-deployment/package-lock.json
+          test -f release-assets/vps-deployment/scripts/backup-postgres.sh
+          test -f release-assets/vps-deployment/deploy/vps/setup-vps.sh
+          tar -czf release-assets/sentinellan-vps-deployment.tar.gz -C release-assets/vps-deployment .
+
+      - name: Validate Bundled VPS Compose Configuration
+        working-directory: release-assets/vps-deployment
+        env:
+          PUBLIC_DOMAIN: sentinel.example.test
+          POSTGRES_PASSWORD: ci-only-password
+          BOOTSTRAP_ORG_CODE: ci-org
+          BOOTSTRAP_ORG_NAME: CI Organization
+          BOOTSTRAP_ADMIN_EMAIL: admin@example.test
+          BOOTSTRAP_ADMIN_PASSWORD: ci-only-admin-password
+          SIGNING_KEY: ci-command-signing-key-at-least-32-characters
+          ACCESS_TOKEN_SIGNING_KEY: ci-access-token-key-at-least-32-characters
+          SERVER_VAULT_KEY: ci-server-vault-key-at-least-32-characters
+        run: docker compose -f deploy/vps/docker-compose.prod.yaml config --quiet
 
       - name: Generate SHA256 Checksums
         working-directory: release-assets
         run: |
-          sha256sum SentinelLAN.Agent.exe SentinelLAN.Agent sentinellan-vps-deployment.tar.gz > SHA256SUMS.txt
+          sha256sum SentinelLAN.Agent.msi SentinelLAN.Agent.exe SentinelLAN.Agent configure-windows-agent.ps1 sentinellan-vps-deployment.tar.gz > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         with:
-          name: "SentinelLAN Release ${{ github.ref_name || inputs.version }}"
-          tag_name: ${{ github.ref_name || inputs.version }}
+          name: "SentinelLAN Release ${{ github.ref_name }}"
+          tag_name: ${{ github.ref_name }}
           draft: false
-          prerelease: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
+            release-assets/SentinelLAN.Agent.msi
             release-assets/SentinelLAN.Agent.exe
             release-assets/SentinelLAN.Agent
+            release-assets/configure-windows-agent.ps1
             release-assets/sentinellan-vps-deployment.tar.gz
             release-assets/SHA256SUMS.txt
+          body: |
+            Windows: tải SentinelLAN.Agent.msi (ưu tiên), configure-windows-agent.ps1 và SHA256SUMS.txt.
+            Cài MSI trước, sau đó chạy script cấu hình với URL HTTPS và token một lần từ dashboard.
+            EXE là lựa chọn phụ cho IT. Gói VPS không chứa .env, database, chứng chỉ hoặc bí mật.
+            Hướng dẫn: https://github.com/psy-zney/SentinelLAN/blob/main/docs/guides/agent-enrollment-guide.md
           generate_release_notes: true

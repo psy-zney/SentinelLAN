@@ -18,7 +18,7 @@ echo "[*] Publishing Linux Agent x64 Binary..."
 dotnet publish apps/agent/src/SentinelLAN.Agent/SentinelLAN.Agent.csproj \
   -c Release \
   -r linux-x64 \
-  --self-contained false \
+  --self-contained true \
   -p:PublishSingleFile=true \
   -o "$RELEASE_DIR/agents"
 

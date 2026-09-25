@@ -38,9 +38,7 @@ public sealed class ProtectedOfflineTelemetryQueueStore(string path, string? non
             throw new InvalidDataException("The protected Agent telemetry queue exceeds its storage limit.");
 
         var directory = Path.GetDirectoryName(path) ?? throw new InvalidOperationException("The Agent data directory is not configured.");
-        Directory.CreateDirectory(directory);
-        if (!OperatingSystem.IsWindows())
-            File.SetUnixFileMode(directory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        ProtectedStoreDirectory.Ensure(directory);
         var temporaryPath = Path.Combine(directory, $".telemetry-{Guid.NewGuid():N}.tmp");
         try
         {
