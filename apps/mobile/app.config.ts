@@ -1,5 +1,31 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
 
+const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL;
+const configuredWebUrl = process.env.EXPO_PUBLIC_WEB_URL;
+const webUrl = configuredWebUrl ?? configuredApiUrl;
+const webOrigin = (() => {
+  try { return webUrl ? new URL(webUrl) : null; } catch { return null; }
+})();
+const universalLinkHost = webOrigin?.protocol === 'https:' && !webOrigin.port &&
+  webOrigin.hostname !== 'localhost' && !webOrigin.hostname.endsWith('.local')
+  ? webOrigin.hostname
+  : null;
+if (process.env.EAS_BUILD_PROFILE === 'preview' || process.env.EAS_BUILD_PROFILE === 'production') {
+  for (const [name, value] of [['EXPO_PUBLIC_API_URL', configuredApiUrl], ['EXPO_PUBLIC_WEB_URL', webUrl]]) {
+    try {
+      const url = new URL(value ?? '');
+      if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash) {
+        throw new Error('invalid origin');
+      }
+    } catch {
+      throw new Error(`${name} must be an HTTPS origin for release builds`);
+    }
+  }
+  if (!universalLinkHost) {
+    throw new Error('EXPO_PUBLIC_WEB_URL must be an HTTPS origin on port 443 for universal links');
+  }
+}
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'SentinelLAN Employee',
@@ -19,7 +45,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       NSPhotoLibraryUsageDescription:
         'SentinelLAN allows selecting an image from your photo library containing a QR code.',
     },
-    associatedDomains: ['applinks:sentinellan.local', 'applinks:dashboard.sentinellan.local'],
+    associatedDomains: universalLinkHost ? [`applinks:${universalLinkHost}`] : [],
   },
   android: {
     package: 'com.sentinellan.employee',
@@ -31,16 +57,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     intentFilters: [
       {
         action: 'VIEW',
-        data: [
-          { scheme: 'sentinellan' },
-          {
-            scheme: 'https',
-            host: 'sentinellan.local',
-            pathPrefix: '/activate',
-          },
-        ],
+        data: [{ scheme: 'sentinellan' }],
         category: ['BROWSABLE', 'DEFAULT'],
       },
+      ...(universalLinkHost ? [{
+        action: 'VIEW' as const,
+        autoVerify: true,
+        data: [
+          { scheme: 'https', host: universalLinkHost, pathPrefix: '/activate' },
+        ],
+        category: ['BROWSABLE', 'DEFAULT'],
+      }] : []),
     ],
   },
   plugins: [
@@ -55,9 +82,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-secure-store',
   ],
   extra: {
-    apiUrl: process.env.EXPO_PUBLIC_API_URL || 'https://localhost:7147',
-    eas: {
-      projectId: 'sentinellan-employee',
-    },
+    apiUrl: configuredApiUrl || 'https://localhost:7147',
+    webUrl: configuredWebUrl || configuredApiUrl || 'https://localhost:7147',
   },
 });

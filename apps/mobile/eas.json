@@ -21,9 +21,6 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      },
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://sentinellan.local"
       }
     },
     "production": {
@@ -33,9 +30,6 @@
       },
       "ios": {
         "simulator": false
-      },
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://dashboard.sentinellan.local"
       }
     }
   },

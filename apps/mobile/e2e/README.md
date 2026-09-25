@@ -1,44 +1,22 @@
-# SentinelLAN Mobile - Maestro E2E Testing Guide
+# Kiểm thử mobile trên thiết bị
 
-Tài liệu này định nghĩa và hướng dẫn thực thi bộ kiểm thử E2E (End-to-End) tự động cho ứng dụng **SentinelLAN Mobile** (`@sentinellan/mobile`, `com.sentinellan.mobile`) bằng [Maestro](https://maestro.mobile.dev/).
+Các flow Maestro dùng app ID `com.sentinellan.employee`. Cần Android emulator hoặc thiết bị Android có `adb`, Maestro CLI, ứng dụng đã cài, và API thử nghiệm truy cập được từ thiết bị. Chạy luồng trên tenant/thiết bị thử được ủy quyền. Flow `00` kích hoạt tài khoản Employee mới bằng `MAESTRO_ACTIVATION_LINK` một lần; nếu tài khoản đã kích hoạt, bắt đầu từ `01`. Link HTTPS chỉ mở app khi domain đã phục vụ `/.well-known/assetlinks.json` (Android) và `/.well-known/apple-app-site-association` (iOS) đúng app ID và chứng chỉ ký. Scheme `sentinellan://activate?token=...` dùng để thử route app trước khi cấu hình liên kết domain.
 
-## 1. Yêu cầu môi trường chạy E2E
-Để thực thi Maestro E2E trên máy cục bộ hoặc CI:
-- **Maestro CLI**: Đã cài đặt (`curl -Ls "https://get.maestro.mobile.dev" | bash` hoặc trên Windows qua Scoop / binary `maestro.exe`).
-- **Android Emulator hoặc Thiết bị thật**:
-  - Android 10+ (API level 29 trở lên).
-  - Đã bật Developer Options & USB Debugging.
-  - `adb devices` hiển thị ít nhất một thiết bị `device`.
-- **Bản dựng ứng dụng**:
-  - Development APK hoặc Preview APK tạo bởi `eas build --platform android --profile preview` hoặc `npx expo run:android`.
-  - Package ID: `com.sentinellan.mobile`.
-- **Backend API**:
-  - Đang chạy ASP.NET Core API tại máy chủ LAN hoặc HTTPS hợp lệ (ví dụ: `https://sentinellan.local/api/v1`).
+Trước khi chạy, cấp các biến môi trường `MAESTRO_ORG_CODE`, `MAESTRO_EMPLOYEE_EMAIL`, `MAESTRO_EMPLOYEE_PASSWORD`, `MAESTRO_ASSIGNED_QR_CODE` và `MAESTRO_FORBIDDEN_QR_CODE` từ fixture thử nghiệm. Flow `00` cần thêm `MAESTRO_ACTIVATION_LINK` chứa token mới; mật khẩu đó phải trùng `MAESTRO_EMPLOYEE_PASSWORD` dùng ở `01`. Mã QR bị từ chối phải là tem **có thật** của thiết bị không được gán cho Employee đang đăng nhập; mã ngẫu nhiên chỉ kiểm tra nhánh 404. Không ghi mật khẩu hoặc mã tem vào file repo hay dòng lệnh lưu trong lịch sử shell.
 
-## 2. Danh mục E2E Flows
-- **`01-activate-and-login.yaml`**: Luồng khởi động ứng dụng lần đầu, kích hoạt / nhập thông tin đăng nhập native và xác thực thành công.
-- **`02-scan-qr-my-device.yaml`**: Luồng quét mã QR tem máy trạm (bao gồm fallback nhập mã thủ công), phân giải thiết bị qua API và xem trang "Máy của tôi" kèm Cam kết minh bạch dữ liệu.
-- **`03-report-incident.yaml`**: Luồng tạo báo cáo sự cố an ninh có idempotency key, gửi lên server và hiển thị trong danh sách sự cố.
-- **`04-cold-start-refresh-and-logout.yaml`**: Luồng đóng ứng dụng hoàn toàn (cold-start), khôi phục phiên từ SecureStore qua refresh token rotation, và thực hiện đăng xuất an toàn (thu hồi refresh session trên server và xóa SecureStore cục bộ).
-- **`05-forbidden-qr.yaml`**: Luồng quét / nhập mã thiết bị không thuộc về tài khoản nhân viên; hệ thống hiển thị thông báo từ chối truy cập và ngăn chặn chuyển hướng.
-- **`06-deny-camera-fallback.yaml`**: Luồng từ chối cấp quyền camera; ứng dụng hiển thị rationale, cho phép chọn ảnh từ thư viện với safe UX disclosure (không giả mạo thành công) và chuyển tiếp nhập tem thủ công an toàn.
-- **`07-cold-start-offline.yaml`**: Luồng khởi động ứng dụng trong tình trạng ngắt kết nối mạng; kiểm tra khả năng phục hồi phiên và hiển thị cảnh báo offline.
+Chạy flow theo thứ tự số để dùng chung phiên đăng nhập:
 
-## 3. Lệnh thực thi
-```bash
-# Chạy toàn bộ flows theo thứ tự:
-maestro test apps/mobile/e2e/01-activate-and-login.yaml
+```text
+maestro test apps/mobile/e2e/00-activate-account.yaml # chỉ khi có tài khoản/token mới
+maestro test apps/mobile/e2e/01-login.yaml
 maestro test apps/mobile/e2e/02-scan-qr-my-device.yaml
 maestro test apps/mobile/e2e/03-report-incident.yaml
-maestro test apps/mobile/e2e/04-cold-start-refresh-and-logout.yaml
 maestro test apps/mobile/e2e/05-forbidden-qr.yaml
 maestro test apps/mobile/e2e/06-deny-camera-fallback.yaml
 maestro test apps/mobile/e2e/07-cold-start-offline.yaml
-
-# Hoặc chạy toàn bộ thư mục:
-maestro test apps/mobile/e2e/
+maestro test apps/mobile/e2e/04-cold-start-refresh-and-logout.yaml
 ```
 
-## 4. Trạng thái hiện tại trong môi trường cục bộ
-- **Tooling check**: Môi trường hiện tại không có sẵn `adb` và Android SDK Emulator trên PATH. Do đó, các flows này được lưu trữ chuẩn hóa dưới dạng mã nguồn có thể thực thi ngay khi kết nối thiết bị hoặc chạy trên CI/CD runner có Android SDK.
+Flow `06` đặt quyền camera thành `deny` rồi kiểm tra nhập mã thủ công. Flow `07` dùng airplane mode của Android, xác nhận app giữ refresh token mà không hiển thị dữ liệu riêng khi chưa xác thực lại; sau khi bật mạng, nút Thử lại phải khôi phục phiên. Flow `04` đăng xuất nên chạy cuối. Chọn ảnh QR được kiểm tra bằng test component; để xác nhận native, cần chuẩn bị ảnh QR thử trong thư viện ảnh của thiết bị và thử quét bằng tay trên Android/iOS.
 
+Các lệnh `npm run lint:mobile`, `npm run typecheck:mobile`, `npm run test:mobile` và `expo export` kiểm tra mã và bundle JavaScript. Chúng không thay thế build APK/IPA và chạy Maestro trên OS thật. Với EAS preview/production, cấu hình `EXPO_PUBLIC_API_URL` là HTTPS origin của API và `EXPO_PUBLIC_WEB_URL` là HTTPS origin của link kích hoạt/QR (nếu khác API). Liên kết EAS project bằng tài khoản của tổ chức trước khi build; không dùng project ID giả hoặc domain `.local` cho bản phát hành công khai.

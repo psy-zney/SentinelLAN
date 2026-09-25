@@ -23,21 +23,21 @@ const linkDefs: Record<Exclude<Role, "Agent">, readonly (readonly [TranslationKe
     ["dashboard", "/dashboard"],
     ["devices", "/devices"],
     ["scanQr", "/scan"],
-    ["vpsNodes", "/vps-nodes"],
     ["policies", "/policies"],
     ["commands", "/commands"],
     ["alerts", "/alerts"],
     ["auditLogs", "/audit-logs"],
-    ["users", "/users"]
+    ["users", "/users"],
+    ["vpsNodes", "/vps-nodes"]
   ],
   Technician: [
     ["dashboard", "/dashboard"],
     ["devices", "/devices"],
     ["scanQr", "/scan"],
-    ["vpsNodes", "/vps-nodes"],
     ["policies", "/policies"],
     ["commands", "/commands"],
-    ["alerts", "/alerts"]
+    ["alerts", "/alerts"],
+    ["vpsNodes", "/vps-nodes"]
   ],
   Employee: [
     ["myDevice", "/my-device"],
@@ -62,11 +62,13 @@ const sectionMetaMap: Record<string, { titleKey: TranslationKey; eyebrowKey: Tra
 export function AppShell({
   title,
   eyebrow = "Operations",
+  subtitleKey,
   allowedRoles = operatorRoles,
   children
 }: {
   title: string;
   eyebrow?: string;
+  subtitleKey?: TranslationKey;
   allowedRoles?: readonly Role[];
   children: React.ReactNode;
 }) {
@@ -148,6 +150,7 @@ export function AppShell({
             <LogoutButton />
           </div>
         </header>
+        {subtitleKey ? <p className="subtitle" style={{ marginBottom: 24 }}>{t(subtitleKey)}</p> : null}
         {children}
       </main>
       </SessionContext.Provider>

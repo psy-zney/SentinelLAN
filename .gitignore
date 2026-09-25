@@ -16,7 +16,10 @@ playwright-report/
 *.expo/
 .env
 .env.*
+*.env
+*.env.*
 !.env.example
+!*.env.example
 *.user
 *.suo
 *.log
@@ -27,21 +30,23 @@ playwright-report/
 *.crt
 *.cer
 *.db
+*.sqlite
+*.sqlite3
 *.dump
+*.kdbx
+*.secret
+*.secrets
+*.credentials
+*password*.txt
+*secret*.json
+*credential*.json
+id_rsa*
+id_ed25519*
 agent-data/
 
 # Local notes and generated reports
-CLAUDE.md
-LICENSE
-PROJECT_OVERVIEW.md
-BAO_CAO*
-*bao_cao*
-plan/
-plans/
-!docs/plans/
-docs/plans/*
-!docs/plans/qr-personal-device-management-plan.md
-!docs/plans/employee-mobile-app-plan.md
+**/AGENTS.md
+**/CLAUDE.md
 aio/
 .aio/
 .agents/
@@ -52,14 +57,6 @@ scratch/
 /docs/local/
 /docs/private/
 /deploy/vps/certs/
-/INFRASTRUCTURE_CONG_VPS.txt
-**/AGENTS.md
-docs/html/codegraph-visualizer.html
-
-# Ignore internal markdown files in root except public README.md
-/*.md
-!/README.md
-!/MVP_IMPLEMENTATION_PLAN.md
 
 # Office, document, and report formats
 *.docx

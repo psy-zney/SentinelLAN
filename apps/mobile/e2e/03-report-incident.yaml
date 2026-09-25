@@ -1,28 +1,32 @@
-appId: com.sentinellan.mobile
+appId: com.sentinellan.employee
 ---
 # Flow 3: Báo cáo sự cố an ninh / kỹ thuật có idempotency
 - launchApp
 
 # Chuyển sang tab Sự cố
 - tapOn: "Sự cố"
-- assertVisible: "Nhật ký sự cố của bạn"
+- assertVisible: "Lịch sử sự cố"
 
 # Mở form báo cáo mới
-- tapOn: "+ Báo cáo sự cố"
-- assertVisible: "Tạo báo cáo sự cố"
+- tapOn: "+ Báo sự cố mới"
+- assertVisible: "Báo sự cố mới"
 
 # Điền form
-- tapOn: "Tiêu đề ngắn gọn mô tả sự cố"
+- tapOn:
+    id: "incident-title-input"
 - inputText: "Mất kết nối VPN công ty đột ngột"
 
-- tapOn: "Mô tả chi tiết hiện tượng kỹ thuật quan sát được"
+- tapOn:
+    id: "incident-desc-input"
 - inputText: "Máy tính không phân giải được DNS nội bộ sau khi cắm cáp mạng LAN phòng họp."
 
 - hideKeyboard
 
 # Gửi báo cáo
-- tapOn: "Gửi báo cáo sự cố"
+- tapOn:
+    id: "submit-incident-button"
+- assertVisible: "Sự cố đã được ghi nhận thành công."
+- tapOn: "OK"
 
 # Kiểm tra sự cố được tạo và quay về danh sách
 - assertVisible: "Mất kết nối VPN công ty đột ngột"
-- assertVisible: "Đang mở"

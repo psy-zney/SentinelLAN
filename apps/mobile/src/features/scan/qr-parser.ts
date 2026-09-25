@@ -1,17 +1,10 @@
+import { isTrustedWebUrl } from '../../lib/security/trusted-links';
+
 export interface QrParseResult {
   valid: boolean;
   code?: string;
   error?: string;
 }
-
-const ALLOWED_SCHEMES = ['sentinellan:', 'https:', 'http:'];
-const ALLOWED_HOSTS = [
-  'sentinellan.local',
-  'dashboard.sentinellan.local',
-  'localhost',
-  '10.0.2.2',
-  '127.0.0.1',
-];
 
 export function parseScannedQrContent(raw: string): QrParseResult {
   if (!raw || typeof raw !== 'string') {
@@ -36,33 +29,25 @@ export function parseScannedQrContent(raw: string): QrParseResult {
   if (lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('sentinellan://')) {
     try {
       const url = new URL(trimmed);
-      const scheme = url.protocol.toLowerCase();
-
-      if (!ALLOWED_SCHEMES.includes(scheme)) {
-        return { valid: false, error: `Disallowed scheme: ${scheme}` };
-      }
-
-      if (scheme === 'https:' || scheme === 'http:') {
-        const hostname = url.hostname.toLowerCase();
-        const isAllowed =
-          ALLOWED_HOSTS.includes(hostname) ||
-          hostname.endsWith('.sentinellan.local') ||
-          hostname.startsWith('192.168.') ||
-          hostname.startsWith('10.');
-
-        if (!isAllowed) {
-          return { valid: false, error: `Foreign or untrusted origin: ${hostname}` };
+      if (url.protocol === 'sentinellan:') {
+        const customQrPath = url.host.toLowerCase() === 'qr' || (url.host === '' && url.pathname.startsWith('/qr/'));
+        if (!customQrPath) {
+          return { valid: false, error: 'Invalid SentinelLAN QR URL' };
         }
+      } else if (!isTrustedWebUrl(url)) {
+        return { valid: false, error: `Foreign or untrusted origin: ${url.hostname}` };
       }
 
-      // Check path: /qr/<code-part> or sentinellan://qr/<code-part>
+      // Check path: /qr/<code-part> or sentinellan://qr/<code-part>.
       const segments = url.pathname.split('/').filter(Boolean);
       let extractedCode: string | null = null;
 
-      if (segments.length >= 2 && segments[0].toLowerCase() === 'qr') {
+      if (url.protocol !== 'sentinellan:' && segments.length === 2 && segments[0].toLowerCase() === 'qr') {
         extractedCode = segments[1];
-      } else if (url.host.toLowerCase() === 'qr' && segments.length >= 1) {
+      } else if (url.protocol === 'sentinellan:' && url.host.toLowerCase() === 'qr' && segments.length === 1) {
         extractedCode = segments[0];
+      } else if (url.protocol === 'sentinellan:' && url.host === '' && segments.length === 2 && segments[0].toLowerCase() === 'qr') {
+        extractedCode = segments[1];
       }
 
       if (extractedCode && isValidOpaqueCode(extractedCode)) {

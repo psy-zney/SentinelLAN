@@ -27,6 +27,7 @@ jest.mock('expo-linking', () => ({
   createURL: jest.fn((path: string) => `sentinellan://${path}`),
   addEventListener: jest.fn(() => ({ remove: jest.fn() })),
   getInitialURL: jest.fn(async () => null),
+  useURL: jest.fn(() => null),
   openSettings: jest.fn(async () => {}),
 }));
 
@@ -36,6 +37,7 @@ jest.mock('expo-camera', () => {
   const { View } = require('react-native');
   return {
     CameraView: (props: any) => React.createElement(View, { testID: 'mock-camera-view', ...props }),
+    Camera: { scanFromURLAsync: jest.fn(async () => []) },
     useCameraPermissions: jest.fn(() => [
       { granted: true, canAskAgain: true, status: 'granted' },
       jest.fn(async () => ({ granted: true })),
@@ -60,7 +62,7 @@ jest.mock('expo-router', () => ({
     back: jest.fn(),
     setParams: jest.fn(),
   }),
-  useLocalSearchParams: () => ({}),
+  useLocalSearchParams: jest.fn(() => ({})),
   usePathname: () => '/',
   Link: ({ children }: any) => children,
   Slot: ({ children }: any) => children,

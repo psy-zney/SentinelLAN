@@ -1,17 +1,10 @@
+import { isTrustedWebUrl } from './trusted-links';
+
 export interface ActivationLinkParseResult {
   valid: boolean;
   token?: string;
   error?: string;
 }
-
-const ALLOWED_SCHEMES = ['sentinellan:', 'https:', 'http:'];
-const ALLOWED_HOSTS = [
-  'sentinellan.local',
-  'dashboard.sentinellan.local',
-  'localhost',
-  '10.0.2.2',
-  '127.0.0.1',
-];
 
 export function parseActivationUrl(rawUrl: string): ActivationLinkParseResult {
   if (!rawUrl || typeof rawUrl !== 'string') {
@@ -21,33 +14,20 @@ export function parseActivationUrl(rawUrl: string): ActivationLinkParseResult {
   try {
     const url = new URL(rawUrl);
 
-    // 1. Verify scheme
-    const scheme = url.protocol.toLowerCase();
-    if (!ALLOWED_SCHEMES.includes(scheme)) {
-      return { valid: false, error: `Disallowed scheme: ${scheme}` };
-    }
-
-    // 2. If HTTP/HTTPS, verify trusted host
-    if (scheme === 'https:' || scheme === 'http:') {
-      const hostname = url.hostname.toLowerCase();
-      const isAllowedHost =
-        ALLOWED_HOSTS.includes(hostname) ||
-        hostname.endsWith('.sentinellan.local') ||
-        hostname.startsWith('192.168.') ||
-        hostname.startsWith('10.');
-
-      if (!isAllowedHost) {
-        return { valid: false, error: `Untrusted host: ${hostname}` };
+    if (url.protocol === 'sentinellan:') {
+      const customPathIsValid =
+        (url.host.toLowerCase() === 'activate' && (url.pathname === '' || url.pathname === '/')) ||
+        (url.host === '' && url.pathname === '/activate');
+      if (!customPathIsValid) {
+        return { valid: false, error: 'Invalid activation path' };
       }
-    }
-
-    // 3. Verify path is /activate or activate
-    const cleanPath = url.pathname.replace(/^\/+/, '').replace(/\/+$/, '');
-    if (cleanPath !== 'activate' && url.host !== 'activate') {
+    } else if (!isTrustedWebUrl(url)) {
+      return { valid: false, error: `Untrusted host: ${url.hostname}` };
+    } else if (url.pathname !== '/activate') {
       return { valid: false, error: `Invalid activation path: ${url.pathname}` };
     }
 
-    // 4. Extract token
+    // Extract the token without navigating to the URL.
     const fragmentParams = new URLSearchParams(url.hash.replace(/^#/, ''));
     const token = url.searchParams.get('token') ?? fragmentParams.get('token');
     if (!token || token.trim().length < 16 || token.trim().length > 512) {

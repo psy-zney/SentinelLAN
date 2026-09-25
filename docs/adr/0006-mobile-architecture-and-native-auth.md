@@ -16,18 +16,18 @@ Khác với giao diện Web sử dụng `SameSite=Lax HttpOnly Cookie` và Data 
 ## 2. Quyết định Kiến trúc (Decisions)
 
 ### 2.1. Nền tảng Công nghệ Mobile
-- **Framework**: React Native thông qua Expo SDK 57 (Expo Router v54, React 19.2.8, React Native 0.86.0).
+- **Framework**: React Native thông qua Expo SDK 57 (Expo Router 57, React 19.2.8, React Native 0.87.1).
 - **Kiến trúc Native**: New Architecture (Fabric Renderer + TurboModules) được kích hoạt mặc định (`newArchEnabled: true`).
 - **Styling**: `StyleSheet.create` kết hợp Design Tokens nội bộ (`src/theme/tokens.ts`), tuân thủ tỷ lệ tương phản WCAG 2.1 AA, touch target tối thiểu >= 44dp, hỗ trợ Dark/Light Theme.
 - **State Management**:
   - Server state: TanStack Query v5 (caching, query invalidation, background refetch, offline detection).
   - Form state: React Hook Form kết hợp Zod resolver.
-  - Client state: `AuthContext` quản lý finite state machine (`bootstrapping`, `unauthenticated`, `authenticated`, `session_expired`, `update_required`).
+  - Client state: `AuthContext` quản lý các trạng thái `bootstrapping`, `unauthenticated`, `authenticated`, `offline`, `session-expired`, `update-required`.
 
 ### 2.2. Chiến lược Quản lý Token và Bảo mật Native Auth
 1. **Lưu trữ Token Client**:
    - **Access Token (JWT)**: Thời hạn ngắn (15 phút), **chỉ lưu trong bộ nhớ RAM (In-Memory)** của process ứng dụng. Tuyệt đối không lưu trữ xuống AsyncStorage, SQLite hay File System.
-   - **Refresh Token (Opaque)**: Chuỗi ngẫu nhiên cryptographically secure entropy >= 256 bit (32 bytes), **chỉ lưu trong `expo-secure-store`** (mã hóa phần cứng Android Keystore / iOS Keychain). Tuyệt đối không fallback về AsyncStorage không mã hóa.
+   - **Refresh Token (Opaque)**: Chuỗi ngẫu nhiên có entropy >= 256 bit (32 bytes), **chỉ lưu trong `expo-secure-store`** qua cơ chế bảo vệ của Android/iOS. Tuyệt đối không fallback về AsyncStorage không mã hóa; mức bảo vệ phần cứng phụ thuộc thiết bị.
 2. **Server-Side Refresh Session & Token Family Rotation**:
    - Server chỉ lưu giá trị Hash SHA-256 của Refresh Token (`HashedToken`) và chuỗi `TokenFamily`.
    - Cơ chế xoay vòng 1 lần (Single-Use Token Rotation): Mỗi lần gọi `/api/v1/mobile/auth/refresh`, refresh token hiện tại bị đánh dấu thu hồi (`IsRevoked = true`) và một refresh token mới được cấp phát trong cùng một transaction.
@@ -36,7 +36,7 @@ Khác với giao diện Web sử dụng `SameSite=Lax HttpOnly Cookie` và Data 
 3. **Phân biệt ranh giới Web Cookie và Mobile Bearer**:
    - Mobile endpoints được định tuyến rõ ràng tại `/api/v1/mobile/auth/*`.
    - Phản hồi từ Mobile Auth endpoints luôn mang header `Cache-Control: no-store` và được bảo vệ bởi Rate Limiter riêng biệt ("sensitive").
-   - Các API chia sẻ dữ liệu (`/api/v1/my-device`, `/api/v1/qr/resolve`, `/api/v1/incidents`) chấp nhận đồng thời Web Cookie hoặc Mobile Bearer Token thông qua OpenApi Bearer Security Scheme.
+   - Mobile dùng `/api/v1/my-device`, `/api/v1/my-device/incidents` và `GET /api/v1/qr/{code}` với Bearer token. API cũng hỗ trợ Web Cookie theo chính sách quyền của từng endpoint.
 
 ### 2.3. Ranh giới Quyền riêng tư (Privacy Boundaries)
 - Ứng dụng SentinelLAN Mobile là công cụ hỗ trợ người dùng được ủy quyền quản lý máy trạm văn phòng, **KHÔNG PHẢI phần mềm giám sát điện thoại**.
@@ -54,9 +54,13 @@ Khác với giao diện Web sử dụng `SameSite=Lax HttpOnly Cookie` và Data 
 
 ## 3. Hệ quả (Consequences)
 - **Tích cực**:
-  - Bảo mật tối đa: Mất điện thoại hay bị trích xuất file system cũng không rò rỉ JWT access token; refresh token được bảo vệ bởi hardware keystore.
+  - JWT access token không được ghi xuống lưu trữ lâu dài; refresh token được lưu qua `expo-secure-store`.
   - Không vi phạm quyền riêng tư của nhân viên; giao diện minh bạch tạo sự tin cậy.
   - Hạn chế tối đa nguy cơ tấn công replay token hoặc IDOR nhờ phân quyền thiết bị nghiêm ngặt tại server.
 - **Lưu ý / Ràng buộc**:
   - Không thể sử dụng Expo Go thuần túy cho một số native modules đặc thù trên thiết bị thật nếu cần build production release; cần sử dụng EAS Build hoặc Development Build (`npx expo run:android`).
-  - Thư viện giải mã QR offline từ ảnh tĩnh trong New Architecture (Fabric) cần native module chuyên biệt; ở giai đoạn hiện tại cung cấp UX minh bạch và hướng dẫn người dùng quét trực tiếp hoặc nhập tem thủ công.
+  - Ảnh QR được chọn qua system image picker và giải mã cục bộ bằng `Camera.scanFromURLAsync`. Cần xác nhận kết quả trên Android/iOS thật; trên Android mã QR nên chiếm phần lớn ảnh.
+
+## 4. Trạng thái triển khai cần kiểm chứng
+
+ADR ghi quyết định kiến trúc, không tự chứng nhận bảo đảm phần cứng trên mọi điện thoại. `expo-secure-store` phụ thuộc OS/thiết bị; cần kiểm thử trên build và thiết bị đích. URL kích hoạt/QR trên web chỉ được chấp nhận khi khớp chính xác origin cấu hình trong app; HTTP chỉ được phép ở Development. Cần chạy các flow Maestro trên thiết bị thật trước khi phát hành.

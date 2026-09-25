@@ -41,6 +41,7 @@ export function ActivateView() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
+    if (token) return;
     let rawToken: string | null = null;
 
     if (params.token) {
@@ -62,6 +63,8 @@ export function ActivateView() {
       return;
     }
 
+    setToken(rawToken);
+    setValidating(true);
     // Strip token from router parameters to prevent leak via navigation history
     try {
       router.setParams({ token: undefined, link: undefined });
@@ -69,11 +72,13 @@ export function ActivateView() {
       // Ignored if router doesn't support setting undefined params in current screen
     }
 
-    setToken(rawToken);
+  }, [params.token, params.link, incomingUrl, router, token]);
 
+  useEffect(() => {
+    if (!token) return;
     let active = true;
     apiClient
-      .validateActivationToken(rawToken)
+      .validateActivationToken(token)
       .then((res) => {
         if (active) {
           setTokenInfo(res);
@@ -90,7 +95,7 @@ export function ActivateView() {
     return () => {
       active = false;
     };
-  }, [params.token, params.link, incomingUrl, apiClient, router]);
+  }, [token, apiClient]);
 
   const handleSubmit = async () => {
     if (submitting || !token) return; // Guard double submit

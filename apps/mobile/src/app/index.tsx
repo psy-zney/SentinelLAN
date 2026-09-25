@@ -2,12 +2,12 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../features/auth/auth-context';
-import { useAppColors, AppButton } from '../components/common';
+import { useAppColors, AppButton, OfflineBanner } from '../components/common';
 import { useI18n } from '../lib/i18n';
 import { spacing, typography } from '../theme/tokens';
 
 export default function SplashScreen() {
-  const { status, dismissSessionExpired } = useAuth();
+  const { status, dismissSessionExpired, retrySession } = useAuth();
   const router = useRouter();
   const colors = useAppColors();
   const { t } = useI18n();
@@ -47,6 +47,15 @@ export default function SplashScreen() {
             style={{ marginTop: spacing.xl, width: '100%' }}
           />
         </View>
+      </View>
+    );
+  }
+
+  if (status === 'offline') {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <OfflineBanner message={t('offlineBanner')} />
+        <AppButton title={t('retry')} onPress={() => { void retrySession(); }} style={{ marginTop: spacing.lg }} />
       </View>
     );
   }

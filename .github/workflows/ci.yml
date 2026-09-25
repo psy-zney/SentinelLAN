@@ -55,6 +55,9 @@ jobs:
       - name: Restore Backend Dependencies
         run: dotnet restore SentinelLAN.slnx
 
+      - name: Audit Backend Dependencies
+        run: dotnet list SentinelLAN.slnx package --vulnerable --include-transitive
+
       - name: Build Backend Solution
         run: dotnet build SentinelLAN.slnx -c Release --no-restore
 
@@ -63,6 +66,9 @@ jobs:
 
       - name: Install Web Dependencies
         run: npm ci
+
+      - name: Audit Production Web Dependencies
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Lint Web Code
         run: npm run lint
@@ -75,6 +81,21 @@ jobs:
 
       - name: Build Web Production
         run: npm run build
+
+      - name: Lint Mobile Code
+        run: npm run lint:mobile
+
+      - name: Typecheck Mobile Code
+        run: npm run typecheck:mobile
+
+      - name: Run Mobile Unit Tests
+        run: npm run test --workspace=@sentinellan/mobile -- --runInBand
+
+      - name: Bundle Mobile JavaScript
+        working-directory: apps/mobile
+        run: |
+          npx expo export --platform android --output-dir ../../dist/mobile-android
+          npx expo export --platform ios --output-dir ../../dist/mobile-ios
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v4

@@ -2,6 +2,8 @@
 
 SentinelLAN quản lý thiết bị đầu cuối được tổ chức cho phép: Admin cấp tài khoản và mã đăng ký, Agent gửi telemetry kỹ thuật, nhân viên xem máy được giao và báo sự cố, kỹ thuật viên xử lý cảnh báo/công việc. Dữ liệu của mỗi tổ chức được giới hạn bằng `OrganizationId`. Các lệnh khóa máy và cô lập mạng vẫn **chỉ mô phỏng**; không bật hành vi thay đổi hệ điều hành trong bản này.
 
+**Phạm vi chính:** một luồng quản lý thiết bị được ủy quyền, từ đăng ký Agent → heartbeat/telemetry → gán thiết bị → xử lý sự cố và ghi audit. Web và mobile là hai giao diện của cùng luồng này. Quản trị VPS qua SSH là chức năng mở rộng đã có; không phải mục tiêu chính của đồ án. SentinelLAN không quét toàn bộ LAN, bắt gói tin hay tự động cô lập thiết bị. [Phạm vi và tiêu chí kiểm chứng](docs/project-overview.md) là điểm tham chiếu khi thêm tính năng hoặc viết báo cáo.
+
 ## Cấu trúc dự án
 
 | Đường dẫn | Trách nhiệm |
@@ -16,7 +18,7 @@ SentinelLAN quản lý thiết bị đầu cuối được tổ chức cho phép
 | `deploy` | Dockerfile, reverse proxy và bộ cài Agent |
 | `scripts` | Khởi tạo, kiểm thử, sao lưu và diễn tập khôi phục |
 
-Ranh giới kiến trúc và luồng chi tiết nằm trong [kế hoạch MVP](MVP_IMPLEMENTATION_PLAN.md) và [ADR](docs/adr/0002-modular-monolith.md). Tài liệu trong `docs/local/`, `docs/private/`, chứng chỉ, dump, `.env` và ghi chú hạ tầng cá nhân không được đưa vào Git hoặc Docker build context.
+Ranh giới kiến trúc và luồng chi tiết nằm trong [bản đồ hệ thống HTML](docs/system-map.html), [tổng quan dự án](docs/project-overview.md) và [ADR](docs/adr/0002-modular-monolith.md). [SQL PostgreSQL](docs/database/schema.postgresql.sql) được sinh từ EF Core migrations. Tài liệu trong `docs/local/`, `docs/private/`, chứng chỉ, dump, `.env` và ghi chú hạ tầng cá nhân không được đưa vào Git hoặc Docker build context.
 
 ## Chạy cục bộ bằng Docker Compose
 
@@ -26,13 +28,15 @@ Cần Docker Engine/Desktop và Compose v2. Đây là cấu hình **Development*
 git clone https://github.com/psy-zney/SentinelLAN.git
 cd SentinelLAN
 cp .env.example .env
+# Fill SENTINELLAN_SIGNING_KEY, SENTINELLAN_ACCESS_TOKEN_SIGNING_KEY,
+# and SENTINELLAN_SERVER_VAULT_KEY with three distinct random secrets.
 docker compose up --build -d
 docker compose ps
 curl --fail http://localhost:8080/health/live
 curl --fail http://localhost:8080/health/ready
 ```
 
-Trên PowerShell, thay `cp` bằng `Copy-Item .env.example .env` và dùng `Invoke-WebRequest http://localhost:8080/health/ready`. Dashboard: `http://localhost:3000`; API: `http://localhost:8080`; OpenAPI chỉ mở trong Development tại `http://localhost:8080/openapi/v1.json`. Tài khoản thử: tổ chức `demo`, `admin@sentinellan.local`, mật khẩu đúng bằng `SENTINELLAN_DEMO_ADMIN_PASSWORD` trong `.env`. Đổi mật khẩu mẫu trước khi cho máy khác truy cập môi trường này.
+Tạo ba khóa khác nhau bằng cách chạy `openssl rand -hex 32` ba lần rồi điền vào `.env`; trên PowerShell có thể chạy `[Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))` ba lần. Compose từ chối khởi động nếu thiếu một trong ba khóa. Trên PowerShell, thay `cp` bằng `Copy-Item .env.example .env` và dùng `Invoke-WebRequest http://localhost:8080/health/ready`. Dashboard: `http://localhost:3000`; API: `http://localhost:8080`; OpenAPI chỉ mở trong Development tại `http://localhost:8080/openapi/v1.json`. Tài khoản thử: tổ chức `demo`, `admin@sentinellan.local`, mật khẩu đúng bằng `SENTINELLAN_DEMO_ADMIN_PASSWORD` trong `.env`. Đổi mật khẩu mẫu trước khi cho máy khác truy cập môi trường này. Giữ khóa vault cục bộ nếu muốn đọc lại SSH key đã mã hóa sau khi tạo lại container.
 
 Nếu readiness trả 503, kiểm tra `docker compose logs postgres api`. `health/live` chỉ xác nhận tiến trình còn chạy; `health/ready` thực sự thử kết nối database. Sau khi sửa `.env`, khởi động lại dịch vụ bằng `docker compose up -d --build`.
 
@@ -75,7 +79,9 @@ Không đưa API, PostgreSQL hoặc cổng Agent HTTP trực tiếp ra Internet.
 
 Dashboard và API thực hiện các thao tác quản trị/lập phiếu bằng dữ liệu thật. Các giá trị `demo` chỉ được seed trong Development. Không coi policy cấu hình là bằng chứng Agent đã khóa USB hay mạng.
 
-Khi thêm VPS, Admin cần nhập SSH host-key fingerprint dạng `SHA256:<43 ký tự base64>`, lấy và xác minh qua console tin cậy của nhà cung cấp (ví dụ chạy `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub -E sha256` trên chính VPS). API chỉ thử SSH, đọc số liệu hoặc restart service nếu host key khớp pin. Các node đã tạo trước khi có trường này bị chặn SSH; xóa và đăng ký lại sau khi xác minh fingerprint. Private key được mã hóa ở server, không phải kho “zero knowledge”.
+### Mở rộng hiện có: quản trị VPS qua SSH
+
+Luồng này phục vụ máy chủ Linux được đăng ký riêng; không phải điều kiện để chạy luồng Agent và quản lý endpoint ở trên. Khi thêm VPS, Admin cần nhập SSH host-key fingerprint dạng `SHA256:<43 ký tự base64>`, lấy và xác minh qua console tin cậy của nhà cung cấp (ví dụ chạy `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub -E sha256` trên chính VPS). API chỉ thử SSH, đọc số liệu hoặc restart service nếu host key khớp pin. Các node đã tạo trước khi có trường này bị chặn SSH; xóa và đăng ký lại sau khi xác minh fingerprint. Private key được mã hóa ở server, không phải kho “zero knowledge”.
 
 Dùng tài khoản SSH riêng có quyền tối thiểu; chỉ cấp `sudo systemctl restart` cho các dịch vụ thực sự cần vận hành. Không dùng tài khoản `root` mặc định trên biểu mẫu. Thử kết nối và quyền restart trên VPS thử nghiệm trước khi cấp quyền cho Production.
 
@@ -108,6 +114,12 @@ bash scripts/restore-drill-postgres.sh backups/postgres/<file>.dump deploy/vps/d
 Đặt `SENTINELLAN_BACKUP_DIR` để đưa dump ra volume lưu trữ riêng. Mã hóa bản sao, giữ khóa vault riêng, sao chép offsite và diễn tập khôi phục định kỳ. `pg_dump` cho snapshot nhất quán và `pg_restore` kiểm tra được archive theo [tài liệu PostgreSQL](https://www.postgresql.org/docs/current/app-pgdump.html). Script restore chỉ tạo rồi xóa database thử có tên ngẫu nhiên; không ghi đè database ứng dụng. Khi nghi ngờ xâm nhập: bảo toàn log/bằng chứng, cô lập cổng public tại proxy/firewall, thu hồi credential thiết bị/phiên, xoay khóa theo [runbook sự cố](docs/security/incident-workflow.md); không xóa audit để che dấu vết.
 
 ## Kiểm tra chất lượng
+
+### Ứng dụng mobile
+
+Ứng dụng Employee nằm trong `apps/mobile`. Build Development dùng `EXPO_PUBLIC_API_URL` trỏ đến API mà emulator/điện thoại truy cập được; `localhost` trên điện thoại là chính điện thoại. Bản EAS preview/production yêu cầu `EXPO_PUBLIC_API_URL` và `EXPO_PUBLIC_WEB_URL` là HTTPS origin thật (nếu web và API cùng origin, có thể đặt cùng giá trị). Domain web phải phục vụ file liên kết ứng dụng của Android/iOS cho đường dẫn `/activate` trước khi link HTTPS có thể mở app; app cũng hỗ trợ scheme `sentinellan://activate`. Không đưa token kích hoạt vào log hoặc fixture công khai. Xem [hướng dẫn kiểm thử thiết bị](apps/mobile/e2e/README.md) để chạy các flow đăng nhập, quét QR, báo sự cố, ngoại tuyến và đăng xuất trên Android.
+
+Các lệnh lint, typecheck, Jest và Expo export chỉ xác nhận mã nguồn cùng JavaScript bundle. Cần build native và chạy trên thiết bị đích để nghiệm thu camera, chọn ảnh, SecureStore, deep link và kết nối qua mạng thật.
 
 ```powershell
 dotnet restore SentinelLAN.slnx

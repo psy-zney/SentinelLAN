@@ -64,8 +64,6 @@ if (Test-Path $SourceExe) {
 # Set system-wide environment variables for the agent service
 [Environment]::SetEnvironmentVariable("SENTINELLAN_API_URL", $ServerUrl, [EnvironmentVariableTarget]::Machine)
 [Environment]::SetEnvironmentVariable("SENTINELLAN_ENROLLMENT_TOKEN", $EnrollToken, [EnvironmentVariableTarget]::Machine)
-[Environment]::SetEnvironmentVariable("SENTINELLAN_ALLOW_REAL_COMMANDS", "false", [EnvironmentVariableTarget]::Machine)
-[Environment]::SetEnvironmentVariable("SENTINELLAN_LAB_EXECUTION", "false", [EnvironmentVariableTarget]::Machine)
 
 Write-Host "[✓] Configured Server URL: $ServerUrl" -ForegroundColor Green
 

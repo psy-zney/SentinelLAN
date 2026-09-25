@@ -1,4 +1,6 @@
-# Critical data flows
+# Luồng dữ liệu lõi
+
+Các sơ đồ dưới đây cùng mô tả vòng đời thiết bị đầu cuối được ủy quyền. Quản trị VPS qua SSH là phần mở rộng riêng, không nằm trong chuỗi này.
 
 ```mermaid
 sequenceDiagram
@@ -38,14 +40,21 @@ sequenceDiagram
   API-->>W: SignalR command-status
 ```
 
+Agent command trong sơ đồ trên trả kết quả mô phỏng; quy trình cô lập thật chưa được triển khai. Restart dịch vụ VPS qua SSH là luồng riêng, có host-key pinning, quyền, lý do, xác nhận, nonce và audit; xem [bối cảnh](context.md) và [threat model](../security/threat-model.md).
+
 ```mermaid
-flowchart LR
-  Event[Published security event] --> Alert[Create alert]
-  Alert --> Proposal[Isolation proposal]
-  Proposal --> Approval{Authorized approval}
-  Approval -->|approved| Simulate[Simulate isolation]
-  Approval -->|rejected| Close[Close with reason]
-  Simulate --> Review[Technician review]
-  Review --> Recover[Restore/close]
-  Recover --> Audit[(Append-only audit)]
+sequenceDiagram
+  participant Admin
+  participant API
+  participant DB as PostgreSQL
+  participant Employee as Employee web/mobile
+  participant Tech as Technician
+  Admin->>API: gán thiết bị cho Employee
+  API->>DB: kiểm tra tenant và lưu assignment + audit
+  Employee->>API: xem /my-device và telemetry được công bố
+  API->>DB: đọc theo tenant và assignment
+  Employee->>API: báo sự cố cho máy được gán
+  API->>DB: lưu incident idempotent
+  Tech->>API: xử lý incident theo quyền
+  API->>DB: cập nhật trạng thái + audit
 ```

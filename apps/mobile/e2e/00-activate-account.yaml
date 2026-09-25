@@ -1,0 +1,21 @@
+appId: com.sentinellan.employee
+---
+# Dùng một link kích hoạt mới của tài khoản Employee thử nghiệm.
+- launchApp:
+    clearState: true
+
+- openLink:
+    link: ${MAESTRO_ACTIVATION_LINK}
+
+- assertVisible: "Kích hoạt tài khoản"
+- tapOn:
+    id: "new-password-input"
+- inputText: ${MAESTRO_EMPLOYEE_PASSWORD}
+- tapOn:
+    id: "confirm-password-input"
+- inputText: ${MAESTRO_EMPLOYEE_PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: "activate-submit-button"
+- assertVisible: "Kích hoạt thành công! Đang chuyển đến màn hình đăng nhập..."
+- assertVisible: "Đăng nhập Nhân viên"

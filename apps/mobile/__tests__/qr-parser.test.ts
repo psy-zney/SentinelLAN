@@ -33,6 +33,12 @@ describe('QR Code Scanned Content Parser', () => {
     expect(result.error).toContain('Foreign or untrusted origin');
   });
 
+  it('rejects insecure and unconfigured QR origins', () => {
+    expect(parseScannedQrContent('http://sentinellan.local/qr/QR-A1B2C3D4').valid).toBe(false);
+    expect(parseScannedQrContent('https://192.168.1.10/qr/QR-A1B2C3D4').valid).toBe(false);
+    expect(parseScannedQrContent('sentinellan://evil/qr/QR-A1B2C3D4').valid).toBe(false);
+  });
+
   it('rejects malicious schemes', () => {
     expect(parseScannedQrContent('javascript:doBadThings()').valid).toBe(false);
     expect(parseScannedQrContent('file:///android_asset/something').valid).toBe(false);

@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Bản đồ kiến trúc SentinelLAN theo máy Admin, máy nhân viên, mobile, LAN và VPS; luồng dữ liệu, bảo mật và PostgreSQL.">
+  <title>SentinelLAN · Bản đồ hệ thống</title>
+  <style>
+    :root { color-scheme: light; --ink:#162238; --muted:#526078; --line:#dbe3ec; --surface:#fff; --paper:#f5f7fa; --navy:#10283d; --teal:#007d78; --teal-light:#dff6f0; --amber:#9a6100; --amber-light:#fff1d5; --red:#a13d3d; --red-light:#ffecec; --blue-light:#e8efff; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.62 system-ui,-apple-system,"Segoe UI",sans-serif; }
+    a { color:#075c81; text-underline-offset:3px; }
+    a:hover { color:#023c56; }
+    :focus-visible { outline:3px solid #168fca; outline-offset:3px; }
+    .wrap { width:min(1180px,calc(100% - 40px)); margin-inline:auto; }
+    .hero { background:radial-gradient(circle at 78% 12%,#1c5d68 0,#123447 34%,#0b2135 75%); color:#fff; padding:64px 0 52px; }
+    .hero small,.eyebrow { display:block; font-size:.76rem; font-weight:800; text-transform:uppercase; letter-spacing:.16em; }
+    .hero small { color:#8ee4cf; }
+    h1,h2,h3 { line-height:1.2; letter-spacing:-.025em; }
+    h1 { font-size:clamp(2.3rem,5vw,4.4rem); margin:12px 0 14px; max-width:830px; }
+    h2 { font-size:clamp(1.7rem,3vw,2.5rem); margin:0 0 14px; }
+    h3 { font-size:1.1rem; margin:0 0 9px; }
+    p { margin:0 0 14px; }
+    .lead { max-width:830px; color:#dce8f2; font-size:1.12rem; }
+    .hero-meta { display:flex; gap:10px; flex-wrap:wrap; margin-top:26px; }
+    .pill { border:1px solid #ffffff55; color:#e8f8f4; border-radius:999px; padding:5px 12px; font-size:.8rem; font-weight:700; }
+    .jump { position:sticky; top:0; z-index:10; background:#fffefdf2; border-bottom:1px solid var(--line); backdrop-filter:blur(12px); }
+    .jump .wrap { display:flex; gap:22px; overflow:auto; white-space:nowrap; padding-block:14px; }
+    .jump a { color:var(--ink); font-size:.9rem; font-weight:700; text-decoration:none; }
+    main section { padding:60px 0; scroll-margin-top:64px; }
+    main section+section { border-top:1px solid var(--line); }
+    .section-intro { max-width:850px; color:var(--muted); }
+    .eyebrow { color:var(--teal); margin-bottom:10px; }
+    .surface { background:var(--surface); border:1px solid var(--line); border-radius:18px; box-shadow:0 12px 40px #233b5210; }
+    .topology { padding:24px; margin-top:28px; }
+    .topology-grid { display:grid; grid-template-columns:1.2fr .72fr 1.3fr; gap:18px; align-items:stretch; }
+    .actor-stack,.server-stack { display:grid; gap:12px; }
+    .node { border:1px solid var(--line); border-radius:14px; padding:16px 17px; background:#fff; min-height:104px; }
+    .node strong { display:block; font-size:1rem; }
+    .node span { display:block; color:var(--muted); font-size:.88rem; line-height:1.4; margin-top:4px; }
+    .node .state { display:inline-block; width:max-content; padding:2px 8px; margin:0 0 7px; border-radius:999px; font-size:.72rem; font-weight:800; color:#075d57; background:var(--teal-light); }
+    .node .state.planned { color:var(--amber); background:var(--amber-light); }
+    .admin { border-left:5px solid #315fba; }
+    .employee { border-left:5px solid var(--teal); }
+    .mobile { border-left:5px solid #789bb3; }
+    .server { border-left:5px solid #4c7287; }
+    .network { display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; border:1px dashed #73a6ac; border-radius:18px; background:#eaf8f5; padding:18px; }
+    .network .symbol { font-size:2.5rem; line-height:1; color:#106e69; }
+    .network strong { font-size:1.1rem; margin:9px 0 3px; }
+    .network p { font-size:.85rem; color:#376d69; margin:0; }
+    .network .arrow { font-size:1.3rem; font-weight:800; color:var(--teal); margin:14px 0; }
+    .server-stack { grid-template-rows:auto 1fr; }
+    .server-core { border:1px solid #8ba4ba; background:#f4f8fc; border-radius:15px; padding:18px; }
+    .server-core h3 { margin:0 0 14px; }
+    .server-core .inside { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .server-core .inside div { background:#fff; border:1px solid var(--line); border-radius:10px; padding:9px 10px; font-weight:700; font-size:.84rem; }
+    .server-core .inside div:last-child { grid-column:1/-1; }
+    .server-core p { color:var(--muted); font-size:.85rem; margin:12px 0 0; }
+    .topology-note { color:var(--muted); font-size:.86rem; margin:18px 0 0; }
+    .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:25px; }
+    .card { padding:20px; }
+    .card p:last-child { margin-bottom:0; }
+    .card-number { display:block; color:var(--teal); font-size:.8rem; font-weight:800; letter-spacing:.11em; margin-bottom:12px; }
+    .flow { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-top:25px; }
+    .flow div { padding:18px; border-top:4px solid #0a8a80; }
+    .flow b { display:block; font-size:.83rem; color:#0a746d; margin-bottom:8px; }
+    .flow p { color:var(--muted); font-size:.89rem; margin:0; }
+    .notice { padding:16px 19px; border-radius:13px; margin-top:20px; background:var(--amber-light); border:1px solid #eacb8b; color:#704a08; }
+    .notice.red { background:var(--red-light); border-color:#e9b2b2; color:#7b2828; }
+    .table-wrap { overflow:auto; border:1px solid var(--line); border-radius:15px; background:#fff; margin-top:23px; }
+    table { border-collapse:collapse; width:100%; min-width:750px; font-size:.9rem; }
+    th,td { text-align:left; vertical-align:top; padding:13px 15px; border-bottom:1px solid var(--line); }
+    tr:last-child td { border-bottom:0; }
+    th { background:#edf3f7; color:#293b4b; font-size:.8rem; text-transform:uppercase; letter-spacing:.045em; }
+    td:first-child { font-weight:700; }
+    code { font: .88em ui-monospace,SFMono-Regular,Consolas,monospace; background:#eaf0f4; border-radius:4px; padding:1px 4px; overflow-wrap:anywhere; }
+    pre { background:#10283d; color:#d9f0ef; padding:19px; border-radius:12px; overflow:auto; font-size:.82rem; line-height:1.55; }
+    pre code { color:inherit; background:none; padding:0; }
+    .security-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:15px; margin-top:24px; }
+    .security-grid .card { border-top:4px solid #294e73; }
+    .security-grid ul { margin:7px 0 0; padding-left:21px; }
+    .security-grid li { margin:5px 0; }
+    .security-grid .limit { background:#fff7e8; border-radius:8px; padding:9px 11px; margin:13px 0 0; font-size:.88rem; }
+    .erd { display:grid; grid-template-columns:repeat(3,1fr); gap:15px; margin-top:24px; align-items:start; }
+    .erd-group { display:grid; gap:10px; }
+    .entity { background:#fff; border:1px solid #bacbd8; border-radius:12px; overflow:hidden; box-shadow:0 8px 22px #2741580c; }
+    .entity strong { display:block; color:#fff; background:#234b64; padding:8px 11px; font-size:.86rem; }
+    .entity span { display:block; padding:8px 11px; color:#526078; font: .76rem/1.45 ui-monospace,SFMono-Regular,Consolas,monospace; }
+    .entity.core strong { background:#087c77; }
+    .erd-hint { color:var(--muted); font-size:.85rem; margin-top:16px; }
+    .links { display:flex; flex-wrap:wrap; gap:11px; margin-top:19px; }
+    .links a { display:inline-block; background:#e9f4f6; padding:9px 13px; border-radius:9px; font-weight:700; text-decoration:none; }
+    footer { color:#d3e4ed; background:#0b2135; padding:30px 0; font-size:.88rem; }
+    footer a { color:#9de3dd; }
+    @media(max-width:880px) { .topology-grid { grid-template-columns:1fr; } .actor-stack { grid-template-columns:repeat(2,1fr); } .network { min-height:130px; } .network .arrow { margin:2px; } .cards,.erd { grid-template-columns:repeat(2,1fr); } .flow { grid-template-columns:repeat(2,1fr); } }
+    @media(max-width:590px) { .wrap { width:min(100% - 28px,1180px); } .hero { padding:45px 0; } main section { padding:42px 0; } .topology { padding:13px; } .actor-stack,.cards,.flow,.security-grid,.erd { grid-template-columns:1fr; } .server-core .inside { grid-template-columns:1fr; } .server-core .inside div:last-child { grid-column:auto; } }
+    @media print { .jump { position:static; } .hero { background:#10283d!important; print-color-adjust:exact; } main section { break-inside:avoid; } .surface { box-shadow:none; } }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <small>Bản đồ hệ thống · 26.09.2026</small>
+      <h1>SentinelLAN xoay quanh thiết bị được ủy quyền</h1>
+      <p class="lead">Sáu chủ thể chính: máy Admin, máy nhân viên, mobile Admin, mobile nhân viên, mạng LAN và VPS. Tất cả đi qua một API, một mô hình quyền theo tổ chức và một cơ sở dữ liệu PostgreSQL. Trạng thái triển khai được ghi ngay trên sơ đồ.</p>
+      <div class="hero-meta"><span class="pill">Quản lý endpoint trong LAN</span><span class="pill">Dữ liệu kỹ thuật tối thiểu</span><span class="pill">VPS là nơi triển khai hoặc phần mở rộng SSH</span></div>
+    </div>
+  </header>
+  <nav class="jump" aria-label="Mục lục"><div class="wrap"><a href="#subjects">Chủ thể</a><a href="#journey">Cách hoạt động</a><a href="#security">Bảo mật</a><a href="#transfer">Dữ liệu và tệp</a><a href="#database">Database và SQL</a><a href="#status">Ranh giới hiện tại</a></div></nav>
+  <main>
+    <section id="subjects"><div class="wrap">
+      <span class="eyebrow">01 / Bối cảnh thống nhất</span><h2>Các chủ thể liên kết thế nào?</h2>
+      <p class="section-intro">Máy Admin và máy nhân viên có thể cùng ở LAN. Người dùng có thể truy cập dịch vụ từ mạng được cấp phép qua HTTPS. Agent trên máy được quản lý chủ động kết nối ra API; PostgreSQL chỉ nằm phía server.</p>
+      <div class="topology surface" aria-label="Sơ đồ chủ thể SentinelLAN">
+        <div class="topology-grid">
+          <div class="actor-stack">
+            <div class="node admin"><span class="state">Đã có</span><strong>Máy Admin</strong><span>Trình duyệt web: tạo người dùng, token đăng ký, gán máy, xem trạng thái, xử lý sự cố và audit.</span></div>
+            <div class="node employee"><span class="state">Đã có</span><strong>Máy nhân viên</strong><span>Agent gửi heartbeat/telemetry; nhân viên dùng web xem máy được gán và báo sự cố.</span></div>
+            <div class="node mobile"><span class="state planned">Chưa có app Admin riêng</span><strong>Mobile Admin</strong><span>Vai trò Admin trên điện thoại là mục tiêu giao diện; chưa có ứng dụng native Admin. Không coi đây là kênh quản trị đã nghiệm thu.</span></div>
+            <div class="node mobile"><span class="state">Đã có mã ứng dụng</span><strong>Mobile nhân viên</strong><span>Expo app: đăng nhập, xem máy được gán, quét QR, xem telemetry và gửi sự cố. Cần kiểm tra native trên thiết bị đích.</span></div>
+          </div>
+          <div class="network"><div class="symbol" aria-hidden="true">◎</div><strong>LAN / Internet</strong><p>LAN nối các máy nội bộ. Truy cập API Production đi qua HTTPS tại reverse proxy; thiết bị ngoài LAN chỉ truy cập khi được cấp đường mạng và tài khoản phù hợp.</p><div class="arrow" aria-hidden="true">⇄</div><p>Agent: kết nối outbound. Web/mobile: yêu cầu có xác thực.</p></div>
+          <div class="server-stack">
+            <div class="server-core"><span class="state" style="display:inline-block;color:#075d57;background:#dff6f0;padding:2px 8px;border-radius:999px;font-size:.72rem;font-weight:800;margin-bottom:7px">Triển khai Production</span><h3>VPS chạy SentinelLAN</h3><div class="inside"><div>Reverse proxy TLS</div><div>Next.js web</div><div>ASP.NET Core API + SignalR</div><div>PostgreSQL · dữ liệu tenant, thiết bị, phiên và audit</div></div><p>Production chỉ công bố 80 để chuyển hướng và 443; API/web/PostgreSQL nằm sau proxy trong mạng container.</p></div>
+            <div class="node server"><span class="state">Mở rộng tùy chọn</span><strong>VPS Linux được quản lý</strong><span>API kết nối SSH ra node đã đăng ký với host-key pin. Theo dõi metric và restart dịch vụ trong allow-list là luồng riêng.</span></div>
+          </div>
+        </div>
+        <p class="topology-note">Hai vai trò của “VPS” được phân biệt rõ: VPS chạy hệ thống là hạ tầng; VPS được quản lý qua SSH là tài sản tùy chọn. Chúng có thể là các máy khác nhau.</p>
+      </div>
+      <div class="cards">
+        <article class="card surface"><span class="card-number">QUẢN TRỊ</span><h3>Admin/Technician</h3><p>Thao tác qua web, có quyền theo vai trò và tổ chức. Lệnh gửi Agent phải có lý do, xác nhận, thời hạn và nonce; lệnh Agent hiện được mô phỏng.</p></article>
+        <article class="card surface"><span class="card-number">THIẾT BỊ</span><h3>Agent trên máy được quản lý</h3><p>Đăng ký bằng token một lần, nhận credential riêng, gửi CPU/RAM/đĩa, OS và phiên bản Agent. Không đọc màn hình, bàn phím, tệp cá nhân hay gói tin mạng.</p></article>
+        <article class="card surface"><span class="card-number">NHÂN VIÊN</span><h3>Web và mobile</h3><p>Chỉ thấy máy được gán trong tổ chức, quét tem QR để xác minh và gửi incident. Mobile không phải phần mềm quản lý điện thoại.</p></article>
+      </div>
+    </div></section>
+
+    <section id="journey"><div class="wrap"><span class="eyebrow">02 / Vòng đời thiết bị</span><h2>Hệ thống hoạt động theo một luồng chính</h2>
+      <p class="section-intro">Một thiết bị đi từ được cấp phép tới theo dõi, gán người dùng, hỗ trợ sự cố và thu hồi. Các màn hình đều dùng dữ liệu do cùng API kiểm tra quyền.</p>
+      <div class="flow"><div class="surface"><b>01 · Cấp phép</b><p>Admin tạo tài khoản và token enrollment một lần, có hạn. Cài Agent trên máy được tổ chức cho phép.</p></div><div class="surface"><b>02 · Đăng ký</b><p>Agent gửi token qua HTTPS. API sử dụng token và trả device ID cùng credential riêng; server lưu hash.</p></div><div class="surface"><b>03 · Theo dõi</b><p>Agent gửi heartbeat có idempotency key và telemetry kỹ thuật. API lưu PostgreSQL, đẩy trạng thái qua SignalR.</p></div><div class="surface"><b>04 · Sử dụng</b><p>Admin gán máy; nhân viên xem trên web/mobile, quét QR và gửi incident. Technician xử lý theo quyền.</p></div><div class="surface"><b>05 · Kiểm soát</b><p>Admin thu hồi credential, audit ghi tác vụ. Lệnh Agent xác minh chữ ký, nonce và hạn trước khi trả kết quả mô phỏng.</p></div></div>
+      <div class="notice">“Ping” ở đây là heartbeat tầng ứng dụng qua HTTPS, không phải ICMP ping. Trạng thái online cho biết lần Agent liên hệ API; cần kiểm tra riêng mạng và thiết bị thực tế trước khi khẳng định luồng vận hành đã nghiệm thu.</div>
+    </div></section>
+
+    <section id="security"><div class="wrap"><span class="eyebrow">03 / Cơ chế bảo mật riêng</span><h2>Chống xâm nhập ở từng ranh giới</h2>
+      <p class="section-intro">SentinelLAN giảm nguy cơ giả mạo truy cập, vượt quyền và phát lại lệnh. Phần cứng, hệ điều hành và đường mạng vẫn cần các biện pháp vận hành riêng; Agent hiện không phải EDR/antivirus/IDS.</p>
+      <div class="security-grid">
+        <article class="card surface"><h3>Máy Admin bị truy cập từ bên ngoài</h3><ul><li>Web yêu cầu đăng nhập; mật khẩu lưu bằng PBKDF2-SHA256 với 600.000 vòng.</li><li>Session dùng cookie HttpOnly, SameSite Strict, Secure ở Production; refresh token xoay vòng và có thể thu hồi.</li><li>Thao tác ghi bằng cookie yêu cầu header chống CSRF; API kiểm tra quyền, tenant, rate limit và audit.</li></ul><p class="limit"><b>Giới hạn:</b> malware hoặc người điều khiển máy Admin đã đăng nhập có thể thao tác theo quyền phiên. Cần cập nhật OS, MFA nếu bổ sung, khóa màn hình, EDR và phân quyền tối thiểu ở môi trường triển khai.</p></article>
+        <article class="card surface"><h3>Máy nhân viên bị truy cập từ bên ngoài</h3><ul><li>Agent chủ động kết nối outbound; không có kênh điều khiển inbound tới Agent trong luồng lõi.</li><li>Mỗi Agent có credential riêng; thu hồi thiết bị làm credential cũ không còn hợp lệ.</li><li>Lệnh chỉ thuộc allow-list, ký HMAC, có device ID, hạn và nonce để chặn sửa/phát lại.</li></ul><p class="limit"><b>Giới hạn:</b> Agent không chặn malware, khai thác lỗ hổng Windows hay truy cập SMB/RDP trái phép. Firewall, cập nhật OS và bảo vệ endpoint phải do hạ tầng triển khai.</p></article>
+        <article class="card surface"><h3>Đường mạng và VPS chạy hệ thống</h3><ul><li>Reverse proxy Production nhận HTTPS; HTTP/80 chuyển hướng sang 443. API và PostgreSQL không công bố trực tiếp trong stack Production.</li><li>TLS bảo vệ dữ liệu trên đường truyền tới proxy; API kiểm tra danh tính, quyền và OrganizationId trước khi đọc/ghi.</li><li>Endpoint nhạy cảm có rate limit; heartbeat và incident dùng idempotency để tránh ghi trùng khi retry.</li></ul><p class="limit"><b>Giới hạn:</b> bảo vệ DDoS, quản lý chứng chỉ, firewall VPS, backup/restore và giám sát xâm nhập là trách nhiệm triển khai. Kết nối nội bộ container không phải mã hóa đầu cuối.</p></article>
+        <article class="card surface"><h3>Mobile và VPS được quản lý qua SSH</h3><ul><li>Mobile nhân viên giữ access token trong RAM, refresh token trong SecureStore; API kiểm tra quyền máy được gán.</li><li>QR được phân tích trên thiết bị; ứng dụng gửi mã QR tới API, không gửi ảnh camera trong luồng hiện tại.</li><li>SSH tới VPS tùy chọn dùng host-key fingerprint đã pin; private key mã hóa AES-256-GCM ở server, thao tác restart có quyền, lý do, xác nhận và nonce.</li></ul><p class="limit"><b>Giới hạn:</b> chưa có app native Admin và chưa có bảo đảm phòng chống thiết bị mobile đã root/jailbreak. Khóa vault và fingerprint SSH phải được quản lý an toàn ngoài DB.</p></article>
+      </div>
+      <div class="notice red">Không tuyên bố “ngăn mọi xâm nhập”. Dữ liệu PostgreSQL không được mã hóa từng dòng bởi ứng dụng; tenant isolation là kiểm tra trong service/truy vấn, chưa có PostgreSQL row-level security. Audit chặn sửa/xóa qua EF Core nhưng chưa phải WORM độc lập.</div>
+    </div></section>
+
+    <section id="transfer"><div class="wrap"><span class="eyebrow">04 / Dữ liệu và tệp</span><h2>Cái gì thực sự được gửi đi?</h2>
+      <p class="section-intro">Luồng hiện tại truyền đối tượng JSON và sự kiện trạng thái. Không có luồng upload/download tệp người dùng, thu gom tài liệu hay chuyển tệp giữa hai máy.</p>
+      <div class="table-wrap"><table><thead><tr><th>Nguồn → đích</th><th>Nội dung / định dạng</th><th>Xác thực và mã hóa</th><th>Lưu ở đâu</th></tr></thead><tbody>
+        <tr><td>Agent → API</td><td><code>POST /api/v1/agent/enroll</code>, JSON: token, tên máy, OS, phiên bản Agent. Sau đó <code>/heartbeat</code>, JSON: idempotency key, CPU/RAM/đĩa dạng %, OS, phiên bản.</td><td>HTTPS; sau enrollment dùng device ID + secret trong header riêng. Token/secret được hash ở server.</td><td>Devices, DeviceCredentials, Heartbeats, Telemetry.</td></tr>
+        <tr><td>API → Agent</td><td><code>/agent/commands/poll</code> trả JSON lệnh: loại, lý do, target, nonce, chữ ký, thời hạn. Agent gửi JSON kết quả tới <code>/result</code>.</td><td>HTTPS + credential Agent; Agent kiểm chữ ký HMAC, hạn, nonce và allow-list. Kết quả hiện mô phỏng.</td><td>Commands, CommandResults, AuditLogs.</td></tr>
+        <tr><td>Web Admin/Employee ↔ API</td><td>Yêu cầu/đáp ứng JSON qua REST; cập nhật trạng thái qua SignalR WebSocket hoặc transport được hỗ trợ.</td><td>HTTPS/WSS Production; cookie HttpOnly, SameSite Strict, CSRF header cho thao tác ghi, RBAC + tenant.</td><td>Users, Devices, Incidents, AuditLogs và bảng liên quan.</td></tr>
+        <tr><td>Mobile Employee ↔ API</td><td>JSON login/refresh, máy được gán, telemetry, incident, QR code. Incident có <code>Idempotency-Key</code>.</td><td>HTTPS; bearer access token trong RAM, refresh token trong SecureStore.</td><td>RefreshSessions, Devices, Incidents; mobile lưu ít dữ liệu phiên cục bộ.</td></tr>
+        <tr><td>API ↔ VPS quản lý</td><td>Giao thức SSH cho metric và lệnh dịch vụ trong allow-list; không phải file transfer.</td><td>SSH với host-key pin; private key mã hóa AES-256-GCM trước khi lưu DB.</td><td>VpsNodes và AuditLogs.</td></tr>
+        <tr><td>Vận hành → backup</td><td>PostgreSQL backup dạng <code>.dump</code> bằng <code>pg_dump</code>; không đi qua Agent/mobile.</td><td>Quyền truy cập, nơi lưu và mã hóa backup do đơn vị triển khai cấu hình.</td><td>Vị trí backup do vận hành chọn.</td></tr>
+      </tbody></table></div>
+      <h3 style="margin-top:28px">Ví dụ heartbeat JSON</h3>
+      <pre><code>{
+  "idempotencyKey": "7f82b915de0644d3a6781d04c2be4017",
+  "cpuPercent": 21.5,
+  "ramPercent": 48.2,
+  "diskPercent": 63.0,
+  "osVersion": "Windows 11",
+  "agentVersion": "0.1.0"
+}</code></pre>
+      <p>Định dạng request JSON là <code>application/json</code> theo HTTP client của .NET và ứng dụng. Khi mất mạng, Agent Production xếp tối đa 50 mục telemetry trong tối đa 1 giờ; file hàng đợi được bảo vệ bằng Windows DPAPI hoặc AES-GCM trên Linux. Đây là file cục bộ để retry, không phải tệp gửi lên. Credential/nonce/kết quả chờ của Agent cũng được bảo vệ ở nơi lưu cục bộ. Không có mã hóa đầu cuối riêng cho toàn bộ JSON ngoài TLS.</p>
+      <div class="notice">Nếu sau này cần gửi tệp đính kèm, phải thiết kế riêng: danh sách MIME/đuôi được phép, giới hạn dung lượng, quét malware, checksum, quyền theo tenant, mã hóa lưu trữ, thời hạn lưu và audit. API hiện tại chưa có hợp đồng upload tệp để chọn “định dạng bắt buộc”.</div>
+    </div></section>
+
+    <section id="database"><div class="wrap"><span class="eyebrow">05 / PostgreSQL</span><h2>Sơ đồ dữ liệu và SQL có thể chạy</h2>
+      <p class="section-intro">Sơ đồ dưới đây cho thấy quan hệ nghiệp vụ chính. Tên bảng, cột, index và migration chính xác nằm trong tệp SQL được sinh từ EF Core, không viết tay song song.</p>
+      <div class="erd" aria-label="Sơ đồ quan hệ chính của PostgreSQL">
+        <div class="erd-group"><div class="entity core"><strong>Organizations</strong><span>Id · Code · Name</span></div><div class="entity"><strong>Users</strong><span>OrganizationId → Organizations.Id<br>Role / Status / PasswordHash</span></div><div class="entity"><strong>RefreshSessions</strong><span>UserId · OrganizationId<br>TokenHash · ExpiresAt</span></div><div class="entity"><strong>EnrollmentTokens</strong><span>OrganizationId → Organizations.Id<br>TokenHash · UsedAt · ExpiresAt</span></div></div>
+        <div class="erd-group"><div class="entity core"><strong>Devices</strong><span>OrganizationId → Organizations.Id<br>AssignedUserId → Users.Id<br>Name · LastSeenAt · AssetStatus</span></div><div class="entity"><strong>DeviceCredentials</strong><span>DeviceId → Devices.Id<br>SecretHash</span></div><div class="entity"><strong>DeviceQrLabels</strong><span>DeviceId → Devices.Id<br>CodeHash · ExpiresAt · RevokedAt</span></div><div class="entity"><strong>Heartbeats + Telemetry</strong><span>DeviceId → Devices.Id<br>IdempotencyKey · metrics</span></div></div>
+        <div class="erd-group"><div class="entity"><strong>Commands + CommandResults</strong><span>DeviceId → Devices.Id<br>Nonce · Signature · Succeeded</span></div><div class="entity"><strong>Incidents + WorkOrders</strong><span>DeviceId → Devices.Id<br>ReportedByUserId · Status</span></div><div class="entity"><strong>Policies + PolicyAssignments</strong><span>OrganizationId · PolicyId · DeviceId</span></div><div class="entity"><strong>AuditLogs + VpsNodes</strong><span>OrganizationId · ActorId · Action<br>SSH node là phần mở rộng</span></div></div>
+      </div>
+      <p class="erd-hint">Mũi tên biểu thị quan hệ nghiệp vụ giữa các bảng. SQL hiện tại tạo 25 bảng (gồm bảng lịch sử migration) qua 14 migrations nhưng chưa khai báo foreign key vật lý; tính toàn vẹn liên bảng đang phụ thuộc kiểm tra của ứng dụng. Xem migration SQL để xác nhận constraint và index chính xác.</p>
+      <div class="links"><a href="database/schema.postgresql.sql" download>Tải SQL PostgreSQL</a><a href="database/erd.md">ERD Mermaid đầy đủ</a><a href="database/data-dictionary.md">Từ điển dữ liệu</a></div>
+      <p style="margin-top:18px">Tệp <code>schema.postgresql.sql</code> là script <b>idempotent</b> từ toàn bộ EF Core migrations, gồm DDL, index, thay đổi schema và bảng lịch sử migration. Tạo lại sau khi thêm migration:</p>
+      <pre><code>dotnet ef migrations script --idempotent \
+  --project apps/backend/src/SentinelLAN.Infrastructure \
+  --startup-project apps/backend/src/SentinelLAN.Api \
+  --output docs/database/schema.postgresql.sql</code></pre>
+      <p>Chỉ chạy script trên PostgreSQL đã sao lưu và trong quy trình triển khai được duyệt. Script định nghĩa schema, không chứa dữ liệu demo hoặc mật khẩu.</p>
+    </div></section>
+
+    <section id="status"><div class="wrap"><span class="eyebrow">06 / Trạng thái và phạm vi</span><h2>Điều đã có và điều chưa thể tuyên bố</h2>
+      <div class="table-wrap"><table><thead><tr><th>Chủ thể / cơ chế</th><th>Trạng thái từ mã nguồn</th><th>Điều cần kiểm chứng trên môi trường đích</th></tr></thead><tbody>
+        <tr><td>Máy Admin</td><td>Dashboard web và API quản trị có mã nguồn.</td><td>Quyền, TLS, phiên và thao tác trên deployment thực.</td></tr>
+        <tr><td>Máy nhân viên + Agent</td><td>Enrollment, heartbeat, telemetry, gán máy, incident; lệnh Agent mô phỏng.</td><td>Cài Agent trên máy được phép, mất mạng/khôi phục và heartbeat tới API.</td></tr>
+        <tr><td>Mobile nhân viên</td><td>Expo app và các API tương ứng có mã nguồn.</td><td>Camera, SecureStore, deep link, mạng và vòng đời phiên trên Android/iOS đích.</td></tr>
+        <tr><td>Mobile Admin</td><td>Chưa có ứng dụng native Admin.</td><td>Cần thiết kế, triển khai và nghiệm thu nếu là yêu cầu sản phẩm.</td></tr>
+        <tr><td>LAN / VPS</td><td>Compose LAN/dev và cấu hình VPS Production có trong repo; quản trị VPS SSH là phần mở rộng.</td><td>DNS, chứng chỉ, firewall, backup/restore, SSH fingerprint và kết nối thật.</td></tr>
+        <tr><td>Chống xâm nhập máy</td><td>Kiểm soát truy cập SentinelLAN và lệnh an toàn đã có.</td><td>OS hardening, firewall, EDR/antivirus và phát hiện xâm nhập ngoài phạm vi Agent hiện tại.</td></tr>
+      </tbody></table></div>
+      <p style="margin-top:20px">Trọng tâm sản phẩm là quản lý vòng đời endpoint được ủy quyền trong LAN. Không có packet sniffing, IDS/IPS, remote desktop, đọc tệp cá nhân hay cô lập/khóa máy thật trong luồng Agent hiện tại.</p>
+    </div></section>
+  </main>
+  <footer><div class="wrap">SentinelLAN · tài liệu kiến trúc theo chủ thể. Nguồn chi tiết: <a href="project-overview.md">tổng quan</a>, <a href="architecture/data-flow.md">luồng dữ liệu</a>, <a href="security/threat-model.md">mô hình đe dọa</a>, <a href="deployment/saas-vps-guide.md">triển khai VPS</a>.</div></footer>
+</body>
+</html>

@@ -143,19 +143,19 @@ export function MyDeviceView() {
       {/* System Specifications Card */}
       <Text style={[styles.sectionTitle, { color: colors.ink }]}>{t('systemSpecs')}</Text>
       <AppCard>
-        <SpecRow label={t('osVersion')} value={device.osVersion ?? 'Windows 11'} />
-        <SpecRow label={t('agentVersion')} value={device.agentVersion ?? 'SentinelLAN v0.1.0'} />
+        <SpecRow label={t('osVersion')} value={device.osVersion ?? t('notReported')} />
+        <SpecRow label={t('agentVersion')} value={device.agentVersion ?? t('notReported')} />
         {serialNumber && <SpecRow label={t('serialNumber')} value={serialNumber} />}
         {manufacturer && <SpecRow label="Nhà sản xuất" value={manufacturer} />}
         {model && <SpecRow label="Model" value={model} />}
         {location && <SpecRow label={t('location')} value={location} />}
-        <SpecRow label={t('appliedPolicy')} value={appliedPolicy ?? 'Standard Endpoint Security'} />
+        <SpecRow label={t('appliedPolicy')} value={appliedPolicy ?? t('noAssignedPolicy')} />
       </AppCard>
 
       {/* Quick Action Buttons */}
       <View style={styles.actionContainer}>
         <AppButton
-          title="🚨 Báo sự cố cho máy này"
+          title={`🚨 ${t('reportIncidentButton')}`}
           onPress={() => router.push('/incident-create')}
           style={{ marginBottom: spacing.md }}
         />

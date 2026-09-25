@@ -4,13 +4,12 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   Modal,
   Platform,
   AppState,
   AppStateStatus,
 } from 'react-native';
-import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
+import { Camera, CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
@@ -19,6 +18,7 @@ import { useAppColors, AppButton, AppInput, AppCard } from '../../components/com
 import { spacing, typography, radii } from '../../theme/tokens';
 import { parseScannedQrContent } from './qr-parser';
 import { useAuth } from '../auth/auth-context';
+import { ApiError } from '../../lib/api/client';
 
 export function ScannerView({ isActiveScreen = true }: { isActiveScreen?: boolean }) {
   const { t } = useI18n();
@@ -30,6 +30,7 @@ export function ScannerView({ isActiveScreen = true }: { isActiveScreen?: boolea
   const [manualModalOpen, setManualModalOpen] = useState(false);
   const [manualCode, setManualCode] = useState('');
   const [resolving, setResolving] = useState(false);
+  const [imageScanning, setImageScanning] = useState(false);
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
 
   // AppState management to pause camera when in background
@@ -74,8 +75,13 @@ export function ScannerView({ isActiveScreen = true }: { isActiveScreen?: boolea
           );
         }
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : t('invalidQrCode');
-        setErrorNotice(msg);
+        if (err instanceof ApiError && err.status === 403) {
+          setErrorNotice(t('qrNotAssigned'));
+        } else if (err instanceof ApiError && err.status === 404) {
+          setErrorNotice(t('invalidQrCode'));
+        } else {
+          setErrorNotice(err instanceof Error ? err.message : t('invalidQrCode'));
+        }
       } finally {
         setResolving(false);
       }
@@ -100,8 +106,8 @@ export function ScannerView({ isActiveScreen = true }: { isActiveScreen?: boolea
     [resolving, isActiveScreen, appState, handleResolveCode]
   );
 
-  // Scoped Image Picker fallback
   const handlePickImage = async () => {
+    if (imageScanning || resolving) return;
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
@@ -110,18 +116,63 @@ export function ScannerView({ isActiveScreen = true }: { isActiveScreen?: boolea
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        // Safe UX disclosure for offline/in-repo New Architecture environment:
-        // Local QR decoding from static image requires OpenCV/ZXing native libraries not bundled in standard Expo Client.
-        Alert.alert(
-          'Chọn ảnh QR',
-          'Đã chọn ảnh thành công. Với môi trường demo hiện tại, vui lòng sử dụng Camera quét trực tiếp hoặc Nhập mã tem thiết bị để phân giải nhanh nhất.',
-          [{ text: 'Đồng ý', onPress: () => setManualModalOpen(true) }]
-        );
+        setImageScanning(true);
+        setErrorNotice(null);
+        const scanned = await Camera.scanFromURLAsync(result.assets[0].uri, ['qr']);
+        if (scanned.length === 0) {
+          setErrorNotice(t('noQrInImage'));
+        } else {
+          await handleResolveCode(scanned[0].data);
+        }
       }
     } catch {
-      setErrorNotice('Không thể mở thư viện ảnh');
+      setErrorNotice(t('imageScanFailed'));
+    } finally {
+      setImageScanning(false);
     }
   };
+
+  const manualCodeModal = (
+    <Modal
+      visible={manualModalOpen}
+      animationType="slide"
+      transparent
+      onRequestClose={() => setManualModalOpen(false)}
+    >
+      <View style={styles.modalBackdrop}>
+        <AppCard style={styles.modalCard}>
+          <Text style={[styles.modalTitle, { color: colors.ink }]}>{t('manualCodeOption')}</Text>
+          <AppInput
+            testID="manual-code-input"
+            label={t('manualCodePlaceholder')}
+            value={manualCode}
+            onChangeText={setManualCode}
+            placeholder="QR-..."
+            autoCapitalize="characters"
+          />
+          <View style={styles.modalActions}>
+            <AppButton
+              title={t('cancel')}
+              variant="outline"
+              onPress={() => setManualModalOpen(false)}
+              style={{ flex: 1, marginRight: spacing.sm }}
+            />
+            <AppButton
+              testID="submit-manual-code-button"
+              title={t('submitCode')}
+              loading={resolving}
+              disabled={!manualCode.trim()}
+              onPress={() => {
+                setManualModalOpen(false);
+                void handleResolveCode(manualCode);
+              }}
+              style={{ flex: 1 }}
+            />
+          </View>
+        </AppCard>
+      </View>
+    </Modal>
+  );
 
   // State 1: Permission not determined or requested
   if (!permission) {
@@ -171,9 +222,12 @@ export function ScannerView({ isActiveScreen = true }: { isActiveScreen?: boolea
             title={t('pickImageOption')}
             variant="secondary"
             onPress={handlePickImage}
+            loading={imageScanning}
             style={{ width: '100%' }}
           />
+          {errorNotice ? <Text style={[styles.errorText, { color: colors.danger }]}>{errorNotice}</Text> : null}
         </AppCard>
+        {manualCodeModal}
       </View>
     );
   }
@@ -227,54 +281,16 @@ export function ScannerView({ isActiveScreen = true }: { isActiveScreen?: boolea
           <TouchableOpacity
             accessibilityRole="button"
             accessibilityLabel={t('pickImageOption')}
+            disabled={imageScanning || resolving}
             style={[styles.utilityButton, { backgroundColor: colors.surface }]}
             onPress={handlePickImage}
           >
-            <Text style={[styles.utilityText, { color: colors.ink }]}>🖼️ {t('pickImageOption')}</Text>
+            <Text style={[styles.utilityText, { color: colors.ink }]}>🖼️ {imageScanning ? t('imageScanning') : t('pickImageOption')}</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Manual Code Input Modal */}
-      <Modal
-        visible={manualModalOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setManualModalOpen(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <AppCard style={styles.modalCard}>
-            <Text style={[styles.modalTitle, { color: colors.ink }]}>{t('manualCodeOption')}</Text>
-            <AppInput
-              testID="manual-code-input"
-              label={t('manualCodePlaceholder')}
-              value={manualCode}
-              onChangeText={setManualCode}
-              placeholder="QR-..."
-              autoCapitalize="characters"
-            />
-            <View style={styles.modalActions}>
-              <AppButton
-                title={t('cancel')}
-                variant="outline"
-                onPress={() => setManualModalOpen(false)}
-                style={{ flex: 1, marginRight: spacing.sm }}
-              />
-              <AppButton
-                testID="submit-manual-code-button"
-                title={t('submitCode')}
-                loading={resolving}
-                disabled={!manualCode.trim()}
-                onPress={() => {
-                  setManualModalOpen(false);
-                  handleResolveCode(manualCode);
-                }}
-                style={{ flex: 1 }}
-              />
-            </View>
-          </AppCard>
-        </View>
-      </Modal>
+      {manualCodeModal}
     </View>
   );
 }

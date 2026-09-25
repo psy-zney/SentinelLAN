@@ -1,12 +1,16 @@
 import React from 'react';
 import { Text, View } from 'react-native';
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import { useI18n } from '../../lib/i18n';
 import { useAppColors } from '../../components/common';
+import { useAuth } from '../../features/auth/auth-context';
 
 export default function TabsLayout() {
   const { t } = useI18n();
   const colors = useAppColors();
+  const { status } = useAuth();
+
+  if (status !== 'authenticated') return <Redirect href="/" />;
 
   return (
     <Tabs

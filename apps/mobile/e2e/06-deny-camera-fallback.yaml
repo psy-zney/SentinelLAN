@@ -1,32 +1,23 @@
-appId: com.sentinellan.mobile
+appId: com.sentinellan.employee
 ---
-# Flow 6: Từ chối quyền truy cập camera và sử dụng phương án dự phòng an toàn (Fallback)
-- launchApp
+# Flow 6: Từ chối camera và nhập mã thủ công
+- launchApp:
+    permissions:
+      camera: deny
 
 # Chuyển sang tab Quét QR
 - tapOn: "Quét QR"
 
 # Giả định trạng thái quyền camera bị từ chối
 - assertVisible: "Yêu cầu quyền truy cập Camera"
-- assertVisible: "SentinelLAN cần quyền truy cập camera để quét mã QR dán trên thân máy trạm."
 
-# Thử nghiệm chọn ảnh từ thư viện (Safe UX disclosure không giả mạo decode thành công)
-- tapOn: "Chọn ảnh QR từ thư viện"
-- assertVisible: "Chọn ảnh QR"
-- assertVisible: "Đồng ý"
-- tapOn: "Đồng ý"
-
-# Xác nhận modal nhập mã thủ công tự động mở ra
-- assertVisible: "Nhập mã tem thiết bị"
-- tapOn: "Đóng"
-
-# Thử nghiệm mở trực tiếp nhập mã thủ công
+# Nhập mã vẫn phải dùng được khi camera bị từ chối.
 - tapOn: "Hoặc nhập mã thiết bị thủ công"
-- assertVisible: "Nhập mã tem thiết bị"
+- assertVisible: "Nhập mã QR hoặc tiền tố (vd: QR-A1B2C3D4)"
 - tapOn:
     id: "manual-code-input"
-- inputText: "QR-SENTINEL-DEMO-01"
+- inputText: ${MAESTRO_ASSIGNED_QR_CODE}
 - hideKeyboard
 - tapOn:
     id: "submit-manual-code-button"
-- assertVisible: "Thiết bị được phân công"
+- assertVisible: "Máy tính của tôi"

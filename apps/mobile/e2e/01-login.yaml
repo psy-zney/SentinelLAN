@@ -1,0 +1,31 @@
+appId: com.sentinellan.employee
+---
+# Flow 1: Đăng nhập tài khoản Employee đã kích hoạt
+- launchApp:
+    clearState: true
+
+- assertVisible: "Đăng nhập Nhân viên"
+
+# Dùng tài khoản thử được cấp qua biến MAESTRO_ trên máy chạy test.
+- tapOn:
+    id: "org-code-input"
+- inputText: ${MAESTRO_ORG_CODE}
+
+- tapOn:
+    id: "email-input"
+- inputText: ${MAESTRO_EMPLOYEE_EMAIL}
+
+- tapOn:
+    id: "password-input"
+- inputText: ${MAESTRO_EMPLOYEE_PASSWORD}
+
+- hideKeyboard
+
+# Thực hiện đăng nhập
+- tapOn:
+    id: "login-submit-button"
+
+# Kiểm tra chuyển hướng thành công vào hệ thống
+- assertVisible: "Tổng quan"
+- assertVisible: "Máy của tôi"
+- assertVisible: "Quét QR"

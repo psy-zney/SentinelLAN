@@ -1,55 +1,20 @@
-# System Context & Operational Scope
+# Bối cảnh và topology
 
-SentinelLAN is an authorized, privacy-first endpoint and cloud node governance platform built on **Zero Trust principles (NIST SP 800-207)** and **Privacy-by-Design**.
-
-It serves a dual operational scope:
-1. **Workstation Governance (Windows Endpoints)**: Hardware asset tracking, non-invasive health telemetry, policy enforcement, and authorized emergency intervention (e.g., workstation lock) for office and hybrid remote employees.
-2. **Cloud Infrastructure Governance (Linux VPS Nodes)**: Centralized "single pane of glass" monitoring and allow-listed service recovery (e.g., restarting Nginx or Docker services) across multi-cloud providers (Oracle Cloud, AWS, GCP) without requiring open inbound SSH/management ports.
+SentinelLAN quản lý các thiết bị đầu cuối được tổ chức cho phép. Admin và Technician dùng dashboard để quản trị; Employee xem thiết bị được gán. Agent trên máy được quản lý gửi telemetry kỹ thuật qua HTTPS. Kết nối SSH tới VPS đã đăng ký là chức năng mở rộng riêng; VPS này không cần cài Agent để dùng chức năng SSH.
 
 ```mermaid
-flowchart TD
-  subgraph Operators["Human Actors"]
-    Admin["IT Administrator"]
-    Tech["Support Technician"]
-    Employee["Authorized Employee"]
-  end
-
-  subgraph Presentation["Edge & Delivery Layer"]
-    CDN["Cloudflare / Reverse Proxy (Port 443 TLS 1.3)"]
-    Web["SentinelLAN Web Dashboard (Next.js 16)"]
-  end
-
-  subgraph Core["Central Management Cluster"]
-    API["SentinelLAN API & SignalR Hub (.NET 10 Modular Monolith)"]
-    DB[("PostgreSQL 18 (Multi-Tenant Isolated)")]
-    Redis[("Redis 8 (Pub/Sub & Distributed Cache - Optional)")]
-  end
-
-  subgraph ManagedNodes["Managed Fleet (Outbound-Only Connections)"]
-    subgraph OfficeHybrid["Workstation Fleet"]
-      WinAgent["Windows Agent (.NET Service / Worker)\n[Laptop / Office PC]"]
-    end
-    subgraph CloudFleet["Cloud Infrastructure Fleet"]
-      LinuxAgent["Linux Agent (.NET systemd Daemon)\n[Oracle Cloud / AWS / GCP VPS]"]
-    end
-  end
-
-  Admin -->|HTTPS Session| Web
-  Tech -->|HTTPS Session| Web
-  Employee -->|HTTPS /my-device| Web
-
-  Web -->|HTTPS REST / WSS| CDN
-  CDN -->|Proxied REST / WSS| API
-
-  WinAgent -->|Outbound WSS / HTTPS 443| CDN
-  LinuxAgent -->|Outbound WSS / HTTPS 443| CDN
-
-  API --> DB
-  API -.-> Redis
+flowchart LR
+  People[Admin / Technician / Employee] -->|HTTPS| Proxy[Reverse proxy TLS]
+  Proxy --> Web[Next.js dashboard]
+  Proxy --> API[ASP.NET Core API / SignalR]
+  Web -->|Typed API client| API
+  Agent[Windows / Linux Agent] -->|HTTPS outbound| Proxy
+  API --> DB[(PostgreSQL)]
+  API -.->|SSH với host-key pin; mở rộng| VPS[Linux VPS được quản lý]
 ```
 
-## Connectivity Invariants
-- **Outbound-Only Architecture**: Managed agents connect outbound to the central API via TLS 1.3 (HTTPS / WebSocket). Endpoints and cloud servers operate safely behind NAT and firewalls without requiring inbound port forwarding or exposed SSH (Port 22).
-- **Tenant Isolation**: Every query and realtime SignalR group is partitioned strictly by `OrganizationId`. Cross-tenant data leakage is prevented at the database and memory layer.
-- **Privacy Boundary**: Employee transparency is enforced by design; no covert surveillance, screen captures, keystrokes, or arbitrary remote shell execution are supported.
+Trong Development, `compose.yaml` chạy PostgreSQL, API và web; Agent chạy trên host. Stack Production trong `deploy/vps/` thêm Nginx TLS và không tạo dữ liệu demo. Các bước vận hành nằm trong [hướng dẫn LAN](../deployment/self-hosted-guide.md) và [hướng dẫn VPS](../deployment/saas-vps-guide.md). Redis không thuộc stack đang dùng.
 
+Mỗi yêu cầu phải kiểm tra quyền và `OrganizationId` tại boundary ứng dụng. Tenant scope hiện được áp dụng tường minh trong truy vấn; không có EF Core global query filter hay database row-level security. Audit được bảo vệ khỏi sửa/xóa qua `SentinelDbContext`, chưa phải sổ cái bất biến ở mức database. Xem [mô hình đe dọa](../security/threat-model.md) và [các thành phần](components.md).
+
+Lệnh Agent `SimulateLock`, `SimulateNetworkIsolation` và `RestartService` chỉ mô phỏng, không đổi hệ điều hành. Thao tác restart dịch vụ qua SSH của chức năng quản trị VPS là thao tác thật, yêu cầu quyền, lý do, xác nhận, nonce và SSH host-key fingerprint đã xác minh.

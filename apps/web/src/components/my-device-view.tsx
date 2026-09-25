@@ -205,7 +205,7 @@ export function MyDeviceView() {
           <strong>{latestTelemetry?.diskPercent !== null && latestTelemetry?.diskPercent !== undefined ? `${latestTelemetry.diskPercent}%` : "—"}</strong>
         </div>
         <div className="metric">
-          <span>{lang === "vi" ? "Chính sách áp dụng" : "Applied policy"}</span>
+          <span>{t("appliedPolicy")}</span>
           <strong className="metric-text">{device.appliedPolicy ?? t("none")}</strong>
         </div>
       </section>

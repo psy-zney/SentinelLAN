@@ -1,6 +1,6 @@
 ﻿# Mô hình đe dọa SentinelLAN
 
-SentinelLAN quản lý thiết bị được tổ chức cho phép. Tài sản cần bảo vệ gồm tài khoản Admin/Employee/Technician, credential Agent, SSH private key VPS, telemetry, phiếu sự cố và audit. Ranh giới tin cậy chính: trình duyệt ↔ API, Agent ↔ API, API ↔ PostgreSQL, API ↔ VPS qua SSH.
+SentinelLAN quản lý thiết bị đầu cuối được tổ chức cho phép. Tài sản lõi cần bảo vệ gồm tài khoản Admin/Employee/Technician, credential Agent, telemetry, phiếu sự cố và audit. Ranh giới tin cậy chính: trình duyệt/mobile ↔ API, Agent ↔ API và API ↔ PostgreSQL. Phần mở rộng quản trị VPS có thêm SSH private key và ranh giới API ↔ VPS qua SSH.
 
 | Đe dọa | Kiểm soát đã có | Giới hạn cần vận hành |
 |---|---|---|

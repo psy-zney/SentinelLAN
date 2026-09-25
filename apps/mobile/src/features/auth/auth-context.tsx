@@ -7,11 +7,13 @@ import {
 import { TokenVault, CachedUserInfo } from '../../lib/security/secure-store';
 import { MobileLoginRequest } from '../../lib/validation/schemas';
 import Constants from 'expo-constants';
+import { useQueryClient } from '@tanstack/react-query';
 
 export type AuthStatus =
   | 'bootstrapping'
   | 'authenticated'
   | 'unauthenticated'
+  | 'offline'
   | 'session-expired'
   | 'update-required';
 
@@ -21,6 +23,7 @@ interface AuthContextType {
   login: (req: MobileLoginRequest) => Promise<void>;
   logout: () => Promise<void>;
   logoutAll: () => Promise<void>;
+  retrySession: () => Promise<void>;
   dismissSessionExpired: () => void;
   apiClient: MobileApiClient;
 }
@@ -31,76 +34,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('bootstrapping');
   const [user, setUser] = useState<CachedUserInfo | null>(null);
   const [apiClient] = useState(() => new MobileApiClient());
+  const queryClient = useQueryClient();
 
   const handleSessionExpired = useCallback(() => {
     setInMemoryAccessToken(null);
     TokenVault.wipeAll().catch(() => {});
+    queryClient.clear();
     setUser(null);
     setStatus('session-expired');
-  }, []);
+  }, [queryClient]);
 
   useEffect(() => {
     setOnSessionExpired(handleSessionExpired);
   }, [handleSessionExpired]);
 
-  // Bootstrap & Cold-start authentication check
-  useEffect(() => {
-    let active = true;
-
-    async function initialize() {
-      try {
-        // 1. Check bootstrap for minimum version
-        let bootstrapData = null;
-        try {
-          bootstrapData = await apiClient.bootstrap();
-        } catch {
-          // If server is unreachable offline, proceed with local session verification
-        }
-
-        const currentVersion = Constants.expoConfig?.version ?? '1.0.0';
-        if (bootstrapData && isVersionOutdated(currentVersion, bootstrapData.minimumAppVersion)) {
-          if (active) setStatus('update-required');
-          return;
-        }
-
-        // 2. Cold-start refresh check
-        const storedRt = await TokenVault.getRefreshToken();
-        if (!storedRt) {
-          if (active) setStatus('unauthenticated');
-          return;
-        }
-
-        // Try rotating the refresh token to get a fresh access token
-        const refreshSuccess = await apiClient.refresh(storedRt);
-        if (!refreshSuccess) {
-          if (active) {
-            await TokenVault.wipeAll();
-            setStatus('unauthenticated');
-          }
-          return;
-        }
-
-        const cachedUser = await TokenVault.getCachedUser();
-        if (active) {
-          setUser(cachedUser);
-          setStatus('authenticated');
-        }
-      } catch {
-        if (active) {
-          await TokenVault.wipeAll();
-          setStatus('unauthenticated');
-        }
+  const checkSession = useCallback(async (): Promise<{
+    status: AuthStatus;
+    user: CachedUserInfo | null;
+  }> => {
+    try {
+      const bootstrapData = await apiClient.bootstrap();
+      const currentVersion = Constants.expoConfig?.version ?? '1.0.0';
+      if (isVersionOutdated(currentVersion, bootstrapData.minimumAppVersion)) {
+        return { status: 'update-required', user: null };
       }
+    } catch {
+      // Refresh below distinguishes an unavailable server from a rejected session.
     }
 
-    initialize();
+    const storedRt = await TokenVault.getRefreshToken();
+    if (!storedRt) return { status: 'unauthenticated', user: null };
 
-    return () => {
-      active = false;
-    };
-  }, [apiClient]);
+    const outcome = await apiClient.refresh(storedRt);
+    if (outcome === 'success') {
+      return { status: 'authenticated', user: await TokenVault.getCachedUser() };
+    }
+    if (outcome === 'rejected') queryClient.clear();
+    return { status: outcome === 'unavailable' ? 'offline' : 'unauthenticated', user: null };
+  }, [apiClient, queryClient]);
+
+  useEffect(() => {
+    let active = true;
+    checkSession().then((session) => {
+      if (!active) return;
+      setUser(session.user);
+      setStatus(session.status);
+    }).catch(() => {
+      if (active) setStatus('offline');
+    });
+    return () => { active = false; };
+  }, [checkSession]);
+
+  const retrySession = async () => {
+    setStatus('bootstrapping');
+    try {
+      const session = await checkSession();
+      setUser(session.user);
+      setStatus(session.status);
+    } catch {
+      setStatus('offline');
+    }
+  };
 
   const login = async (req: MobileLoginRequest) => {
+    queryClient.clear();
     const res = await apiClient.login({
       ...req,
       appVersion: Constants.expoConfig?.version ?? '1.0.0',
@@ -113,6 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await apiClient.logout();
     } finally {
+      queryClient.clear();
       setUser(null);
       setStatus('unauthenticated');
     }
@@ -122,6 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await apiClient.logoutAll();
     } finally {
+      queryClient.clear();
       setUser(null);
       setStatus('unauthenticated');
     }
@@ -139,6 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         logoutAll,
+        retrySession,
         dismissSessionExpired,
         apiClient,
       }}

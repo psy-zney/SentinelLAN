@@ -49,6 +49,10 @@ if (!builder.Environment.IsDevelopment())
         throw new InvalidOperationException("SENTINELLAN_ACCESS_TOKEN_SIGNING_KEY must be set outside Development.");
     if (IsUnsafeProductionSecret(serverVaultKey))
         throw new InvalidOperationException("SENTINELLAN_SERVER_VAULT_KEY must be a unique secret of at least 32 characters outside Development.");
+    if (string.Equals(signingKey, accessTokenSigningKey, StringComparison.Ordinal) ||
+        string.Equals(signingKey, serverVaultKey, StringComparison.Ordinal) ||
+        string.Equals(accessTokenSigningKey, serverVaultKey, StringComparison.Ordinal))
+        throw new InvalidOperationException("Command signing, access-token signing, and server vault keys must be distinct outside Development.");
 }
 if (accessTokenSigningKey.Length < 32) throw new InvalidOperationException("The access-token signing key must contain at least 32 characters.");
 builder.Services.AddSingleton<ICommandSigner>(new HmacCommandSigner(signingKey));

@@ -26,12 +26,19 @@ describe('Deep Link Parser for Account Activation', () => {
     expect(result.token).toBe('secure-token-sample-123456789');
   });
 
-  it('parses valid LAN/VPN IP hosts', () => {
+  it('rejects an unconfigured LAN host', () => {
     const raw = 'https://192.168.1.100/activate?token=valid-lan-token-1234567890';
     const result = parseActivationUrl(raw);
 
-    expect(result.valid).toBe(true);
-    expect(result.token).toBe('valid-lan-token-1234567890');
+    expect(result.valid).toBe(false);
+  });
+
+  it('rejects HTTP, lookalike hosts, credentials in URLs and a foreign custom-scheme host', () => {
+    const token = 'valid-token-1234567890';
+    expect(parseActivationUrl(`http://sentinellan.local/activate?token=${token}`).valid).toBe(false);
+    expect(parseActivationUrl(`https://sentinellan.local.evil.test/activate?token=${token}`).valid).toBe(false);
+    expect(parseActivationUrl(`https://user@sentinellan.local/activate?token=${token}`).valid).toBe(false);
+    expect(parseActivationUrl(`sentinellan://evil/activate?token=${token}`).valid).toBe(false);
   });
 
   it('rejects foreign or untrusted host', () => {

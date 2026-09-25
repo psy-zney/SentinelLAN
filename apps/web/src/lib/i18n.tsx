@@ -8,7 +8,7 @@ export const translations = {
   vi: {
     // Navigation & Common
     appName: "SentinelLAN",
-    appTagline: "Quản trị Thiết bị Đầu cuối & Node Đám mây",
+    appTagline: "Quản lý thiết bị đầu cuối được ủy quyền",
     dashboard: "Bảng điều khiển",
     devices: "Thiết bị",
     policies: "Chính sách",
@@ -65,11 +65,11 @@ export const translations = {
     eyebrowDirectory: "Danh bạ",
     eyebrowTransparency: "Minh bạch",
 
-    subtitleDashboard: "Tổng quan trạng thái đội máy tính, cảnh báo đang mở và chỉ số phần cứng thời gian thực.",
-    subtitlePolicies: "Khung thời gian làm việc, khóa màn hình khi rảnh, chế độ cổng USB và gán chính sách.",
-    subtitleCommands: "Lệnh ngắn hạn được ký số mật mã với lý do bắt buộc, danh sách cho phép (allow-list) và kiểm toán bất biến.",
-    subtitleAlerts: "Bất thường kết nối thời gian thực, vượt ngưỡng tài nguyên phần cứng và các sự kiện an ninh mạng.",
-    subtitleAudit: "Nhật ký chỉ thêm (append-only) minh bạch cho các tác vụ nhạy cảm, điều khiển từ xa và thay đổi chính sách.",
+    subtitleDashboard: "Trạng thái thiết bị được quản lý, cảnh báo đang mở và telemetry CPU/RAM/đĩa do Agent gửi.",
+    subtitlePolicies: "Lưu và gán cấu hình chính sách cho thiết bị; Agent hiện chưa áp dụng khóa màn hình hoặc chế độ USB.",
+    subtitleCommands: "Lệnh Agent có chữ ký, lý do và audit; hành động trên hệ điều hành hiện được mô phỏng.",
+    subtitleAlerts: "Cảnh báo và sự cố do người có quyền ghi nhận; chưa tự sinh cảnh báo từ ngưỡng telemetry.",
+    subtitleAudit: "Nhật ký tác vụ nhạy cảm được chặn sửa/xóa qua ứng dụng; chưa có kho WORM độc lập.",
     subtitleUsers: "Danh bạ người dùng đa tổ chức (multi-tenant), phân quyền RBAC và ranh giới quyền hạn.",
     subtitleMyDevice: "Xem minh bạch những thông số công ty theo dõi trên thiết bị của bạn. Không quay lén, không theo dõi phím gõ.",
 
@@ -167,13 +167,13 @@ export const translations = {
     // My Device View
     myDeviceHeader: "Thiết bị được giao cho bạn",
     transparencyBadge: "Minh bạch 100% (Privacy-First)",
-    appliedPolicy: "Chính sách đang áp dụng",
+    appliedPolicy: "Chính sách được gán (chưa thực thi)",
     recentActionsTitle: "Nhật ký thao tác gần đây của IT trên máy bạn",
     noRecentActions: "Chưa có thao tác IT nào trên thiết bị này.",
 
     // Login Form
     signInTitle: "Đăng nhập SentinelLAN",
-    signInSubtitle: "Hệ thống quản trị an toàn thiết bị đầu cuối và node đám mây",
+    signInSubtitle: "Quản lý thiết bị đầu cuối được tổ chức cho phép",
     orgCodePrompt: "Mã định danh tổ chức",
     emailPrompt: "Email công việc",
     passwordPrompt: "Mật khẩu",
@@ -182,9 +182,9 @@ export const translations = {
     loginError: "Mã tổ chức, email hoặc mật khẩu không chính xác.",
 
     // Cloud VPS
-    vpsNodes: "Cloud VPS",
-    eyebrowCloud: "Hạ tầng Cloud",
-    subtitleVps: "Quản trị máy chủ Linux Cloud VPS từ xa qua SSH Private Key mã hóa AES-256 Vault. Giám sát tài nguyên và khởi động lại dịch vụ an toàn.",
+    vpsNodes: "VPS (mở rộng)",
+    eyebrowCloud: "Mở rộng tùy chọn",
+    subtitleVps: "Quản trị VPS Linux đã đăng ký riêng qua SSH; chức năng này độc lập với luồng Agent và thiết bị đầu cuối.",
     totalVpsNodes: "Tổng VPS Nodes",
     onlineVpsNodes: "VPS Trực tuyến",
     totalDockerContainers: "Docker Containers",
@@ -324,7 +324,7 @@ export const translations = {
   en: {
     // Navigation & Common
     appName: "SentinelLAN",
-    appTagline: "Secure Endpoint & Cloud Node Governance",
+    appTagline: "Authorized endpoint management",
     dashboard: "Dashboard",
     devices: "Devices",
     policies: "Policies",
@@ -381,11 +381,11 @@ export const translations = {
     eyebrowDirectory: "Directory",
     eyebrowTransparency: "Transparency",
 
-    subtitleDashboard: "Fleet status overview, active security incidents, and real-time hardware metrics.",
-    subtitlePolicies: "Working hours, idle timeout lock, USB modes, and endpoint assignments.",
-    subtitleCommands: "Short-lived cryptographically signed commands with reason, allow-list verification, and audit trail.",
-    subtitleAlerts: "Realtime connectivity anomalies, metric violations, and security events requiring intervention.",
-    subtitleAudit: "Append-only accountability logs for sensitive operations, command dispatch, and policy adjustments.",
+    subtitleDashboard: "Managed device status, open alerts, and CPU/RAM/disk telemetry reported by Agents.",
+    subtitlePolicies: "Store and assign policy settings; the Agent does not yet enforce screen lock or USB modes.",
+    subtitleCommands: "Signed Agent commands with reasons and audit; OS actions are simulated in this version.",
+    subtitleAlerts: "Alerts and incidents recorded by authorized users; telemetry threshold rules are not active.",
+    subtitleAudit: "Sensitive action records protected from edits through the application; no independent WORM store.",
     subtitleUsers: "Multi-tenant user identity, role assignments, and organizational access boundaries.",
     subtitleMyDevice: "Transparency view: inspect exactly what metrics and telemetry are monitored on your assigned device.",
 
@@ -483,13 +483,13 @@ export const translations = {
     // My Device View
     myDeviceHeader: "Your Assigned Corporate Device",
     transparencyBadge: "100% Transparent (Privacy-First)",
-    appliedPolicy: "Applied Policy",
+    appliedPolicy: "Assigned policy (not enforced)",
     recentActionsTitle: "Recent IT Administrator Actions on Your Device",
     noRecentActions: "No recent IT administrative actions logged.",
 
     // Login Form
     signInTitle: "Sign in to SentinelLAN",
-    signInSubtitle: "Secure Endpoint & Cloud Node Governance",
+    signInSubtitle: "Authorized endpoint management",
     orgCodePrompt: "Organization Code",
     emailPrompt: "Work Email",
     passwordPrompt: "Password",
@@ -498,9 +498,9 @@ export const translations = {
     loginError: "Invalid organization code, email, or password.",
 
     // Cloud VPS
-    vpsNodes: "Cloud VPS",
-    eyebrowCloud: "Cloud Infrastructure",
-    subtitleVps: "Remote Linux Cloud VPS management via AES-256 Vault encrypted SSH private keys. Real-time telemetry monitoring and safe allow-listed service recovery.",
+    vpsNodes: "VPS (optional)",
+    eyebrowCloud: "Optional extension",
+    subtitleVps: "Manage separately registered Linux VPS nodes over SSH; this feature is independent of the Agent endpoint workflow.",
     totalVpsNodes: "Total VPS Nodes",
     onlineVpsNodes: "Online VPS",
     totalDockerContainers: "Docker Containers",

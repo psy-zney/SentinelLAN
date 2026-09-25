@@ -32,11 +32,11 @@ describe('Auth State Machine and Token Rotation', () => {
     await TokenVault.saveRefreshToken('initial-refresh-token-1');
     const result = await client.refresh('initial-refresh-token-1');
 
-    expect(result).toBe(true);
+    expect(result).toBe('success');
     expect(await TokenVault.getRefreshToken()).toBe('rotated-refresh-token-2');
   });
 
-  it('wipes SecureStore if refresh fails with 401 or network error', async () => {
+  it('wipes SecureStore when the server rejects a refresh token', async () => {
     const client = new MobileApiClient('https://sentinellan.local');
 
     global.fetch = jest.fn().mockImplementation(async () => {
@@ -50,8 +50,26 @@ describe('Auth State Machine and Token Rotation', () => {
     await TokenVault.saveRefreshToken('revoked-token');
     const result = await client.refresh('revoked-token');
 
-    expect(result).toBe(false);
+    expect(result).toBe('rejected');
     expect(await TokenVault.getRefreshToken()).toBeNull();
+  });
+
+  it('keeps the refresh token when the server is unreachable', async () => {
+    const client = new MobileApiClient('https://sentinellan.local');
+    global.fetch = jest.fn().mockRejectedValue(new TypeError('Network request failed'));
+
+    await TokenVault.saveRefreshToken('still-valid-token');
+    expect(await client.refresh('still-valid-token')).toBe('unavailable');
+    expect(await TokenVault.getRefreshToken()).toBe('still-valid-token');
+  });
+
+  it('keeps the refresh token during a transient server failure', async () => {
+    const client = new MobileApiClient('https://sentinellan.local');
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 503 });
+
+    await TokenVault.saveRefreshToken('still-valid-token');
+    expect(await client.refresh('still-valid-token')).toBe('unavailable');
+    expect(await TokenVault.getRefreshToken()).toBe('still-valid-token');
   });
 
   it('wipes SecureStore unconditionally during logout even if server errors', async () => {

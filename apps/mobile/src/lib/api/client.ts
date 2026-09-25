@@ -32,7 +32,9 @@ export class ApiError extends Error {
 
 // In-memory access token strictly not persisted to disk
 let inMemoryAccessToken: string | null = null;
-let refreshInFlight: Promise<boolean> | null = null;
+export type RefreshOutcome = 'success' | 'rejected' | 'unavailable';
+
+let refreshInFlight: Promise<RefreshOutcome> | null = null;
 let onSessionExpiredCallback: (() => void) | null = null;
 
 export function setInMemoryAccessToken(token: string | null): void {
@@ -97,13 +99,15 @@ export class MobileApiClient {
       path.includes('/mobile/auth/logout');
 
     if (response.status === 401 && retryOn401 && !isAuthEndpoint) {
-      const refreshed = await this.performSingleFlightRefresh();
-      if (refreshed) {
+      const refreshOutcome = await this.performSingleFlightRefresh();
+      if (refreshOutcome === 'success') {
         response = await this.send(path, init);
-      } else {
+      } else if (refreshOutcome === 'rejected') {
         if (onSessionExpiredCallback) {
           onSessionExpiredCallback();
         }
+      } else {
+        throw new Error('Cannot reach the server to renew the session');
       }
     }
 
@@ -127,7 +131,38 @@ export class MobileApiClient {
     return (await response.json()) as T;
   }
 
-  private async performSingleFlightRefresh(): Promise<boolean> {
+  private async requestRefresh(refreshToken: string): Promise<RefreshOutcome> {
+    let response: Response;
+    try {
+      response = await this.send('/api/v1/mobile/auth/refresh', {
+        method: 'POST',
+        body: JSON.stringify({ refreshToken }),
+      });
+    } catch {
+      return 'unavailable';
+    }
+
+    if (response.status === 401 || response.status === 403) {
+      await TokenVault.wipeAll();
+      setInMemoryAccessToken(null);
+      return 'rejected';
+    }
+    if (!response.ok) return 'unavailable';
+
+    try {
+      const parsed = MobileRefreshResponseSchema.parse(await response.json());
+      await TokenVault.saveRefreshToken(parsed.refreshToken);
+      setInMemoryAccessToken(parsed.accessToken);
+      return 'success';
+    } catch {
+      // A rotated token that cannot be saved cannot safely restore the session.
+      await TokenVault.wipeAll();
+      setInMemoryAccessToken(null);
+      return 'rejected';
+    }
+  }
+
+  private async performSingleFlightRefresh(): Promise<RefreshOutcome> {
     if (refreshInFlight) {
       return refreshInFlight;
     }
@@ -135,31 +170,10 @@ export class MobileApiClient {
     refreshInFlight = (async () => {
       try {
         const currentRt = await TokenVault.getRefreshToken();
-        if (!currentRt) {
-          return false;
-        }
-
-        const res = await this.send('/api/v1/mobile/auth/refresh', {
-          method: 'POST',
-          body: JSON.stringify({ refreshToken: currentRt }),
-        });
-
-        if (!res.ok) {
-          await TokenVault.wipeAll();
-          setInMemoryAccessToken(null);
-          return false;
-        }
-
-        const json = await res.json();
-        const parsed = MobileRefreshResponseSchema.parse(json);
-
-        setInMemoryAccessToken(parsed.accessToken);
-        await TokenVault.saveRefreshToken(parsed.refreshToken);
-        return true;
+        if (!currentRt) return 'rejected';
+        return await this.requestRefresh(currentRt);
       } catch {
-        await TokenVault.wipeAll();
-        setInMemoryAccessToken(null);
-        return false;
+        return 'unavailable';
       } finally {
         refreshInFlight = null;
       }
@@ -191,29 +205,8 @@ export class MobileApiClient {
     return parsed;
   }
 
-  async refresh(refreshToken: string): Promise<boolean> {
-    try {
-      const res = await this.send('/api/v1/mobile/auth/refresh', {
-        method: 'POST',
-        body: JSON.stringify({ refreshToken }),
-      });
-
-      if (!res.ok) {
-        await TokenVault.wipeAll();
-        setInMemoryAccessToken(null);
-        return false;
-      }
-
-      const json = await res.json();
-      const parsed = MobileRefreshResponseSchema.parse(json);
-      setInMemoryAccessToken(parsed.accessToken);
-      await TokenVault.saveRefreshToken(parsed.refreshToken);
-      return true;
-    } catch {
-      await TokenVault.wipeAll();
-      setInMemoryAccessToken(null);
-      return false;
-    }
+  async refresh(refreshToken: string): Promise<RefreshOutcome> {
+    return this.requestRefresh(refreshToken);
   }
 
   async logout(): Promise<void> {
@@ -301,8 +294,8 @@ export class MobileApiClient {
   async resolveQr(code: string): Promise<AuthenticatedQrResolve> {
     const encoded = encodeURIComponent(code.trim());
     const data = await this.executeWithRefresh<unknown>(
-      `/api/v1/qr/${encoded}/resolve`,
-      { method: 'POST' }
+      `/api/v1/qr/${encoded}`,
+      { method: 'GET' }
     );
     return AuthenticatedQrResolveSchema.parse(data);
   }

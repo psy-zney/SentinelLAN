@@ -11,8 +11,8 @@ export function PrivacyManifestView() {
   const collectedItems = [
     'Trạng thái trực tuyến / ngoại tuyến (Online / Offline heartbeat)',
     'Tỷ lệ sử dụng phần cứng cơ bản: CPU (%), RAM (%), Ổ đĩa (%)',
-    'Phiên bản Hệ điều hành (Windows 11) và phiên bản SentinelLAN Agent',
-    'Tên chính sách bảo mật đang áp dụng (Applied Security Policy)',
+    'Phiên bản hệ điều hành và phiên bản SentinelLAN Agent do Agent báo cáo',
+    'Tên chính sách được gán; không đồng nghĩa đã được Agent thực thi',
     'Lịch sử báo cáo sự cố phần cứng/mạng do chính người dùng gửi',
   ];
 
@@ -27,10 +27,10 @@ export function PrivacyManifestView() {
   ];
 
   const agentPermissions = [
-    'Chạy dưới dạng Windows Service quyền hạn tối thiểu (least-privileged)',
-    'Chỉ gửi telemetry kỹ thuật outbound qua HTTPS/WSS có xác thực',
+    'Chạy dưới tài khoản dịch vụ quyền hạn tối thiểu trên máy được quản lý',
+    'Gửi telemetry kỹ thuật outbound tới API có xác thực; Production yêu cầu HTTPS',
     'Không mở port inbound, không chấp nhận shell từ xa tùy ý',
-    'Lệnh quản trị (khóa máy, cách ly) bị tắt mặc định trừ khi có phê duyệt qua lab flag',
+    'Lệnh khóa máy và cô lập mạng trong phiên bản này chỉ trả kết quả mô phỏng, không đổi hệ điều hành',
   ];
 
   return (

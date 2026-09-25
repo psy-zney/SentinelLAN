@@ -62,7 +62,7 @@ export default function OverviewScreen() {
                   {deviceData.device.name}
                 </Text>
                 <Text style={[styles.deviceSpec, { color: colors.inkMuted }]}>
-                  {deviceData.device.osVersion ?? 'Windows 11'}
+                  {deviceData.device.osVersion ?? t('notReported')}
                 </Text>
               </View>
               <AppBadge

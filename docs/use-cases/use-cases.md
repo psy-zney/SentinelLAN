@@ -1,29 +1,24 @@
-# Use Cases & Operational Scenarios
+# Use cases và ranh giới hành vi
 
-## 1. Administrative Governance
-- **Multi-Tenant Administration**: Manage organization boundaries, assign technician roles, configure telemetry collection intervals, and define compliance policies.
-- **Fleet Inventory & Node Management**: Monitor both Windows workstations and Linux Cloud VPS instances (Oracle Cloud / AWS) in a unified "single pane of glass".
-- **Emergency Intervention**: Dispatch cryptographically signed emergency commands (`SimulateLock` / `LockWorkStation`, `RestartService`) with mandatory justification reasons.
-- **Immutable Audit Inspection**: Review tamper-evident logs attributing every action to actor, device, timestamp, and cryptographic execution outcome.
+Các use case lõi cùng phục vụ vòng đời một thiết bị đầu cuối được tổ chức cho phép. [Phạm vi sản phẩm](../project-overview.md) là nguồn thống nhất cho việc ưu tiên và đánh giá tính năng.
 
-## 2. Technical Support & SRE
-- **Live Health Monitoring**: Observe real-time SignalR streams of CPU, RAM, and Disk utilization across workstations and servers.
-- **Incident Triage & Service Recovery**: Triage threshold alerts and safely restart crashed cloud services (`nginx`, `docker`) via allow-listed command dispatch without requiring SSH access.
+| Vai trò | Luồng đang hỗ trợ |
+|---|---|
+| Admin | Quản lý user, enrollment token, gán/thu hồi thiết bị, xem telemetry/audit, phát command có lý do và xác nhận |
+| Technician | Xem thiết bị theo quyền, xử lý alert/incident/work order, thực hiện hành động được phân quyền trong tenant |
+| Employee | Xem `/my-device` của máy được gán, telemetry được công bố, chính sách và incident liên quan; báo sự cố cho máy đó |
+| Agent | Đăng ký bằng token một lần, gửi heartbeat idempotent, nhận command có chữ ký và gửi biên lai |
 
-## 3. Employee Transparency (Privacy-by-Design)
-- **Asset Self-Inspection**: Log in to `/my-device` to view the health status and applied policies of their assigned workstation.
-- **Privacy Audit Verification**: Inspect the exact metrics collected by IT, with cryptographic certainty and transparency that no keylogging, audio/video monitoring, screen captures, or file scanning occurs.
+Quản trị VPS qua SSH là use case mở rộng cho Admin/Technician có quyền; không nằm trong chuỗi Agent → thiết bị được gán → sự cố → audit của lõi.
 
-## 4. Managed Agent Lifecycle
-- **Cryptographic Enrollment**: Perform one-time enrollment using a single-use token, generating and securely storing the persistent device credential.
-- **Resilient Heartbeat & Deduplication**: Dispatch periodic UTC heartbeats with idempotency keys; gracefully queue offline telemetry in local encrypted storage during outages and flush with exponential backoff.
-- **Tamper-Resistant Execution**: Verify server HMAC/signatures, validate nonces against replay attacks, execute allow-listed actions, and return idempotent execution receipts.
+## Kịch bản cần kiểm tra
 
-## 5. Account Activation & QR Asset Access
+1. Admin tạo tài khoản Employee, cấp token enrollment, Agent đăng ký, Admin gán máy; Employee chỉ xem được máy được gán. Sau thu hồi, Agent credential cũ bị từ chối.
+2. Token enrollment đã dùng hoặc hết hạn bị từ chối. Command sai chữ ký, hết hạn, sai thiết bị hoặc nonce đã nhận không được thực hiện. Biên lai gửi lại không tạo kết quả thứ hai.
+3. Lệnh `SimulateLock`, `SimulateNetworkIsolation`, `RestartService` của Agent ghi kết quả mô phỏng và không đổi OS, kể cả khi có cờ lab cũ.
+4. User/thiết bị thuộc tenant khác không được đọc hoặc sửa; QR công khai chỉ trả dữ liệu tối thiểu, giải mã có xác thực phải theo tenant và assignment.
+5. Audit ghi actor, target, lý do, thời gian UTC và outcome mà không lưu token, mật khẩu hoặc khóa. Bảo vệ ở tầng EF chưa thay cho kiểm soát DB và lưu trữ WORM.
 
-- **Admin-created account**: An Admin creates a pending account and receives a cryptographically random activation link exactly once. The database stores only the token hash.
-- **Single-use activation**: The invited user sets a password of at least 12 characters. Expired, revoked, replayed, or concurrently consumed tokens are rejected.
-- **QR asset lifecycle**: Admins and Technicians generate, rotate, revoke, download, and print an opaque QR label for an authorized device. Raw QR codes are never written to the audit log.
-- **Context-aware scan**: Anonymous users receive only a minimal asset card. Admins and Technicians are routed to the tenant-scoped device view; an Employee is routed to `/my-device` only when the device is assigned to that account.
-- **Accessible PWA scanner**: `/scan` supports the browser Barcode Detector API, a pinned ZXing fallback, local image upload, and manual code entry. URLs from another origin and invalid schemes are rejected.
-- **Employee incident report**: An Employee can create and follow incidents for the assigned device without supplying or changing a device ID.
+Use case mở rộng VPS: restart dịch vụ qua SSH yêu cầu host-key pin, quyền, lý do, xác nhận, nonce và allow-list; đây là thao tác thật trên máy chủ được đăng ký riêng.
+
+Các bước demo và checklist thực thi nằm trong [kịch bản demo](../demo/demo-script.md). [Thương lượng lệnh](../architecture/command-delivery.md) và [threat model](../security/threat-model.md) giải thích giới hạn bảo mật.

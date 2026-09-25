@@ -1,15 +1,17 @@
-appId: com.sentinellan.mobile
+appId: com.sentinellan.employee
 ---
 # Flow 7: Khởi động lạnh khi mất mạng (Cold Start Offline) và bảo toàn phiên
 # Ngắt kết nối mạng giả lập
-- setAirplaneMode: true
+- setAirplaneMode: enabled
 
 - stopApp
 - launchApp
 
-# Ứng dụng khởi động và phát hiện trạng thái offline mà không bị crash
-- assertVisible: "Máy của tôi"
-- assertVisible: "⚠️ Không có kết nối mạng"
+# Không xóa refresh token và không hiển thị dữ liệu riêng khi chưa xác thực lại.
+- assertVisible: "Không thể kết nối máy chủ"
+- assertVisible: "Thử lại"
 
 # Khôi phục lại mạng
-- setAirplaneMode: false
+- setAirplaneMode: disabled
+- tapOn: "Thử lại"
+- assertVisible: "Tổng quan"

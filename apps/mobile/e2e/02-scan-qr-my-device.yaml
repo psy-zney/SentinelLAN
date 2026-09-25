@@ -1,30 +1,30 @@
-appId: com.sentinellan.mobile
+appId: com.sentinellan.employee
 ---
 # Flow 2: Quét mã QR thiết bị và xem Máy của tôi
 - launchApp
 
 # Chuyển sang tab Quét QR
 - tapOn: "Quét QR"
-- assertVisible: "Hướng camera về phía mã QR dán trên máy tính SentinelLAN"
+- assertVisible: "Hướng camera về phía mã QR dán trên máy tính SentinelLAN của bạn"
 
 # Sử dụng fallback nhập mã tem thiết bị thủ công
 - tapOn:
     id: "manual-entry-button"
 
-- assertVisible: "Nhập mã tem thiết bị"
+- assertVisible: "Hoặc nhập mã thiết bị thủ công"
 - tapOn:
     id: "manual-code-input"
-- inputText: "QR-SENTINEL-DEMO-01"
+- inputText: ${MAESTRO_ASSIGNED_QR_CODE}
 
 - hideKeyboard
 - tapOn:
     id: "submit-manual-code-button"
 
 # Kiểm tra phân giải thành công và chuyển hướng đến My Device
-- assertVisible: "Thiết bị được phân công"
-- assertVisible: "Cam kết minh bạch dữ liệu"
+- assertVisible: "Máy tính của tôi"
+- assertVisible: "Xem cam kết quyền riêng tư (Privacy Manifest)"
 
 # Xem chi tiết minh bạch dữ liệu
-- tapOn: "Cam kết minh bạch dữ liệu"
+- tapOn: "Xem cam kết quyền riêng tư (Privacy Manifest)"
 - assertVisible: "Dữ liệu kỹ thuật ĐƯỢC thu thập"
 - assertVisible: "Dữ liệu NGHIÊM CẤM thu thập"

@@ -1,4 +1,4 @@
-appId: com.sentinellan.mobile
+appId: com.sentinellan.employee
 ---
 # Flow 4: Cold-start refresh session và Đăng xuất an toàn
 - stopApp
@@ -9,12 +9,12 @@ appId: com.sentinellan.mobile
 
 # Vào tab Tài khoản
 - tapOn: "Tài khoản"
-- assertVisible: "Thông tin tài khoản"
+- assertVisible: "Tổ chức"
 - assertVisible: "Phiên bản ứng dụng"
 
 # Thực hiện đăng xuất
-- tapOn: "Đăng xuất tài khoản"
+- tapOn: "Đăng xuất thiết bị này"
+- tapOn: "Đăng xuất thiết bị này"
 
 # Kiểm tra quay lại màn hình Login và phiên đã bị hủy
-- assertVisible: "Đăng nhập tài khoản nhân viên"
-- assertVisible: "SentinelLAN Mobile"
+- assertVisible: "Đăng nhập Nhân viên"

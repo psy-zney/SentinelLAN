@@ -32,4 +32,4 @@ Script hỏi token, tạo user dịch vụ `sentinellan`, khóa identity riêng 
 3. Nếu enroll trả 400, token có thể sai, hết hạn hoặc đã dùng. Admin tạo token mới; không sửa DB để tái dùng token cũ.
 4. Nếu Agent bị thu hồi, header credential cũ trả 401. Cài lại bằng token mới sau khi xác minh thiết bị; không sao chép secret từ thiết bị khác.
 
-Telemetry đang xếp hàng trong bộ nhớ khi offline, tối đa 50 mẫu, giữ tối đa một giờ và thử lại với idempotency key cũ. Hàng đợi này mất khi tiến trình khởi động lại, vì vậy cần giám sát khoảng trống dữ liệu; nó không phải cơ chế backup bền vững.
+Khi offline, Agent giữ tối đa 50 mục telemetry trong một giờ và retry với idempotency key cũ. Production lưu queue trong file được bảo vệ (DPAPI trên Windows; AES-GCM với `SENTINELLAN_AGENT_STORE_KEY` trên Linux) và nạp lại sau restart. Development mặc định dùng RAM nên mất queue khi tiến trình khởi động lại. Cần kiểm tra quyền file và khôi phục trên host thật; queue không phải bản sao lưu.

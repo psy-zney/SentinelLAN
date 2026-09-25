@@ -20,7 +20,7 @@ const translations = {
     confirm: 'Xác nhận',
     error: 'Đã xảy ra lỗi',
     success: 'Thành công',
-    offlineBanner: 'Không có kết nối mạng. Dữ liệu đang hiển thị từ bộ nhớ phiên.',
+    offlineBanner: 'Không thể kết nối máy chủ. Phiên đã được giữ trên thiết bị; thử lại khi có mạng.',
 
     // Auth
     loginTitle: 'Đăng nhập Nhân viên',
@@ -60,7 +60,11 @@ const translations = {
     manualCodePlaceholder: 'Nhập mã QR hoặc tiền tố (vd: QR-A1B2C3D4)',
     submitCode: 'Xác thực mã',
     pickImageOption: 'Chọn ảnh QR từ thư viện',
+    imageScanning: 'Đang đọc mã QR từ ảnh...',
+    noQrInImage: 'Không tìm thấy mã QR trong ảnh. Hãy chọn ảnh rõ hơn hoặc nhập mã thủ công.',
+    imageScanFailed: 'Không thể đọc mã QR từ ảnh đã chọn.',
     invalidQrCode: 'Mã QR không đúng định dạng SentinelLAN hợp lệ hoặc không thuộc hệ thống được phép.',
+    qrNotAssigned: 'Mã QR hợp lệ nhưng thiết bị này không được phân công cho tài khoản của bạn.',
     scanResolving: 'Đang kiểm tra thiết bị...',
 
     // My Device
@@ -79,7 +83,9 @@ const translations = {
     serialNumber: 'Số seri',
     assetTag: 'Mã tài sản',
     location: 'Vị trí',
-    appliedPolicy: 'Chính sách bảo mật',
+    appliedPolicy: 'Chính sách được gán (chưa thực thi)',
+    noAssignedPolicy: 'Chưa gán chính sách',
+    notReported: 'Chưa có dữ liệu từ Agent',
     privacyManifestLink: 'Xem cam kết quyền riêng tư (Privacy Manifest)',
 
     // Privacy Manifest
@@ -141,7 +147,7 @@ const translations = {
     confirm: 'Confirm',
     error: 'An error occurred',
     success: 'Success',
-    offlineBanner: 'No network connection. Showing data from current session memory.',
+    offlineBanner: 'Cannot reach the server. Your session remains on this device; retry when connected.',
 
     // Auth
     loginTitle: 'Employee Sign In',
@@ -181,7 +187,11 @@ const translations = {
     manualCodePlaceholder: 'Enter QR code or prefix (e.g. QR-A1B2C3D4)',
     submitCode: 'Verify Code',
     pickImageOption: 'Select QR Image from Library',
+    imageScanning: 'Reading QR code from image...',
+    noQrInImage: 'No QR code found in the image. Choose a clearer image or enter the code manually.',
+    imageScanFailed: 'Could not read the QR code from the selected image.',
     invalidQrCode: 'QR code does not match a valid SentinelLAN canonical asset URL or format.',
+    qrNotAssigned: 'This device is not assigned to your account.',
     scanResolving: 'Resolving device...',
 
     // My Device
@@ -200,7 +210,9 @@ const translations = {
     serialNumber: 'Serial Number',
     assetTag: 'Asset Tag',
     location: 'Location',
-    appliedPolicy: 'Applied Policy',
+    appliedPolicy: 'Assigned policy (not enforced)',
+    noAssignedPolicy: 'No policy assigned',
+    notReported: 'Not reported by the Agent',
     privacyManifestLink: 'View Privacy & Transparency Manifest',
 
     // Privacy Manifest
