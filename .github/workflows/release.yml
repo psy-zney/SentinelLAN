@@ -1,238 +1,133 @@
-name: Release SentinelLAN
+name: Release SentinelLAN Agent
 
 on:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  verify:
-    name: Run Quality Gates & Tests
+  verify-agent:
+    name: Verify Agent
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    services:
-      postgres:
-        image: postgres:18.1-alpine
-        env:
-          POSTGRES_DB: sentinellan_test
-          POSTGRES_USER: sentinellan
-          POSTGRES_PASSWORD: test-only-password
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U sentinellan -d sentinellan_test"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
-    env:
-      CI: true
-      ConnectionStrings__SentinelLAN: Host=localhost;Port=5432;Database=sentinellan_test;Username=sentinellan;Password=test-only-password
     steps:
-      - name: Validate Release Tag
+      - name: Validate release tag
         run: |
           if [[ ! "$GITHUB_REF" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-            echo "Run releases from an existing vX.Y.Z tag." >&2
+            echo "Release requires a vX.Y.Z tag." >&2
             exit 1
           fi
-
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup .NET 10 SDK
-        uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
+      - name: Run Agent tests
+        run: dotnet test apps/agent/tests/SentinelLAN.Agent.Tests/SentinelLAN.Agent.Tests.csproj -c Release
 
-      - name: Restore & Build Solution
-        run: dotnet build SentinelLAN.slnx -c Release
-
-      - name: Run Backend Tests
-        run: dotnet test SentinelLAN.slnx -c Release --no-build
-
-      - name: Setup Node.js 24
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24.x"
-          cache: npm
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Audit Dependencies
-        run: npm audit --omit=dev --audit-level=high
-
-      - name: Lint Web Code
-        run: npm run lint
-
-      - name: Typecheck Web Code
-        run: npm run typecheck
-
-      - name: Web Unit Tests
-        run: npm test
-
-      - name: Build Web Production
-        run: npm run build
-
-      - name: Lint Mobile Code
-        run: npm run lint:mobile
-
-      - name: Typecheck Mobile Code
-        run: npm run typecheck:mobile
-
-      - name: Run Mobile Unit Tests
-        run: npm run test --workspace=@sentinellan/mobile -- --runInBand
-
-      - name: Bundle Mobile JavaScript
-        working-directory: apps/mobile
-        run: |
-          npx expo export --platform android --output-dir ../../dist/mobile-android
-          npx expo export --platform ios --output-dir ../../dist/mobile-ios
-
-      - name: Install Chromium for E2E
-        run: npx playwright install --with-deps chromium
-
-      - name: Run Browser E2E Tests
-        run: npm run test:e2e
-        env:
-          ConnectionStrings__SentinelLAN: ""
-
-  build-windows-agent:
-    name: Build Windows Agent (MSI and EXE)
-    needs: verify
+  build-windows:
+    name: Build Windows MSI and EXE
+    needs: verify-agent
     runs-on: windows-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup .NET 10 SDK
-        uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-
-      - name: Build Windows Agent MSI and EXE
+      - name: Build Agent packages
+        shell: pwsh
         run: |
           $version = $env:GITHUB_REF_NAME.TrimStart('v').Split('-')[0]
           ./deploy/agent/build-msi.ps1 -Version $version
-
-      - name: Stage Windows Release Files
+      - name: Stage Windows files
+        shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist/release-windows | Out-Null
-          Copy-Item dist/windows-x64/SentinelLAN.Agent.exe dist/release-windows/
           Copy-Item dist/windows-x64/SentinelLAN.Agent.msi dist/release-windows/
+          Copy-Item dist/windows-x64/SentinelLAN.Agent.exe dist/release-windows/
           Copy-Item deploy/agent/configure-windows-agent.ps1 dist/release-windows/
-
-      - name: Upload Windows Agent Artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: sentinellan-agent-windows-x64
+          name: windows-agent
           path: dist/release-windows/
+          if-no-files-found: error
 
-  build-linux-agent:
-    name: Build Linux Agent (Daemon Binary)
-    needs: verify
+  build-linux:
+    name: Build Linux Agent
+    needs: verify-agent
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup .NET 10 SDK
-        uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-
-      - name: Publish Linux x64 Binary
+      - name: Publish Linux binary
         run: |
           dotnet publish apps/agent/src/SentinelLAN.Agent/SentinelLAN.Agent.csproj \
-            -c Release \
-            -r linux-x64 \
-            --self-contained true \
-            -p:PublishSingleFile=true \
-            -o dist/linux-x64
-
-      - name: Upload Linux Agent Artifact
-        uses: actions/upload-artifact@v4
+            -c Release -r linux-x64 --self-contained true \
+            -p:PublishSingleFile=true -o dist/linux-x64
+      - name: Stage Linux files
+        run: |
+          mkdir -p dist/release-linux
+          cp dist/linux-x64/SentinelLAN.Agent dist/release-linux/
+          cp deploy/agent/install-linux-agent.sh dist/release-linux/
+          cp deploy/agent/sentinellan-agent.service dist/release-linux/
+      - uses: actions/upload-artifact@v4
         with:
-          name: sentinellan-agent-linux-x64
-          path: dist/linux-x64/SentinelLAN.Agent
+          name: linux-agent
+          path: dist/release-linux/
+          if-no-files-found: error
 
-  create-release:
-    name: Create GitHub Release & Package Distribution
-    needs: [build-windows-agent, build-linux-agent]
+  publish:
+    name: Publish Agent-only GitHub Release
+    needs: [build-windows, build-linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Download Windows Agent
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          name: sentinellan-agent-windows-x64
+          name: windows-agent
           path: release-assets/
-
-      - name: Download Linux Agent
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          name: sentinellan-agent-linux-x64
+          name: linux-agent
           path: release-assets/
-
-      - name: Package VPS Deployment Bundle
-        run: |
-          mkdir -p release-assets/vps-deployment
-          cp -a apps packages deploy scripts docs README.md package.json package-lock.json SentinelLAN.slnx .dockerignore release-assets/vps-deployment/
-          mkdir -p release-assets/vps-deployment/deploy/vps/certs
-          cp release-assets/SentinelLAN.Agent release-assets/vps-deployment/deploy/agent/SentinelLAN.Agent
-          cp release-assets/SentinelLAN.Agent.exe release-assets/vps-deployment/deploy/agent/SentinelLAN.Agent.exe
-          test -f release-assets/vps-deployment/deploy/docker/api.Dockerfile
-          test -f release-assets/vps-deployment/deploy/docker/web.Dockerfile
-          test -f release-assets/vps-deployment/apps/web/package.json
-          test -f release-assets/vps-deployment/package-lock.json
-          test -f release-assets/vps-deployment/scripts/backup-postgres.sh
-          test -f release-assets/vps-deployment/deploy/vps/setup-vps.sh
-          tar -czf release-assets/sentinellan-vps-deployment.tar.gz -C release-assets/vps-deployment .
-
-      - name: Validate Bundled VPS Compose Configuration
-        working-directory: release-assets/vps-deployment
-        env:
-          PUBLIC_DOMAIN: sentinel.example.test
-          POSTGRES_PASSWORD: ci-only-password
-          BOOTSTRAP_ORG_CODE: ci-org
-          BOOTSTRAP_ORG_NAME: CI Organization
-          BOOTSTRAP_ADMIN_EMAIL: admin@example.test
-          BOOTSTRAP_ADMIN_PASSWORD: ci-only-admin-password
-          SIGNING_KEY: ci-command-signing-key-at-least-32-characters
-          ACCESS_TOKEN_SIGNING_KEY: ci-access-token-key-at-least-32-characters
-          SERVER_VAULT_KEY: ci-server-vault-key-at-least-32-characters
-        run: docker compose -f deploy/vps/docker-compose.prod.yaml config --quiet
-
-      - name: Generate SHA256 Checksums
+      - name: Verify asset allowlist and checksums
         working-directory: release-assets
         run: |
-          sha256sum SentinelLAN.Agent.msi SentinelLAN.Agent.exe SentinelLAN.Agent configure-windows-agent.ps1 sentinellan-vps-deployment.tar.gz > SHA256SUMS.txt
-          cat SHA256SUMS.txt
-
+          expected=(
+            SentinelLAN.Agent.msi
+            SentinelLAN.Agent.exe
+            configure-windows-agent.ps1
+            SentinelLAN.Agent
+            install-linux-agent.sh
+            sentinellan-agent.service
+          )
+          for file in "${expected[@]}"; do test -s "$file"; done
+          test "$(find . -maxdepth 1 -type f | wc -l)" -eq "${#expected[@]}"
+          sha256sum "${expected[@]}" > SHA256SUMS.txt
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "SentinelLAN Release ${{ github.ref_name }}"
+          name: "SentinelLAN Agent ${{ github.ref_name }}"
           tag_name: ${{ github.ref_name }}
-          draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
             release-assets/SentinelLAN.Agent.msi
             release-assets/SentinelLAN.Agent.exe
-            release-assets/SentinelLAN.Agent
             release-assets/configure-windows-agent.ps1
-            release-assets/sentinellan-vps-deployment.tar.gz
+            release-assets/SentinelLAN.Agent
+            release-assets/install-linux-agent.sh
+            release-assets/sentinellan-agent.service
             release-assets/SHA256SUMS.txt
+          fail_on_unmatched_files: true
           body: |
-            Windows: tải SentinelLAN.Agent.msi (ưu tiên), configure-windows-agent.ps1 và SHA256SUMS.txt.
-            Cài MSI trước, sau đó chạy script cấu hình với URL HTTPS và token một lần từ dashboard.
-            EXE là lựa chọn phụ cho IT. Gói VPS không chứa .env, database, chứng chỉ hoặc bí mật.
-            Hướng dẫn: https://github.com/psy-zney/SentinelLAN/blob/main/docs/guides/agent-enrollment-guide.md
+            Agent only: no VPS credentials, database, certificate or deployment environment is bundled.
+            Windows: install SentinelLAN.Agent.msi, then run configure-windows-agent.ps1 with your organization's HTTPS API URL. The script asks for a one-time enrollment token.
+            SentinelLAN.Agent.exe is the secondary Windows option for IT.
+            Linux: download SentinelLAN.Agent, install-linux-agent.sh and sentinellan-agent.service into one directory, then follow the Agent enrollment guide.
+            Server source, Compose template and .env.production.example remain in the repository; each organization configures its own VPS.
+            Guide: https://github.com/psy-zney/SentinelLAN/blob/main/docs/guides/agent-enrollment-guide.md
           generate_release_notes: true
