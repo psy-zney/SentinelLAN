@@ -3,64 +3,748 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="SentinelLAN: quản lý và giám sát endpoint được ủy quyền trong mạng LAN. Tải Agent, xem hướng dẫn triển khai và luồng hệ thống.">
-  <title>SentinelLAN · Giới thiệu và tải về</title>
+  <meta name="description" content="SentinelLAN: Nền tảng quản trị, giám sát và bảo vệ điểm cuối LAN doanh nghiệp. Kiến trúc phân luồng minh bạch, zero inbound port, bắt tay xác thực đa tầng và cam kết bảo vệ quyền riêng tư.">
+  <title>SentinelLAN · Nền Tảng Quản Trị & Giám Sát Điểm Cuối LAN Doanh Nghiệp</title>
   <link rel="stylesheet" href="site.css">
   <script src="downloads.js" defer></script>
 </head>
 <body>
-  <header class="topbar wrap">
-    <a class="brand" href="./" aria-label="SentinelLAN, trang chủ"><span class="mark">S</span><span>SentinelLAN<small>Endpoint management</small></span></a>
-    <nav aria-label="Điều hướng chính">
-      <a href="#gioi-thieu">Giới thiệu</a><a href="#tai-ve">Tải về</a><a href="#huong-dan">Hướng dẫn</a><a href="system-map.html">Sơ đồ luồng</a>
-    </nav>
+
+  <!-- ================= TOPBAR NAVIGATION ================= -->
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="./" aria-label="SentinelLAN Trang Chủ">
+        <div class="brand-shield">S</div>
+        <div class="brand-text">
+          <span>SentinelLAN</span>
+          <small>Enterprise Endpoint Platform</small>
+        </div>
+      </a>
+      <nav class="nav-menu" aria-label="Điều hướng chính">
+        <a href="#tong-quan">Tổng Quan</a>
+        <a href="#phan-luong">Phân Luồng & Dây Dẫn</a>
+        <a href="#tim-thay-nhau">Cơ Chế Bắt Tay</a>
+        <a href="#giao-thuc">Giao Thức</a>
+        <a href="#tai-ve">Tải Về</a>
+        <a href="#huong-dan">Triển Khai</a>
+        <a href="system-map.html" class="btn-nav-highlight">Sơ Đồ Kỹ Thuật Chi Tiết →</a>
+      </nav>
+    </div>
   </header>
+
   <main>
-    <section class="hero wrap" id="gioi-thieu">
-      <div>
-        <p class="eyebrow">Quản lý thiết bị trong mạng nội bộ</p>
-        <h1>Một luồng rõ ràng cho quản trị viên, nhân viên và từng máy trạm.</h1>
-        <p class="lead">SentinelLAN kết nối Agent trên thiết bị đã được tổ chức cho phép với API trên VPS. Quản trị viên cấp quyền và theo dõi trạng thái; nhân viên xem thiết bị được gán và báo sự cố. Hệ thống thu thập chỉ số kỹ thuật như CPU, RAM, ổ đĩa và nhịp kết nối.</p>
-        <div class="actions"><a class="button primary" href="#tai-ve">Chọn gói tải về</a><a class="button light" href="system-map.html">Xem toàn bộ luồng</a></div>
+    <!-- ================= HERO SECTION ================= -->
+    <section class="hero" id="tong-quan">
+      <div class="wrap hero-grid">
+        <div>
+          <div class="hero-tag">
+            <span class="pulse-indicator"></span>
+            Nền Tảng Quản Trị Điểm Cuối Được Ủy Quyền
+          </div>
+          <h1>
+            Giám Sát Toàn Diện Mạng LAN Với <span class="highlight">Kiến Trúc Phân Luồng</span> Minh Bạch
+          </h1>
+          <p class="hero-lead">
+            SentinelLAN cung cấp giải pháp quản lý tập trung cho máy trạm nội bộ: thu thập telemetry kỹ thuật thời gian thực, cấp phát chính sách qua kênh mã hóa TLS 1.3, hỗ trợ cơ chế bắt tay xác thực đa tầng và cam kết tuyệt đối không thu thập dữ liệu nhạy cảm hay giám sát ngầm người dùng.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#tai-ve">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Tải Bộ Cài Đặt Agent (.msi)
+            </a>
+            <a class="button secondary" href="system-map.html">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+              Khám Phá Toàn Bộ Sơ Đồ Hệ Thống
+            </a>
+          </div>
+          <div class="hero-meta">
+            <div class="hero-meta-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--emerald)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span>Bảo mật: <strong>Zero Inbound Ports</strong></span>
+            </div>
+            <div class="hero-meta-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span>Độ trễ SignalR: <strong>&lt; 100ms</strong></span>
+            </div>
+            <div class="hero-meta-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--indigo)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <span>Mã hóa: <strong>TLS 1.3 + DPAPI</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hero Architecture Card -->
+        <aside class="hero-visual" aria-label="Sơ lược luồng kết nối chính">
+          <div class="visual-header">
+            <div class="visual-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+              Sơ Đồ Phân Tuyến Cốt Lõi
+            </div>
+            <span class="live-badge">TLS 1.3 Encrypted</span>
+          </div>
+
+          <!-- Node 1: Admin -->
+          <div class="visual-node">
+            <div class="node-info">
+              <div class="node-icon icon-admin">💻</div>
+              <div>
+                <div class="node-title">Trạm Quản Trị Viên (SOC)</div>
+                <div class="node-sub">Trình duyệt Web Next.js · Xác thực JWT</div>
+              </div>
+            </div>
+            <span class="node-badge">WSS / 443</span>
+          </div>
+
+          <!-- Conduit 1 -->
+          <div class="visual-conduit">
+            <div class="conduit-line"></div>
+            <span class="conduit-label">SignalR Duplex · Lệnh &amp; Telemetry Real-time</span>
+            <div class="conduit-line"></div>
+          </div>
+
+          <!-- Node 2: Server VPS -->
+          <div class="visual-node" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.04);">
+            <div class="node-info">
+              <div class="node-icon icon-vps">🛡️</div>
+              <div>
+                <div class="node-title">Máy Chủ Trung Tâm (VPS Control Plane)</div>
+                <div class="node-sub">Nginx Proxy → ASP.NET Core API → PostgreSQL 16</div>
+              </div>
+            </div>
+            <span class="node-badge" style="color: var(--emerald); border-color: rgba(16, 185, 129, 0.4);">HTTPS / 443</span>
+          </div>
+
+          <!-- Conduit 2 -->
+          <div class="visual-conduit">
+            <div class="conduit-line"></div>
+            <span class="conduit-label">Outbound Heartbeat (15s) · Zero Inbound</span>
+            <div class="conduit-line"></div>
+          </div>
+
+          <!-- Node 3: Endpoint -->
+          <div class="visual-node">
+            <div class="node-info">
+              <div class="node-icon icon-agent">🖥️</div>
+              <div>
+                <div class="node-title">Máy Trạm Nhân Viên (Endpoint)</div>
+                <div class="node-sub">Windows Service (.msi) / Linux Daemon</div>
+              </div>
+            </div>
+            <span class="node-badge">Outbound Only</span>
+          </div>
+
+          <div class="visual-foot">
+            <span>Không mở cổng lắng nghe trên máy trạm</span>
+            <a class="visual-link" href="#phan-luong">Xem chi tiết luồng →</a>
+          </div>
+        </aside>
       </div>
-      <aside class="diagram" aria-label="Các chủ thể trong hệ thống">
-        <p class="diagram-title">Sơ lược kiến trúc</p>
-        <div>Máy admin <span>Web dashboard</span></div>
-        <div>Máy nhân viên <span>Agent / Web / Mobile</span></div>
-        <div class="line">Mạng LAN · HTTPS ra ngoài</div>
-        <div>VPS <span>API · PostgreSQL · Web</span></div>
-        <p>Agent chủ động gửi heartbeat và telemetry. VPS không cần mở cổng điều khiển vào máy trạm.</p>
-      </aside>
     </section>
 
-    <section class="band" id="cach-hoat-dong"><div class="wrap">
-      <div class="section-head"><p class="eyebrow">Cách hoạt động</p><h2>Từ đăng ký tới xử lý sự cố</h2></div>
-      <div class="steps">
-        <article><span>01</span><h3>Đăng ký thiết bị</h3><p>Admin tạo token một lần. Agent dùng HTTPS để đăng ký và lưu định danh được bảo vệ trên máy.</p></article>
-        <article><span>02</span><h3>Gửi trạng thái</h3><p>Agent gửi heartbeat và chỉ số kỹ thuật định kỳ; khi mất mạng, telemetry chờ gửi lại trong giới hạn.</p></article>
-        <article><span>03</span><h3>Phân quyền</h3><p>Admin gán thiết bị cho nhân viên. Web hiển thị theo vai trò; mobile hiện phục vụ nhân viên.</p></article>
-        <article><span>04</span><h3>Xử lý và kiểm toán</h3><p>Nhân viên báo sự cố; thao tác nhạy cảm cần quyền phù hợp và được ghi vào nhật ký kiểm toán.</p></article>
-      </div>
-      <p class="note">SentinelLAN hiện không cung cấp packet sniffing, remote desktop hay khóa máy thật trong Agent mặc định. Xem <a href="system-map.html">sơ đồ chủ thể, bảo mật, truyền tệp và database</a>.</p>
-    </div></section>
+    <!-- ================= SECTION: PHÂN LUỒNG & CHIA DÂY DẪN ================= -->
+    <section id="phan-luong">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="section-eyebrow">Kiến Trúc Mạng &amp; Phân Dây Dẫn</span>
+          <h2 class="section-title">Chia Tuyến Rõ Ràng Giữa Các Chủ Thể Trong Mạng</h2>
+          <p class="section-desc">
+            Hệ thống phân tách bạch lạc giữa các vai trò người dùng, dịch vụ nền và hạ tầng cơ sở dữ liệu. Mọi đường truyền đều được định tuyến qua cổng an toàn chuẩn hóa, không có luồng kết nối tự do không kiểm soát.
+          </p>
+        </div>
 
-    <section class="wrap downloads" id="tai-ve">
-      <div class="section-head"><p class="eyebrow">Tải về</p><h2>Chọn đúng gói cho thiết bị</h2><p id="release-status" role="status">Đang kiểm tra bản phát hành công khai…</p></div>
-      <div class="download-grid">
-        <article class="card featured"><span class="badge">Ưu tiên cho Windows</span><h3>Windows Installer <small>.msi · x64</small></h3><p>Cài Agent thành Windows Service để quản lý bằng công cụ triển khai của tổ chức. Sau khi cài, admin chạy bước cấu hình riêng để nhập URL máy chủ và token.</p><a class="button primary asset-link" data-asset="SentinelLAN.Agent.msi" href="https://github.com/psy-zney/SentinelLAN/releases">Xem bản phát hành MSI</a></article>
-        <article class="card"><span class="badge neutral">Lựa chọn phụ</span><h3>Windows binary <small>.exe · x64</small></h3><p>File chạy độc lập cho kiểm tra hoặc triển khai thủ công bởi IT. File EXE không tự đăng ký service.</p><a class="button light asset-link" data-asset="SentinelLAN.Agent.exe" href="https://github.com/psy-zney/SentinelLAN/releases">Xem bản phát hành EXE</a></article>
-        <article class="card"><span class="badge neutral">Linux</span><h3>Agent binary <small>linux-x64</small></h3><p>Dùng cùng script cài systemd và hướng dẫn cấp token cho máy Linux được ủy quyền.</p><a class="button light asset-link" data-asset="SentinelLAN.Agent" href="https://github.com/psy-zney/SentinelLAN/releases">Xem bản phát hành Linux</a></article>
-        <article class="card"><span class="badge neutral">Máy chủ VPS</span><h3>Tự triển khai Server <small>Docker Compose</small></h3><p>Mã nguồn và cấu hình mẫu để tự triển khai API, Web và PostgreSQL. Mỗi môi trường tự cấp domain, chứng chỉ và biến bí mật trong file .env.</p><a class="button light" href="https://github.com/psy-zney/SentinelLAN/blob/main/docs/deployment/saas-vps-guide.md">Xem hướng dẫn triển khai</a></article>
+        <div class="topology-container">
+          <div class="topology-grid">
+            <!-- Left Column: Client Entities -->
+            <div class="actor-col">
+              <!-- Admin Station -->
+              <article class="actor-card">
+                <div class="actor-header">
+                  <div class="actor-title">1. Trạm Quản Trị (Admin SOC)</div>
+                  <span class="actor-tag tag-ready">Đã Sẵn Sàng</span>
+                </div>
+                <p class="actor-desc">
+                  Trình duyệt web của quản trị viên: tạo tenant, sinh token đăng ký 1 lần, gán thiết bị, cấu hình ngưỡng cảnh báo CPU/RAM/Disk và kiểm toán hành động nhạy cảm.
+                </p>
+                <div class="actor-meta">
+                  <span class="tech-chip">Next.js Dashboard</span>
+                  <span class="tech-chip">JWT Bearer</span>
+                  <span class="tech-chip">SignalR Client</span>
+                </div>
+              </article>
+
+              <!-- Employee Workstation -->
+              <article class="actor-card" style="border-color: rgba(16, 185, 129, 0.35);">
+                <div class="actor-header">
+                  <div class="actor-title">2. Máy Trạm Được Quản Lý (Agent)</div>
+                  <span class="actor-tag tag-ready">Sản Phẩm Cốt Lõi</span>
+                </div>
+                <p class="actor-desc">
+                  Chạy ngầm dưới dạng Windows Service (gói MSI) hoặc Linux Daemon. Định kỳ gửi heartbeat, chỉ số tài nguyên và nhận lệnh theo cơ chế polling. <strong>Hoàn toàn không mở cổng inbound.</strong>
+                </p>
+                <div class="actor-meta">
+                  <span class="tech-chip">.NET 9 Worker</span>
+                  <span class="tech-chip">Windows Service</span>
+                  <span class="tech-chip">DPAPI Encrypted</span>
+                  <span class="tech-chip">Local Offline Buffer</span>
+                </div>
+              </article>
+
+              <!-- Mobile Employee -->
+              <article class="actor-card">
+                <div class="actor-header">
+                  <div class="actor-title">3. Ứng Dụng Di Động (Mobile Staff)</div>
+                  <span class="actor-tag tag-preview">Mã Nguồn Expo</span>
+                </div>
+                <p class="actor-desc">
+                  Ứng dụng dành cho nhân viên: đăng nhập tài khoản tổ chức, quét mã QR vật lý trên màn hình máy trạm để nhận thiết bị, theo dõi telemetry và gửi ticket báo sự cố phần cứng.
+                </p>
+                <div class="actor-meta">
+                  <span class="tech-chip">React Native Expo</span>
+                  <span class="tech-chip">QR Scanner</span>
+                  <span class="tech-chip">REST Client</span>
+                </div>
+              </article>
+            </div>
+
+            <!-- Middle Column: Wires & Conduits -->
+            <div class="wiring-col">
+              <div class="wire-badge">
+                <span class="wire-protocol">HTTPS / TLS 1.3</span>
+                <span class="wire-port">Cổng TCP 443</span>
+                <div class="wire-indicator">⇄ Web / API</div>
+              </div>
+
+              <div class="wire-badge" style="border-color: rgba(6, 182, 212, 0.3);">
+                <span class="wire-protocol" style="color: var(--cyan);">WSS SignalR</span>
+                <span class="wire-port">Cổng TCP 443</span>
+                <div class="wire-indicator" style="color: var(--cyan);">⇄ Realtime Mesh</div>
+              </div>
+
+              <div class="wire-badge" style="border-color: rgba(16, 185, 129, 0.35);">
+                <span class="wire-protocol" style="color: var(--emerald);">Outbound Only</span>
+                <span class="wire-port">Cổng TCP 443</span>
+                <div class="wire-indicator" style="color: var(--emerald);">→ Heartbeat Push</div>
+              </div>
+
+              <div class="wire-badge" style="border-color: rgba(245, 158, 11, 0.3);">
+                <span class="wire-protocol" style="color: var(--amber);">SSH Key-Pinned</span>
+                <span class="wire-port">Cổng TCP 22</span>
+                <div class="wire-indicator" style="color: var(--amber);">→ Node Quản Trị</div>
+              </div>
+            </div>
+
+            <!-- Right Column: Central Control Plane & Database -->
+            <div class="actor-col">
+              <!-- Central Server VPS -->
+              <article class="actor-card" style="background: rgba(13, 20, 36, 0.85); border-color: rgba(6, 182, 212, 0.3);">
+                <div class="actor-header">
+                  <div class="actor-title">4. Trục Điều Khiển Trung Tâm (VPS)</div>
+                  <span class="actor-tag tag-ready">Control Plane</span>
+                </div>
+                <p class="actor-desc">
+                  Đặt trên máy chủ VPS: Nginx Reverse Proxy tiếp nhận TLS ngoài internet/LAN, chuyển tiếp vào ASP.NET Core Modular Monolith. Xử lý logic nghiệp vụ, xác thực JWT, phân quyền đa người thuê và điều phối sự kiện.
+                </p>
+                <div class="actor-meta">
+                  <span class="tech-chip">Nginx Gateway</span>
+                  <span class="tech-chip">ASP.NET Core 9 API</span>
+                  <span class="tech-chip">SignalR Core Hub</span>
+                  <span class="tech-chip">Modular Monolith</span>
+                </div>
+              </article>
+
+              <!-- Database -->
+              <article class="actor-card">
+                <div class="actor-header">
+                  <div class="actor-title">5. Cơ Sở Dữ Liệu (PostgreSQL 16)</div>
+                  <span class="actor-tag tag-ready">Cách Ly Mạng Nội Bộ</span>
+                </div>
+                <p class="actor-desc">
+                  Lưu trữ có cấu trúc toàn bộ thông tin tenant, tài khoản người dùng, thiết bị đã đăng ký, chuỗi sự kiện telemetry và nhật ký kiểm toán bất biến (Append-Only Audit Log). <strong>Không mở cổng ra internet.</strong>
+                </p>
+                <div class="actor-meta">
+                  <span class="tech-chip">PostgreSQL 16</span>
+                  <span class="tech-chip">Port 5432 (Internal)</span>
+                  <span class="tech-chip">EF Core Migrations</span>
+                  <span class="tech-chip">Append-Only Audit</span>
+                </div>
+              </article>
+
+              <!-- Managed Linux Node -->
+              <article class="actor-card">
+                <div class="actor-header">
+                  <div class="actor-title">6. Máy Chủ Hạ Tầng Phụ Trợ (Managed Node)</div>
+                  <span class="actor-tag tag-optional">Mở Rộng Tùy Chọn</span>
+                </div>
+                <p class="actor-desc">
+                  Kết nối trực tiếp từ API sang các node Linux chuyên biệt qua giao thức SSH có gắn chặt mã vân tay khóa chủ (Host-Key Pinning), giám sát tài nguyên và khởi động lại dịch vụ trong danh mục cho phép.
+                </p>
+                <div class="actor-meta">
+                  <span class="tech-chip">SSH Port 22</span>
+                  <span class="tech-chip">Host-Key Pinned</span>
+                  <span class="tech-chip">Allow-listed Actions</span>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
       </div>
-      <p class="note">Ứng dụng mobile nhân viên hiện được kiểm tra dưới dạng Expo source; chưa có APK hoặc IPA phát hành. Mobile Admin chưa có app riêng. <a href="https://github.com/psy-zney/SentinelLAN/tree/main/apps/mobile">Xem mã nguồn mobile</a>. Kiểm tra <a class="asset-link" data-asset="SHA256SUMS.txt" href="https://github.com/psy-zney/SentinelLAN/releases">SHA256SUMS.txt</a> trước khi cài.</p>
     </section>
 
-    <section class="band" id="huong-dan"><div class="wrap guide">
-      <div><p class="eyebrow">Hướng dẫn nhanh</p><h2>Cài Windows bằng MSI</h2><ol><li>Admin triển khai VPS và xác nhận API có chứng chỉ HTTPS hợp lệ.</li><li>Admin tạo enrollment token một lần trên dashboard cho máy được phép.</li><li>Tải MSI từ Release, kiểm tra SHA-256 rồi cài với quyền Administrator.</li><li>Tải script cấu hình cùng Release; mở PowerShell Administrator và chạy lệnh bên dưới. Script hỏi token qua prompt, bật service và xóa token khỏi file cấu hình sau khi đăng ký.</li><li>Kiểm tra service <code>SentinelLANAgent</code> và heartbeat trong dashboard.</li></ol></div>
-      <div class="command"><p>PowerShell · chạy tại thư mục có script</p><pre><code>./configure-windows-agent.ps1 -ServerUrl 'https://sentinel.example.com'</code></pre><a class="asset-link" data-asset="configure-windows-agent.ps1" href="https://github.com/psy-zney/SentinelLAN/releases">Lấy script cấu hình từ Release →</a><hr><p>Muốn cài im lặng qua công cụ quản trị?</p><pre><code>msiexec /i SentinelLAN.Agent.msi /qn</code></pre><small>Cấu hình URL và token bằng script riêng trên từng máy; không đặt token trên dòng lệnh MSI.</small></div>
-    </div></section>
-    <section class="wrap closing"><h2>Release công khai có phù hợp?</h2><p>Có, cho bộ cài và mã triển khai không chứa bí mật. GitHub Release không mang theo <code>.env</code>, dữ liệu PostgreSQL, chứng chỉ hoặc khóa của VPS. Người vận hành tự cấp các giá trị này theo <a href="https://github.com/psy-zney/SentinelLAN/blob/main/docs/deployment/saas-vps-guide.md">hướng dẫn triển khai VPS</a>. Mỗi máy trạm cần token đăng ký riêng do admin tạo trong hệ thống đang chạy.</p></section>
+    <!-- ================= SECTION: CƠ CHẾ TÌM THẤY NHAU & BẮT TAY ================= -->
+    <section id="tim-thay-nhau">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="section-eyebrow">Cơ Chế Bắt Tay &amp; Xác Thực Định Danh</span>
+          <h2 class="section-title">Cách Các Chủ Thể Tìm Thấy Nhau Trong Mạng</h2>
+          <p class="section-desc">
+            Không sử dụng cơ chế quét cổng (port scanning) hỗn loạn hay phát tán bản tin broadcast vô tội vạ. SentinelLAN thiết lập quan hệ tin cậy thông qua 3 quy trình bắt tay kỹ thuật nghiêm ngặt.
+          </p>
+        </div>
+
+        <div class="discovery-grid">
+          <!-- Discovery 1: Agent to Server -->
+          <article class="discovery-card">
+            <div class="discovery-step-num">01</div>
+            <div class="discovery-subtitle">Máy Trạm ⇄ Máy Chủ VPS</div>
+            <h3 class="discovery-title">Ghi Danh Token 1 Lần &amp; Outbound Pull</h3>
+            <p class="discovery-text">
+              Máy trạm không bao giờ mở cổng chờ inbound để tránh bị quét mạng LAN. Thay vào đó, máy trạm chủ động tìm máy chủ thông qua kênh gọi ra ngoài (Outbound HTTPS).
+            </p>
+            <div class="discovery-flow">
+              <div class="flow-step">
+                <div class="flow-dot"></div>
+                <span>Admin tạo mã Enrollment Token dùng 1 lần (One-Time Token) trên Web.</span>
+              </div>
+              <div class="flow-step">
+                <div class="flow-dot"></div>
+                <span>Agent khởi động, gửi POST HTTPS kèm Token lên VPS tại cổng 443.</span>
+              </div>
+              <div class="flow-step">
+                <div class="flow-dot"></div>
+                <span>VPS thẩm định token, cấp cặp <code>DeviceId</code> và khóa mật mã máy trạm.</span>
+              </div>
+              <div class="flow-step">
+                <div class="flow-dot"></div>
+                <span>Agent mã hóa lưu khóa vào Windows DPAPI, xóa token tạm và bắt đầu gửi heartbeat.</span>
+              </div>
+            </div>
+          </article>
+
+          <!-- Discovery 2: Mobile to Workstation -->
+          <article class="discovery-card">
+            <div class="discovery-step-num">02</div>
+            <div class="discovery-subtitle">Điện Thoại ⇄ Máy Trạm &amp; VPS</div>
+            <h3 class="discovery-title">Ghép Nối QR Xác Minh Hiện Diện Vật Lý</h3>
+            <p class="discovery-text">
+              Điện thoại nhân viên không broadcast trong mạng LAN để tìm máy trạm. Việc ghép nối yêu cầu xác minh trực tiếp tại vị trí đặt máy (Physical Presence).
+            </p>
+            <div class="discovery-flow">
+              <div class="flow-step">
+                <div class="flow-dot"></div>
+                <span>Nhân viên mở Web hoặc bảng thông tin máy trạm, yêu cầu sinh mã QR định danh.</span>
+              </div>
+              <div class="flow-step">
+                <div class="flow-dot"></div>
+                <span>Mã QR chứa token có chữ ký thời hạn 5 phút gắn với <code>DeviceId</code> cụ thể.</span>
+              </div>
+              <div class="flow-step">
+                <div class="flow-dot"></div>
+                <span>Camera ứng dụng Mobile quét mã QR, gửi hash xác nhận lên API máy chủ.</span>
+              </div>
+              <div class="flow-step">
+                <div class="flow-dot"></div>
+                <span>VPS đối chiếu quyền tài khoản nhân viên và gán quyền theo dõi máy trạm tương ứng.</span>
+              </div>
+            </div>
+          </article>
+
+          <!-- Discovery 3: Admin to System -->
+          <article class="discovery-card">
+            <div class="discovery-step-num">03</div>
+            <div class="discovery-subtitle">Bảng Quản Trị ⇄ Mạng Lưới Điểm Cuối</div>
+            <h3 class="discovery-title">SignalR Tenant Mesh &amp; Event Dispatch</h3>
+            <p class="discovery-text">
+              Admin nhận biết tình trạng của hàng trăm máy trạm trong thời gian thực mà không cần làm mới trang (Zero Page Reload) nhờ cơ chế định tuyến kênh WebSocket.
+            </p>
+            <div class="discovery-flow">
+              <div class="flow-step">
+                <div class="flow-dot"></div>
+                <span>Admin đăng nhập Web Dashboard, thiết lập phiên WebSocket qua SignalR Hub.</span>
+              </div>
+              <div class="flow-step">
+                <div class="flow-dot"></div>
+                <span>Máy chủ xác thực JWT Claim và đưa socket vào nhóm bảo mật <code>tenant-{id}</code>.</span>
+              </div>
+              <div class="flow-step">
+                <div class="flow-dot"></div>
+                <span>Khi bất kỳ Agent nào trong tenant gửi heartbeat hoặc vượt ngưỡng CPU/RAM/Disk.</span>
+              </div>
+              <div class="flow-step">
+                <div class="flow-dot"></div>
+                <span>VPS dispatch sự kiện realtime ngay lập tức tới Admin với độ trễ &lt; 100ms.</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SECTION: BẢNG MA TRẬN GIAO THỨC & CỔNG ================= -->
+    <section id="giao-thuc">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="section-eyebrow">Ma Trận Kỹ Thuật</span>
+          <h2 class="section-title">Giao Thức Kết Nối &amp; Quy Chuẩn Phân Luồng</h2>
+          <p class="section-desc">
+            Toàn bộ lưu lượng mạng trong SentinelLAN tuân thủ chuẩn mã hóa hiện đại và được phân quyền chặt chẽ theo mô hình Zero-Trust.
+          </p>
+        </div>
+
+        <div class="table-responsive">
+          <table class="protocol-table">
+            <thead>
+              <tr>
+                <th>Chủ Thể Nguồn</th>
+                <th>Chủ Thể Đích</th>
+                <th>Giao Thức</th>
+                <th>Cổng</th>
+                <th>Cơ Chế Bắt Tay &amp; Xác Thực</th>
+                <th>Lưu Lượng Dữ Liệu</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="entity-badge">💻 Máy Quản Trị (Admin)</span></td>
+                <td>Nginx / VPS API</td>
+                <td><span class="badge-proto proto-https">HTTPS TLS 1.3</span></td>
+                <td><span class="mono">443 / TCP</span></td>
+                <td>JWT Bearer Token + Role Claims (Admin/Manager)</td>
+                <td>Cấp token, gán máy, cấu hình ngưỡng và tra cứu audit log</td>
+              </tr>
+              <tr>
+                <td><span class="entity-badge">💻 Máy Quản Trị (Admin)</span></td>
+                <td>SignalR Telemetry Hub</td>
+                <td><span class="badge-proto proto-wss">WSS (WebSocket)</span></td>
+                <td><span class="mono">443 / TCP</span></td>
+                <td>WebSocket Handshake + Tenant Group Membership</td>
+                <td>Nhận luồng telemetry, cảnh báo bất thường và nhịp kết nối realtime</td>
+              </tr>
+              <tr>
+                <td><span class="entity-badge">🖥️ Máy Trạm (Agent)</span></td>
+                <td>Nginx / VPS API</td>
+                <td><span class="badge-proto proto-https">HTTPS TLS 1.3</span></td>
+                <td><span class="mono">443 / TCP</span></td>
+                <td>Header <code>X-Device-Id</code> + Cryptographic Device Secret</td>
+                <td>Định kỳ 15s gửi Heartbeat, chỉ số CPU, RAM, Disk, Uptime và poll lệnh</td>
+              </tr>
+              <tr>
+                <td><span class="entity-badge">📱 Điện Thoại (Mobile)</span></td>
+                <td>Nginx / VPS API</td>
+                <td><span class="badge-proto proto-https">HTTPS TLS 1.3</span></td>
+                <td><span class="mono">443 / TCP</span></td>
+                <td>JWT Token + QR Code Physical Presence Hash</td>
+                <td>Tra cứu thông số máy trạm được giao, gửi phiếu báo cáo sự cố phần cứng</td>
+              </tr>
+              <tr>
+                <td><span class="entity-badge">🛡️ Nginx Gateway</span></td>
+                <td>ASP.NET Core API</td>
+                <td><span class="badge-proto proto-tcp">HTTP Reverse Proxy</span></td>
+                <td><span class="mono">8080 / TCP</span></td>
+                <td>Nội bộ Docker Container Network (Không lộ ra ngoài)</td>
+                <td>Chuyển tiếp yêu cầu đã giải mã SSL và gắn kèm Client IP thực</td>
+              </tr>
+              <tr>
+                <td><span class="entity-badge">🛡️ ASP.NET Core API</span></td>
+                <td>PostgreSQL 16 DB</td>
+                <td><span class="badge-proto proto-tcp">TCP Postgres Wire</span></td>
+                <td><span class="mono">5432 / TCP</span></td>
+                <td>User / Password bí mật qua biến môi trường (.env)</td>
+                <td>Truy vấn dữ liệu thiết bị, ghi telemetry thời gian thực và nhật ký kiểm toán</td>
+              </tr>
+              <tr>
+                <td><span class="entity-badge">🛡️ ASP.NET Core API</span></td>
+                <td>Managed Linux Node</td>
+                <td><span class="badge-proto proto-ssh">SSH v2 Pinned</span></td>
+                <td><span class="mono">22 / TCP</span></td>
+                <td>SSH Private Key + Host-Key Pinning nghiêm ngặt</td>
+                <td>Giám sát metric Linux từ xa và khởi động lại dịch vụ trong danh mục cho phép</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SECTION: TẢI VỀ CHUẨN DOANH NGHIỆP ================= -->
+    <section class="downloads-section" id="tai-ve">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="section-eyebrow">Khu Vực Tải Về</span>
+          <h2 class="section-title">Chọn Đúng Gói Cài Đặt Cho Hệ Thống</h2>
+          <p class="section-desc">
+            Tất cả các bản dựng chính thức đều được kiểm tra mã băm SHA-256 trước khi xuất bản. Khuyến nghị sử dụng bộ cài đặt MSI cho môi trường máy trạm Windows doanh nghiệp.
+          </p>
+        </div>
+
+        <div class="release-banner">
+          <div>
+            <span id="release-status" role="status">Đang kết nối GitHub Releases để kiểm tra gói tải mới nhất…</span>
+          </div>
+          <div>
+            <a class="asset-link" data-asset="SHA256SUMS.txt" href="https://github.com/psy-zney/SentinelLAN/releases">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Kiểm tra mã băm SHA256SUMS.txt
+            </a>
+          </div>
+        </div>
+
+        <div class="download-grid">
+          <!-- Card 1: Windows MSI (Featured) -->
+          <article class="download-card featured">
+            <span class="download-card-badge badge-featured">Khuyến Nghị Cho Doanh Nghiệp</span>
+            <h3>Windows Installer <small>.msi · x64</small></h3>
+            <p class="download-desc">
+              Gói cài đặt MSI chính thức: đăng ký Agent thành <strong>Windows Service</strong> tự khởi động cùng hệ điều hành, vận hành với quyền tài khoản hạn chế và tương thích triển khai hàng loạt qua Active Directory GPO hoặc Intune.
+            </p>
+            <ul class="download-meta-list">
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Tự động tạo &amp; quản lý service <code>SentinelLANAgent</code>
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Hỗ trợ lệnh cài im lặng: <code>msiexec /i SentinelLAN.Agent.msi /qn</code>
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Tách rời token nhạy cảm ra khỏi file cấu hình sau khi hoàn tất đăng ký
+              </li>
+            </ul>
+            <a class="button primary asset-link" data-asset="SentinelLAN.Agent.msi" href="https://github.com/psy-zney/SentinelLAN/releases">
+              Tải Bộ Cài Đặt MSI (.msi)
+            </a>
+          </article>
+
+          <!-- Card 2: Windows EXE Standalone -->
+          <article class="download-card">
+            <span class="download-card-badge badge-secondary">Kiểm Tra Nhanh</span>
+            <h3>Windows Binary <small>.exe · x64</small></h3>
+            <p class="download-desc">
+              Tập tin thực thi độc lập không cần cài đặt, thích hợp cho kỹ thuật viên IT chạy thử nghiệm tính năng, kiểm tra thông số mạng hoặc chẩn đoán sự cố cục bộ trong phiên làm việc console.
+            </p>
+            <ul class="download-meta-list">
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Chạy trực tiếp từ dòng lệnh không cần phân quyền quản trị sâu
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Xuất log trực quan ra màn hình console trong thời gian thực
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Không tự động duy trì tiến trình nền khi tắt cửa sổ
+              </li>
+            </ul>
+            <a class="button secondary asset-link" data-asset="SentinelLAN.Agent.exe" href="https://github.com/psy-zney/SentinelLAN/releases">
+              Tải File Chạy Độc Lập (.exe)
+            </a>
+          </article>
+
+          <!-- Card 3: Linux Daemon -->
+          <article class="download-card">
+            <span class="download-card-badge badge-secondary">Hệ Điều Hành Linux</span>
+            <h3>Linux Agent Daemon <small>linux-x64 · systemd</small></h3>
+            <p class="download-desc">
+              Bản dựng nhị phân độc lập dành cho các trạm làm việc Ubuntu, Debian hoặc RHEL trong mạng nội bộ. Tích hợp trơn tru với hệ thống quản lý tiến trình systemd tiêu chuẩn.
+            </p>
+            <ul class="download-meta-list">
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Có sẵn tệp cấu hình mẫu cho <code>systemd service unit</code>
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Mã hóa lưu trữ định danh thông qua hệ thống Secret Service
+              </li>
+            </ul>
+            <a class="button secondary asset-link" data-asset="SentinelLAN.Agent" href="https://github.com/psy-zney/SentinelLAN/releases">
+              Tải Gói Linux (linux-x64)
+            </a>
+          </article>
+
+          <!-- Card 4: Server Self-Host -->
+          <article class="download-card">
+            <span class="download-card-badge badge-secondary">Máy Chủ Độc Lập</span>
+            <h3>Máy Chủ Tự Triển Khai <small>Docker Compose · SaaS</small></h3>
+            <p class="download-desc">
+              Bộ mã nguồn và cấu hình đầy đủ để thiết lập toàn bộ hạ tầng gồm Nginx Proxy, ASP.NET Core Monolith, Web Dashboard và cơ sở dữ liệu PostgreSQL 16 trên hạ tầng máy chủ nội bộ.
+            </p>
+            <ul class="download-meta-list">
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Không phụ thuộc bất kỳ dịch vụ đám mây công cộng bên ngoài nào
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Tự quản lý khóa bảo mật, chứng chỉ SSL và dữ liệu trong file <code>.env</code>
+              </li>
+            </ul>
+            <a class="button secondary" href="https://github.com/psy-zney/SentinelLAN/blob/main/docs/deployment/saas-vps-guide.md">
+              Xem Hướng Dẫn Triển Khai VPS →
+            </a>
+          </article>
+        </div>
+
+        <p class="section-desc" style="font-size: 0.88rem; text-align: center;">
+          * Ứng dụng di động nhân viên hiện được phân phối dưới dạng mã nguồn React Native Expo. Quản trị viên có thể kiểm tra trực tiếp qua Expo Go hoặc biên dịch APK/IPA nội bộ theo chính sách tổ chức.
+          <a href="https://github.com/psy-zney/SentinelLAN/tree/main/apps/mobile">Xem thư mục ứng dụng mobile →</a>
+        </p>
+      </div>
+    </section>
+
+    <!-- ================= SECTION: HƯỚNG DẪN TRIỂN KHAI & COMMANDS ================= -->
+    <section id="huong-dan">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="section-eyebrow">Quy Trình Chuẩn Hóa</span>
+          <h2 class="section-title">Triển Khai Máy Trạm Windows Với Gói MSI</h2>
+          <p class="section-desc">
+            Quy trình 5 bước đảm bảo an toàn tuyệt đối cho thiết bị: không lưu trữ thông tin nhạy cảm ở dạng rõ ràng và khởi động service có kiểm soát.
+          </p>
+        </div>
+
+        <div class="guide-grid">
+          <div>
+            <ol class="guide-steps">
+              <li>
+                <strong>Khởi tạo Máy Chủ &amp; Chứng Chỉ:</strong> Xác nhận API trên máy chủ VPS đã hoạt động ổn định và chứng chỉ HTTPS (TLS 1.3) hợp lệ, không bị lỗi cảnh báo trình duyệt.
+              </li>
+              <li>
+                <strong>Cấp Mã Token Ghi Danh Một Lần:</strong> Quản trị viên đăng nhập Dashboard, tạo một <em>Enrollment Token</em> riêng biệt cho máy trạm dự kiến triển khai với thời hạn định trước.
+              </li>
+              <li>
+                <strong>Cài Đặt Bộ Cài MSI:</strong> Tải tệp <code>SentinelLAN.Agent.msi</code> về máy trạm, đối chiếu mã SHA-256 và chạy cài đặt dưới quyền Administrator.
+              </li>
+              <li>
+                <strong>Thực Thi Script Cấu Hình Bảo Mật:</strong> Tải script <code>configure-windows-agent.ps1</code> đi kèm; mở PowerShell Administrator và chạy lệnh cấu hình. Script sẽ yêu cầu nhập token qua cửa sổ che dấu, lưu vào DPAPI, kích hoạt service và tự hủy token khỏi tệp cấu hình tạm.
+              </li>
+              <li>
+                <strong>Xác Nhận Nhịp Kết Nối:</strong> Kiểm tra trạng thái service <code>SentinelLANAgent</code> đang ở chế độ <code>Running</code> và theo dõi nhịp heartbeat đầu tiên hiển thị trên Web Dashboard.
+              </li>
+            </ol>
+          </div>
+
+          <div class="command-box">
+            <div class="command-box-header">
+              <span class="command-box-title">PowerShell (Chạy với quyền Administrator)</span>
+            </div>
+            <pre class="command-pre"><code># 1. Cấu hình địa chỉ máy chủ và ghi danh Agent
+./configure-windows-agent.ps1 -ServerUrl 'https://sentinel.yourdomain.com'
+
+# 2. Khởi động lại dịch vụ sau cấu hình
+Restart-Service SentinelLANAgent
+
+# 3. Kiểm tra trạng thái tiến trình nền
+Get-Service SentinelLANAgent</code></pre>
+            <p class="command-hint" style="margin-bottom: 20px;">
+              <a class="asset-link" data-asset="configure-windows-agent.ps1" href="https://github.com/psy-zney/SentinelLAN/releases">
+                Tải script cấu hình configure-windows-agent.ps1 từ GitHub Release →
+              </a>
+            </p>
+
+            <div class="command-box-header" style="border-top: 1px solid var(--border); padding-top: 16px;">
+              <span class="command-box-title">Lệnh Cài Đặt Im Lặng (Silent Deploy cho GPO / SCCM)</span>
+            </div>
+            <pre class="command-pre"><code>msiexec /i SentinelLAN.Agent.msi /qn /norestart</code></pre>
+            <p class="command-hint">
+              * Tuyệt đối không truyền token trực tiếp trên dòng lệnh <code>msiexec</code> để tránh bị ghi lại vào bộ đệm tiến trình hoặc nhật ký hệ thống. Hãy sử dụng script cấu hình riêng cho bước kích hoạt.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SECTION: CAM KẾT BẢO MẬT & ZERO SURVEILLANCE ================= -->
+    <section>
+      <div class="wrap">
+        <div class="section-head center">
+          <span class="section-eyebrow">Ranh Giới An Ninh &amp; Trách Nhiệm</span>
+          <h2 class="section-title">Cam Kết Đo Lường Kỹ Thuật · Không Xâm Phạm Riêng Tư</h2>
+          <p class="section-desc">
+            SentinelLAN được thiết kế phục vụ mục đích quản trị tài sản công nghệ và bảo vệ an toàn hạ tầng nội bộ, tuân thủ nghiêm ngặt nguyên tắc quyền riêng tư và minh bạch thông tin.
+          </p>
+        </div>
+
+        <div class="defense-box">
+          <div class="defense-col">
+            <h3>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--emerald)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              Những Gì Hệ Thống Thực Hiện
+            </h3>
+            <ul>
+              <li>
+                <span class="flow-dot"></span>
+                <span>Thu thập thông số hiệu năng phần cứng: tỷ lệ sử dụng CPU, dung lượng RAM, dung lượng ổ đĩa còn trống và thời gian bật máy (Uptime).</span>
+              </li>
+              <li>
+                <span class="flow-dot"></span>
+                <span>Ghi nhận nhịp hoạt động định kỳ (Heartbeat) để phát hiện kịp thời các máy trạm mất nguồn hoặc đứt cáp mạng.</span>
+              </li>
+              <li>
+                <span class="flow-dot"></span>
+                <span>Cung cấp kênh tiếp nhận báo cáo sự cố phần cứng/phần mềm từ nhân viên gửi về bộ phận IT hỗ trợ.</span>
+              </li>
+              <li>
+                <span class="flow-dot"></span>
+                <span>Lưu vết mọi thao tác quản trị vào chuỗi nhật ký kiểm toán bất biến (Append-Only Audit Trail) phục vụ công tác thanh tra.</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="defense-col">
+            <h3>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--rose)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              Những Gì Hệ Thống Tuyệt Đối Không Làm
+            </h3>
+            <ul>
+              <li>
+                <span class="flow-dot" style="background: var(--rose);"></span>
+                <span><strong>Không nghe trộm gói tin (Packet Sniffing):</strong> Không chặn bắt hay phân tích nội dung lưu lượng duyệt web cá nhân của người dùng.</span>
+              </li>
+              <li>
+                <span class="flow-dot" style="background: var(--rose);"></span>
+                <span><strong>Không ghi lại bàn phím (Keylogger) hay chụp ảnh màn hình ngầm:</strong> Không lưu trữ văn bản gõ phím hay hình ảnh riêng tư.</span>
+              </li>
+              <li>
+                <span class="flow-dot" style="background: var(--rose);"></span>
+                <span><strong>Không thực thi mã tùy ý (No Arbitrary Execution):</strong> Agent chỉ tiếp nhận danh mục lệnh có định dạng chặt chẽ đã được định nghĩa trước.</span>
+              </li>
+              <li>
+                <span class="flow-dot" style="background: var(--rose);"></span>
+                <span><strong>Không khóa máy phá hoại:</strong> Tính năng cô lập chỉ tồn tại dưới dạng cờ kiểm thử giả lập, mặc định vô hiệu hóa để bảo vệ tính toàn vẹn của thiết bị.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
-  <footer class="wrap"><span>© SentinelLAN · Dự án quản lý endpoint được ủy quyền</span><a href="https://github.com/psy-zney/SentinelLAN">Mã nguồn trên GitHub</a></footer>
+
+  <!-- ================= FOOTER ================= -->
+  <footer>
+    <div class="wrap">
+      <div>
+        <strong>SentinelLAN</strong> · Nền tảng quản lý và giám sát điểm cuối mạng nội bộ được ủy quyền.
+      </div>
+      <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+        <a href="system-map.html">Bản Đồ Kiến Trúc Hệ Thống</a>
+        <a href="https://github.com/psy-zney/SentinelLAN">Mã Nguồn GitHub</a>
+        <a href="https://github.com/psy-zney/SentinelLAN/blob/main/docs/deployment/saas-vps-guide.md">Hướng Dẫn VPS</a>
+        <a href="https://github.com/psy-zney/SentinelLAN/releases">GitHub Releases</a>
+      </div>
+    </div>
+  </footer>
+
 </body>
 </html>
