@@ -26,7 +26,7 @@ public sealed class CommandVerifierTests
         }
 
         var tempDirectory = Path.Combine(Path.GetTempPath(), $"sentinellan-nonce-restart-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDirectory);
+        CreatePrivateTempDirectory(tempDirectory);
         var storePath = Path.Combine(tempDirectory, "command-nonces.dat");
         var nonceValue = Guid.NewGuid().ToString("N");
         try
@@ -77,7 +77,7 @@ public sealed class CommandVerifierTests
     public void ProtectedNonceCacheFailsClosedWhenCiphertextIsCorrupt()
     {
         var tempDirectory = Path.Combine(Path.GetTempPath(), $"sentinellan-nonce-corrupt-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDirectory);
+        CreatePrivateTempDirectory(tempDirectory);
         var path = Path.Combine(tempDirectory, "command-nonces.dat");
         try
         {
@@ -189,6 +189,12 @@ public sealed class CommandVerifierTests
 
     private static RemoteCommand Command(string type, string? parameter = null) =>
         new(Guid.NewGuid(), Guid.NewGuid(), type, "Demo", Guid.NewGuid().ToString("N"), "sig", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(1), Parameter: parameter);
+
+    private static void CreatePrivateTempDirectory(string path)
+    {
+        if (OperatingSystem.IsWindows()) Directory.CreateDirectory(path);
+        else Directory.CreateDirectory(path, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+    }
 
     private static string FindRepositoryRoot()
     {
