@@ -282,6 +282,7 @@ export function DeviceTable({ initialDevices }: { initialDevices: Device[] }) {
                   <option value="ShowNotification">{lang === "vi" ? "Gửi thông báo màn hình (ShowNotification)" : "Show Notification"}</option>
                   <option value="CollectTelemetryNow">{lang === "vi" ? "Thu thập telemetry tức thời (CollectTelemetryNow)" : "Collect Telemetry Now"}</option>
                   <option value="RefreshPolicy">{lang === "vi" ? "Làm mới chính sách (RefreshPolicy)" : "Refresh Policy"}</option>
+                  <option value="LockWorkstation">{lang === "vi" ? "Khóa Windows thật (máy lab được phép)" : "Lock Windows (authorized lab)"}</option>
                   <option value="SimulateLock">{lang === "vi" ? "Mô phỏng khóa màn hình (SimulateLock)" : "Simulate Screen Lock"}</option>
                   <option value="SimulateNetworkIsolation">{lang === "vi" ? "Mô phỏng cách ly mạng (SimulateNetworkIsolation)" : "Simulate Network Isolation"}</option>
                 </select>

@@ -43,9 +43,16 @@ public sealed class DomainRulesTests
         var now = DateTimeOffset.UtcNow;
         var command = new DeviceCommand
         {
-            OrganizationId = Guid.NewGuid(), DeviceId = Guid.NewGuid(), IssuedByUserId = Guid.NewGuid(),
-            Type = "SimulateLock", Reason = "Authorized demo", Nonce = "stable-nonce", Signature = "stable-signature",
-            IssuedAt = now, ExpiresAt = now.AddMinutes(1), Status = DeviceCommandStatus.Pending
+            OrganizationId = Guid.NewGuid(),
+            DeviceId = Guid.NewGuid(),
+            IssuedByUserId = Guid.NewGuid(),
+            Type = "SimulateLock",
+            Reason = "Authorized demo",
+            Nonce = "stable-nonce",
+            Signature = "stable-signature",
+            IssuedAt = now,
+            ExpiresAt = now.AddMinutes(1),
+            Status = DeviceCommandStatus.Pending
         };
 
         Assert.True(command.TryLeaseForDelivery(now, TimeSpan.FromSeconds(30)));

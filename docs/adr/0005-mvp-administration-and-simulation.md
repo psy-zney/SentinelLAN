@@ -2,6 +2,8 @@
 
 Date: 2026-09-20. Status: Accepted for this implementation.
 
+Decision 5 is superseded by [ADR 0007](0007-real-windows-agent-actions.md): distinct real lab commands and Infrastructure adapters are now implemented; Simulate names retain their behavior.
+
 ## Context
 
 Enrollment, assigned-device visibility and credential rejection already exist, but administrators cannot issue enrollment tokens, create users, assign devices or revoke credentials through the dashboard. The singular employee endpoint assumes one device. Existing command handling can turn `SimulateLock` into a real OS action under a flag and invokes Linux service control from Agent Core. The command parameter is omitted from the signature.

@@ -1,6 +1,6 @@
 # SentinelLAN
 
-SentinelLAN quản lý thiết bị đầu cuối được tổ chức cho phép: Admin cấp tài khoản và mã đăng ký, Agent gửi telemetry kỹ thuật, nhân viên xem máy được giao và báo sự cố, kỹ thuật viên xử lý cảnh báo/công việc. Dữ liệu của mỗi tổ chức được giới hạn bằng `OrganizationId`. Các lệnh khóa máy và cô lập mạng vẫn **chỉ mô phỏng**; không bật hành vi thay đổi hệ điều hành trong bản này.
+SentinelLAN quản lý thiết bị đầu cuối được tổ chức cho phép: Admin cấp tài khoản và mã đăng ký, Agent gửi telemetry kỹ thuật, nhân viên xem máy được giao và báo sự cố, kỹ thuật viên xử lý cảnh báo/công việc. Dữ liệu của mỗi tổ chức được giới hạn bằng `OrganizationId`. Agent có adapter Windows thật; khóa/cô lập thật chỉ được phép trên thiết bị lab đã cấu hình rõ ràng. Lệnh `Simulate` vẫn chỉ mô phỏng. [Hướng dẫn thực thi và nghiệm thu](docs/guides/real-agent-execution.md) ghi rõ quyền, companion, kiểm tra trạng thái và điều kiện môi trường.
 
 **Phạm vi chính:** một luồng quản lý thiết bị được ủy quyền, từ đăng ký Agent → heartbeat/telemetry → gán thiết bị → xử lý sự cố và ghi audit. Web và mobile là hai giao diện của cùng luồng này. Quản trị VPS qua SSH là chức năng mở rộng đã có; không phải mục tiêu chính của đồ án. SentinelLAN không quét toàn bộ LAN, bắt gói tin hay tự động cô lập thiết bị. [Phạm vi và tiêu chí kiểm chứng](docs/project-overview.md) là điểm tham chiếu khi thêm tính năng hoặc viết báo cáo.
 
@@ -73,7 +73,7 @@ Không đưa API, PostgreSQL hoặc cổng Agent HTTP trực tiếp ra Internet.
 ## Luồng chức năng thật
 
 1. **Admin** đăng nhập, tạo tài khoản (link kích hoạt chỉ hiện một lần), cấp token enrollment 1–60 phút, xem inventory/telemetry/audit, gán hoặc thu hồi máy. API kiểm tra quyền, tenant, lý do và xác nhận; token/secret chỉ lưu dạng hash ở server.
-2. **Agent** dùng token đăng ký một lần, lưu credential riêng, gửi heartbeat/CPU/RAM/disk và nhận lệnh có chữ ký khi được cấu hình khóa. Production giữ tối đa 50 heartbeat trong file được mã hóa, tối đa một giờ, và khôi phục queue sau restart; Development mặc định dùng RAM. Retry giữ nguyên idempotency key. Server cho phép giao lại cùng lệnh sau lease 30 giây nếu poll response bị mất; Agent giữ nonce và tối đa một biên lai đang chờ trong file bảo vệ, rồi gửi lại biên lai sau restart trước khi poll tiếp. Lệnh `SimulateLock`, `SimulateNetworkIsolation`, `RestartService`, `RefreshPolicy` và `ShowNotification` hiện chỉ trả kết quả mô phỏng, không thay đổi OS hoặc áp dụng policy.
+2. **Agent** dùng token đăng ký một lần, lưu credential riêng, gửi heartbeat/CPU/RAM/disk và nhận lệnh có chữ ký khi được cấu hình khóa. Production giữ tối đa 50 heartbeat trong file được mã hóa, tối đa một giờ, và khôi phục queue sau restart; Development mặc định dùng RAM. Retry giữ nguyên idempotency key. Server cho phép giao lại cùng lệnh sau lease 30 giây nếu poll response bị mất; Agent giữ nonce và tối đa một biên lai đang chờ trong file bảo vệ, rồi gửi lại biên lai sau restart trước khi poll tiếp. `CollectTelemetryNow` thu và gửi mẫu mới thật. Adapter Windows thực thi thông báo, restart service và áp policy khi đủ quyền/cấu hình; `LockWorkstation` và `IsolateNetwork` cần cờ lab cùng device ID được phép. Chỉ `SimulateLock` và `SimulateNetworkIsolation` trả kết quả mô phỏng. Thiếu adapter, quyền hoặc cấu hình thì receipt báo `Failed`.
 3. **Technician** xem thiết bị, xử lý cảnh báo, incident, work order và loan trong tenant. Work order đang mở được xếp theo Critical → High → Medium → Low, hạn đến rồi thời điểm tạo. Tham chiếu người dùng, incident và thiết bị được kiểm tra cùng tenant.
 4. **Employee** xem `/my-device`, telemetry được công bố, chính sách gán và sự cố của máy mình; báo sự cố qua web/mobile. Khi Admin thu hồi máy, quyền xem máy và credential Agent bị từ chối.
 
@@ -92,6 +92,8 @@ Restart VPS yêu cầu lý do, checkbox xác nhận, nonce riêng và hạn tố
 Tem QR chứa mã ngẫu nhiên chỉ trả một lần khi phát hành. Hãy in ngay trong phiên đó; sau khi tải lại trang, dashboard chỉ hiển thị trạng thái và tiền tố, không thể dựng lại mã từ tiền tố. Nếu cần in lại, xoay vòng tem để vô hiệu mã cũ.
 
 ## Cài Agent
+
+Windows Service cần [desktop companion](docs/guides/real-agent-execution.md) để hiển thị thông báo, khóa console và áp idle policy. Chạy `scripts/test-production-readiness.ps1 -ServerUrl https://<api-dns> -CheckWindowsAgent` để nhận danh sách điều kiện còn thiếu; script không thay đổi hệ điều hành.
 
 Admin cấp enrollment token trên dashboard. Windows ưu tiên MSI; cài MSI và cấu hình service bằng script tải từ cùng GitHub Release:
 

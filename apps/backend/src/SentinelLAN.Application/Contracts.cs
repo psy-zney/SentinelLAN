@@ -66,7 +66,7 @@ public record AuthSessionResponse(int ExpiresIn, string Role, string DisplayName
 public record CurrentSessionResponse(string Role, string DisplayName);
 public record EnrollRequest(string Token, string DeviceName, string OsVersion, string AgentVersion);
 public record EnrollResponse(Guid DeviceId, string DeviceSecret);
-public record HeartbeatRequest(string IdempotencyKey, double CpuPercent, double RamPercent, double DiskPercent, string OsVersion, string AgentVersion);
+public record HeartbeatRequest(string IdempotencyKey, double CpuPercent, double RamPercent, double DiskPercent, string OsVersion, string AgentVersion, DateTimeOffset? MaintenanceUntil = null, string? MaintenanceAction = null);
 public record CreateCommandRequest(Guid DeviceId, string Type, string Reason, int ValidForSeconds = 120, bool Confirmed = false, string? Parameter = null);
 public record CommandResultRequest(bool Succeeded, string Message);
 public record CommandDto(Guid Id, Guid DeviceId, string DeviceName, string Type, string Reason, string? Parameter, string Status, DateTimeOffset IssuedAt, DateTimeOffset ExpiresAt, bool? Succeeded, string? ResultMessage);
@@ -77,6 +77,7 @@ public record EmployeeDeviceDto(DeviceDto Device, string? AppliedPolicy, IReadOn
 public record TelemetrySnapshotDto(Guid Id, Guid DeviceId, double CpuPercent, double RamPercent, double DiskPercent, DateTimeOffset CreatedAt);
 
 public record PolicyDto(Guid Id, string Name, int IdleTimeoutMinutes, string UsbMode, int AssignedDeviceCount, DateTimeOffset CreatedAt);
+public record AgentPolicyDto(Guid Id, int IdleTimeoutMinutes, string UsbMode);
 public record CreatePolicyRequest(string Name, int IdleTimeoutMinutes, string UsbMode);
 public record UpdatePolicyRequest(string Name, int IdleTimeoutMinutes, string UsbMode);
 public record AssignPolicyRequest(Guid PolicyId, Guid DeviceId);

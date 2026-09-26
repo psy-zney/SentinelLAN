@@ -41,9 +41,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: 'com.sentinellan.employee',
     infoPlist: {
       NSCameraUsageDescription:
-        'SentinelLAN uses the camera exclusively to scan physical QR asset labels on authorized computers.',
+        'SentinelLAN uses the camera when you choose to scan a computer QR code or photograph an error to send to IT.',
       NSPhotoLibraryUsageDescription:
-        'SentinelLAN allows selecting an image from your photo library containing a QR code.',
+        'SentinelLAN lets you select a QR image or preview and send an error image to IT.',
     },
     associatedDomains: universalLinkHost ? [`applinks:${universalLinkHost}`] : [],
   },
@@ -76,13 +76,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-camera',
       {
         cameraPermission:
-          'SentinelLAN uses your camera to scan equipment QR codes. No photos or videos are stored or transmitted.',
+          'SentinelLAN uses your camera when you choose to scan equipment QR codes or photograph an error. Error images are sent only after your confirmation.',
       },
     ],
     'expo-secure-store',
+    ['expo-image-picker', { photosPermission: 'Select an image to scan a QR code or send an error to IT after preview.', cameraPermission: 'Photograph a computer error only when you choose to do so.', microphonePermission: false }],
+    'expo-notifications',
   ],
   extra: {
     apiUrl: configuredApiUrl || 'https://localhost:7147',
     webUrl: configuredWebUrl || configuredApiUrl || 'https://localhost:7147',
+    ...(process.env.EXPO_PUBLIC_EAS_PROJECT_ID ? { eas: { projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID } } : {}),
   },
 });

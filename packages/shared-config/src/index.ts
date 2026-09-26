@@ -1,2 +1,2 @@
 export const productName = "SentinelLAN" as const;
-export const safeCommandTypes = ["ShowNotification", "CollectTelemetryNow", "RefreshPolicy", "SimulateLock", "SimulateNetworkIsolation"] as const;
+export const safeCommandTypes = ["ShowNotification", "CollectTelemetryNow", "RefreshPolicy", "SimulateLock", "SimulateNetworkIsolation", "RestartService", "LockWorkstation", "IsolateNetwork"] as const;

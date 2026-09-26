@@ -43,7 +43,7 @@ export function DeviceDetail({ id }: { id: string }) {
   const [assignmentConfirmed, setAssignmentConfirmed] = useState(false);
   const [revokeReason, setRevokeReason] = useState("");
   const [revokeConfirmed, setRevokeConfirmed] = useState(false);
-  const [commandType, setCommandType] = useState<CommandType>("SimulateLock");
+  const [commandType, setCommandType] = useState<CommandType>("CollectTelemetryNow");
   const [commandReason, setCommandReason] = useState("");
   const [commandConfirmed, setCommandConfirmed] = useState(false);
   const [users, setUsers] = useState<UserItem[]>([]);
@@ -683,8 +683,9 @@ export function DeviceDetail({ id }: { id: string }) {
                   >
                     <option value="SimulateLock">{lang === "vi" ? "Mô phỏng khóa màn hình (SimulateLock)" : "Simulate Lock"}</option>
                     <option value="SimulateNetworkIsolation">{lang === "vi" ? "Mô phỏng cách ly mạng (SimulateNetworkIsolation)" : "Simulate Network Isolation"}</option>
-                    <option value="CollectTelemetryNow">{lang === "vi" ? "Mô phỏng yêu cầu telemetry tức thời" : "Simulate Immediate Telemetry Request"}</option>
-                    <option value="RefreshPolicy">{lang === "vi" ? "Mô phỏng làm mới chính sách" : "Simulate Policy Refresh"}</option>
+                    <option value="LockWorkstation">{lang === "vi" ? "Khóa Windows thật (máy lab được phép)" : "Lock Windows (authorized lab)"}</option>
+                    <option value="CollectTelemetryNow">{lang === "vi" ? "Đo và gửi telemetry ngay" : "Measure and Send Telemetry Now"}</option>
+                    <option value="RefreshPolicy">{lang === "vi" ? "Tải và áp chính sách Windows" : "Fetch and Apply Windows Policy"}</option>
                   </select>
                 </div>
                 <div className="form-group">

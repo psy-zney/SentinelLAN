@@ -17,7 +17,8 @@ export function CommandsView() {
 
   // Form state
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
-  const [commandType, setCommandType] = useState<CommandType>("SimulateLock");
+  const [commandType, setCommandType] = useState<CommandType>("CollectTelemetryNow");
+  const [isolationSeconds, setIsolationSeconds] = useState(30);
   const [serviceName, setServiceName] = useState("docker");
   const [notificationText, setNotificationText] = useState("");
   const [reason, setReason] = useState("");
@@ -51,6 +52,8 @@ export function CommandsView() {
       parameter = serviceName;
     } else if (commandType === "ShowNotification") {
       parameter = notificationText.trim();
+    } else if (commandType === "IsolateNetwork") {
+      parameter = String(isolationSeconds);
     }
 
     try {
@@ -74,7 +77,9 @@ export function CommandsView() {
     }
   };
 
-  const getStatusBadge = (status: string, succeeded?: boolean | null) => {
+  const getStatusBadge = (status: string, succeeded?: boolean | null, type?: CommandType) => {
+    if ((status === "Succeeded" || succeeded === true) && type?.startsWith("Simulate"))
+      return <span className="badge badge-neutral">{lang === "vi" ? "Đã mô phỏng" : "Simulated"}</span>;
     if (status === "Succeeded" || succeeded === true) return <span className="badge badge-success">{t("succeeded")}</span>;
     if (status === "Failed" || succeeded === false) return <span className="badge badge-danger">{t("failed")}</span>;
     if (status === "Delivered") return <span className="badge badge-info">{t("delivered")}</span>;
@@ -110,7 +115,7 @@ export function CommandsView() {
         <div className="metric">
           <span>{t("succeeded")}</span>
           <strong style={{ color: "var(--accent)" }}>
-            {commands.filter((c) => c.status === "Succeeded" || c.succeeded === true).length}
+            {commands.filter((c) => !c.type.startsWith("Simulate") && (c.status === "Succeeded" || c.succeeded === true)).length}
           </strong>
         </div>
         <div className="metric">
@@ -187,7 +192,7 @@ export function CommandsView() {
                     <td style={{ maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {c.reason}
                     </td>
-                    <td>{getStatusBadge(c.status, c.succeeded)}</td>
+                    <td>{getStatusBadge(c.status, c.succeeded, c.type)}</td>
                     <td style={{ maxWidth: 180, fontSize: ".8rem" }}>
                       {c.resultMessage ?? (c.succeeded === true ? t("succeeded") : t("pending"))}
                     </td>
@@ -239,13 +244,22 @@ export function CommandsView() {
                     onChange={(e) => setCommandType(e.target.value as CommandType)}
                   >
                     <option value="SimulateLock">{lang === "vi" ? "Mô phỏng khóa màn hình" : "Simulate Workstation Lock"}</option>
-                    <option value="RestartService">{lang === "vi" ? "Mô phỏng khởi động lại dịch vụ trên Agent" : "Simulate Agent Service Restart"}</option>
-                    <option value="CollectTelemetryNow">{lang === "vi" ? "Mô phỏng yêu cầu telemetry tức thì" : "Simulate Immediate Telemetry Request"}</option>
-                    <option value="RefreshPolicy">{lang === "vi" ? "Mô phỏng làm mới chính sách" : "Simulate Policy Refresh"}</option>
+                    <option value="LockWorkstation">{lang === "vi" ? "Khóa Windows thật (máy lab được phép)" : "Lock Windows (authorized lab)"}</option>
+                    <option value="IsolateNetwork">{lang === "vi" ? "Cô lập Firewall thật có khôi phục (lab)" : "Firewall Isolation with Recovery (lab)"}</option>
+                    <option value="RestartService">{lang === "vi" ? "Khởi động lại dịch vụ Windows" : "Restart Windows Service"}</option>
+                    <option value="CollectTelemetryNow">{lang === "vi" ? "Đo và gửi telemetry ngay" : "Measure and Send Telemetry Now"}</option>
+                    <option value="RefreshPolicy">{lang === "vi" ? "Tải và áp chính sách Windows" : "Fetch and Apply Windows Policy"}</option>
                     <option value="SimulateNetworkIsolation">{lang === "vi" ? "Mô phỏng cách ly mạng" : "Simulate Network Isolation"}</option>
-                    <option value="ShowNotification">{lang === "vi" ? "Mô phỏng thông báo người dùng" : "Simulate User Notification"}</option>
+                    <option value="ShowNotification">{lang === "vi" ? "Hiển thị thông báo Windows" : "Show Windows Notification"}</option>
                   </select>
                 </div>
+
+                {commandType === "IsolateNetwork" && (
+                  <div className="form-group">
+                    <label htmlFor="cmd-isolation-seconds">{lang === "vi" ? "Thời gian cô lập trước khi tự khôi phục (giây)" : "Isolation before automatic recovery (seconds)"}</label>
+                    <input id="cmd-isolation-seconds" type="number" min={30} max={60} required className="form-input" value={isolationSeconds} onChange={(e) => setIsolationSeconds(Number(e.target.value))} />
+                  </div>
+                )}
 
                 {commandType === "RestartService" && (
                   <div className="form-group">

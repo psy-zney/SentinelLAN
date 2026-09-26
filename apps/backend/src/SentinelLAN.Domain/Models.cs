@@ -88,6 +88,8 @@ public sealed class Device : Entity, ITenantOwned
     public required string AgentVersion { get; set; }
     public Guid? AssignedUserId { get; set; }
     public DateTimeOffset? LastSeenAt { get; set; }
+    public DateTimeOffset? MaintenanceUntil { get; set; }
+    public string? MaintenanceAction { get; set; }
     public bool IsRevoked { get; set; }
     public byte[] RowVersion { get; set; } = [];
 
@@ -139,7 +141,7 @@ public sealed class PolicyAssignment : Entity, ITenantOwned { public Guid Organi
 public enum DeviceCommandStatus { Pending, Delivered, Succeeded, Failed, Expired }
 public sealed class DeviceCommand : Entity, ITenantOwned
 {
-    private static readonly HashSet<string> Allowed = ["ShowNotification", "CollectTelemetryNow", "RefreshPolicy", "SimulateLock", "SimulateNetworkIsolation", "RestartService"];
+    private static readonly HashSet<string> Allowed = ["ShowNotification", "CollectTelemetryNow", "RefreshPolicy", "SimulateLock", "SimulateNetworkIsolation", "RestartService", "LockWorkstation", "IsolateNetwork", "InstallApprovedApp", "PauseAgent", "UninstallAgent"];
     public Guid OrganizationId { get; init; }
     public Guid DeviceId { get; init; }
     public required Guid IssuedByUserId { get; init; }

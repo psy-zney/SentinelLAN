@@ -40,7 +40,7 @@ Domain không phụ thuộc Infrastructure; Application sở hữu use case và 
 
 1. Admin tạo tài khoản và token enrollment một lần. Agent đăng ký trên thiết bị được ủy quyền; server lưu hash của token/credential. Admin có thể gán hoặc thu hồi thiết bị.
 2. Agent gửi heartbeat và telemetry qua HTTPS. Production dùng file bảo vệ cho hàng đợi tối đa 50 mục trong một giờ; Development mặc định dùng RAM. Retry giữ nguyên idempotency key.
-3. Admin/Technician có quyền phù hợp tạo command với lý do, xác nhận, thời hạn và nonce. Agent kiểm tra chữ ký HMAC, hạn và nonce; server có delivery lease và nhận biên lai idempotent. Các lệnh Agent hiện chỉ mô phỏng, kể cả `SimulateLock`, `SimulateNetworkIsolation` và `RestartService`.
+3. Admin/Technician có quyền phù hợp tạo command với lý do, xác nhận, thời hạn và nonce. Agent kiểm tra chữ ký HMAC, hạn và nonce; server có delivery lease và nhận biên lai idempotent. Adapter Windows thực thi hành động có kiểm tra trạng thái; khóa/cô lập thật cần cấu hình lab/device ID. `SimulateLock` và `SimulateNetworkIsolation` vẫn chỉ mô phỏng. [Điều kiện và nghiệm thu](guides/real-agent-execution.md) phân biệt mã đã triển khai với vận hành production đã kiểm chứng.
 4. Employee xem máy được gán và gửi incident; Technician xử lý alert, incident và work order trong tenant.
 5. Trong phần mở rộng VPS, API dùng SSH với host-key pinning và khóa riêng được mã hóa tại server. Restart dịch vụ allow-list qua đường này là hành động thật, tách biệt với command của Agent.
 

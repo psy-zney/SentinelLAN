@@ -115,6 +115,22 @@ public sealed class PolicyServiceTests
         Assert.Empty(store.Assignments);
     }
 
+    [Fact]
+    public async Task AgentCanOnlyReadItsOwnAssignedPolicyWithinItsTenant()
+    {
+        var deviceId = Guid.NewGuid();
+        var policy = new Policy { OrganizationId = orgId, Name = "Assigned", IdleTimeoutMinutes = 20, UsbMode = "ReadOnly" };
+        var store = new FakePolicyStore();
+        store.Policies.Add(policy);
+        store.Assignments.Add(new PolicyAssignment { OrganizationId = orgId, DeviceId = deviceId, PolicyId = policy.Id });
+        var service = new PolicyService(store);
+        Assert.Equal(new AgentPolicyDto(policy.Id, 20, "ReadOnly"), await service.GetAssignedPolicyAsync(new(deviceId, orgId), default));
+        Assert.Null(await service.GetAssignedPolicyAsync(new(Guid.NewGuid(), orgId), default));
+        Assert.Null(await service.GetAssignedPolicyAsync(new(deviceId, Guid.NewGuid()), default));
+        store.Policies.Clear();
+        Assert.Null(await service.GetAssignedPolicyAsync(new(deviceId, orgId), default));
+    }
+
     private sealed class FakePolicyStore : IPolicyStore
     {
         public List<Policy> Policies { get; } = [];

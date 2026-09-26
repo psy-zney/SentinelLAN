@@ -35,12 +35,12 @@ sequenceDiagram
   API->>DB: signed command + audit
   A->>API: poll
   API-->>A: verified, unexpired command
-  A->>API: simulated result
+  A->>API: verified execution result or explicit failure
   API->>DB: idempotent result + audit outcome
   API-->>W: SignalR command-status
 ```
 
-Agent command trong sơ đồ trên trả kết quả mô phỏng; quy trình cô lập thật chưa được triển khai. Restart dịch vụ VPS qua SSH là luồng riêng, có host-key pinning, quyền, lý do, xác nhận, nonce và audit; xem [bối cảnh](context.md) và [threat model](../security/threat-model.md).
+Agent dùng adapter Windows thật và companion cho desktop; hai lệnh `Simulate` vẫn mô phỏng. Lệnh lab cô lập Firewall có tác vụ khôi phục và còn cần nghiệm thu traffic trên thiết bị thật; xem [ADR 0007](../adr/0007-real-windows-agent-actions.md). Restart dịch vụ VPS qua SSH là luồng riêng, có host-key pinning, quyền, lý do, xác nhận, nonce và audit; xem [bối cảnh](context.md) và [threat model](../security/threat-model.md).
 
 ```mermaid
 sequenceDiagram

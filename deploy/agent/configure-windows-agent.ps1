@@ -1,6 +1,9 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string]$ServerUrl
+    [string]$ServerUrl,
+    [switch]$AllowApprovedAppInstall,
+    [switch]$AllowAgentMaintenance,
+    [string[]]$TrustedPackageHosts = @()
 )
 
 $ErrorActionPreference = 'Stop'
@@ -36,11 +39,24 @@ if (-not (Test-Path -LiteralPath $identityPath)) {
 }
 
 $settings = @{ SENTINELLAN_API_URL = $uri.AbsoluteUri.TrimEnd('/') }
+if ($AllowApprovedAppInstall -and $TrustedPackageHosts.Count -eq 0) { throw 'Approved installs require explicit trusted HTTPS package host names.' }
+foreach ($packageHost in $TrustedPackageHosts) {
+    if ([Uri]::CheckHostName($packageHost) -ne [UriHostNameType]::Dns -or $packageHost.Contains('*')) {
+        throw 'Trusted package hosts must be exact DNS host names; wildcards, URLs and IP addresses are not accepted.'
+    }
+}
+$settings.SENTINELLAN_ALLOW_APPROVED_APP_INSTALL = [bool]$AllowApprovedAppInstall
+$settings.SENTINELLAN_ALLOW_AGENT_MAINTENANCE = [bool]$AllowAgentMaintenance
+$settings.SENTINELLAN_TRUSTED_PACKAGE_HOSTS = $TrustedPackageHosts -join ','
 if ($token) { $settings.SENTINELLAN_ENROLLMENT_TOKEN = $token }
 $temporaryPath = Join-Path $dataDir ('agent-settings-' + [guid]::NewGuid().ToString('N') + '.tmp')
 try {
     $settings | ConvertTo-Json -Compress | Set-Content -LiteralPath $temporaryPath -Encoding UTF8
     Move-Item -LiteralPath $temporaryPath -Destination $settingsPath -Force
+    & sc.exe sdset SentinelLANAgent 'D:P(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLORC;;;BU)' | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Could not restrict service control to IT administrators.' }
+    & sc.exe failure SentinelLANAgent reset= 86400 actions= restart/5000/restart/15000/restart/60000 | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Could not enable Windows service recovery.' }
     & sc.exe config SentinelLANAgent start= auto | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Could not enable the Agent service.' }
     if ((Get-Service -Name SentinelLANAgent).Status -eq 'Running') {

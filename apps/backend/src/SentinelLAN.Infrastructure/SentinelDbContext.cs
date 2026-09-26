@@ -30,9 +30,19 @@ public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> option
     public DbSet<AssetLoan> AssetLoans => Set<AssetLoan>();
     public DbSet<AccountActivationToken> AccountActivationTokens => Set<AccountActivationToken>();
     public DbSet<DeviceQrLabel> DeviceQrLabels => Set<DeviceQrLabel>();
+    public DbSet<SelfServiceRequest> SelfServiceRequests => Set<SelfServiceRequest>();
+    public DbSet<SelfServiceMessage> SelfServiceMessages => Set<SelfServiceMessage>();
+    public DbSet<SelfServiceAttachment> SelfServiceAttachments => Set<SelfServiceAttachment>();
+    public DbSet<SelfServiceCatalogApp> SelfServiceCatalogApps => Set<SelfServiceCatalogApp>();
+    public DbSet<SelfServiceAnnouncement> SelfServiceAnnouncements => Set<SelfServiceAnnouncement>();
+    public DbSet<SelfServiceAnnouncementReceipt> SelfServiceAnnouncementReceipts => Set<SelfServiceAnnouncementReceipt>();
+    public DbSet<SelfServiceNotification> SelfServiceNotifications => Set<SelfServiceNotification>();
+    public DbSet<SelfServicePushDevice> SelfServicePushDevices => Set<SelfServicePushDevice>();
+    public DbSet<SelfServicePushDelivery> SelfServicePushDeliveries => Set<SelfServicePushDelivery>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        SelfServiceModelConfiguration.Configure(modelBuilder);
         modelBuilder.Entity<Organization>().HasIndex(x => x.Code).IsUnique();
         modelBuilder.Entity<Organization>().HasIndex(x => x.Name).IsUnique();
         modelBuilder.Entity<User>().HasIndex(x => new { x.OrganizationId, x.Email }).IsUnique();
@@ -114,5 +124,7 @@ public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> option
             entry.Property(token => token.RowVersion).CurrentValue = Guid.NewGuid().ToByteArray();
         foreach (var entry in ChangeTracker.Entries<DeviceQrLabel>().Where(entry => entry.State is EntityState.Added or EntityState.Modified))
             entry.Property(label => label.RowVersion).CurrentValue = Guid.NewGuid().ToByteArray();
+        foreach (var entry in ChangeTracker.Entries<SelfServiceRequest>().Where(entry => entry.State is EntityState.Added or EntityState.Modified))
+            entry.Property(request => request.RowVersion).CurrentValue = Guid.NewGuid().ToByteArray();
     }
 }

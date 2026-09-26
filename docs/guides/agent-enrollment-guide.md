@@ -38,6 +38,8 @@ Script hỏi token, tạo user dịch vụ `sentinellan`, khóa identity riêng 
 
 ## Kiểm tra và xử lý lỗi
 
+Windows Service cần desktop companion để thực thi thông báo/khóa/idle policy trên console. Xem [hướng dẫn thực thi thật](real-agent-execution.md) để đăng ký companion, cấu hình quyền và nghiệm thu; `SimulateLock` không khóa Windows. Linux hiện chỉ hỗ trợ telemetry thật, lưu trữ bảo vệ và xác thực/biên lai; các adapter OS mới trong ADR 0007 yêu cầu Windows.
+
 1. Từ thiết bị Agent, thử `https://<dns>/health/live` và xác nhận chứng chỉ hợp lệ. `health/ready` 503 là lỗi kết nối DB phía server.
 2. Kiểm tra service (`Get-Service SentinelLANAgent` trên Windows; `systemctl status sentinellan-agent` trên Linux), rồi xem thiết bị trong inventory và thời điểm heartbeat. Online có thể cần một chu kỳ gửi tiếp theo.
 3. Nếu enroll trả 400, token có thể sai, hết hạn hoặc đã dùng. Admin tạo token mới; không sửa DB để tái dùng token cũ.

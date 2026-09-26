@@ -18,6 +18,13 @@ import {
   AuthenticatedQrResolve,
 } from '../validation/schemas';
 import { TokenVault } from '../security/secure-store';
+import { z } from 'zod';
+import {
+  SupportRequestSchema, CreateSupportRequestSchema, SupportMessageSchema, SupportAttachmentSchema,
+  CatalogAppSchema, AnnouncementSchema, EmployeeNotificationSchema, HelpArticleSchema,
+  AttachmentUploadSchema, RedeemMaintenanceSchema,
+  type CreateSupportRequest, type AttachmentUpload,
+} from '../validation/self-service';
 
 export class ApiError extends Error {
   constructor(
@@ -299,4 +306,43 @@ export class MobileApiClient {
     );
     return AuthenticatedQrResolveSchema.parse(data);
   }
+
+  private selfService(path: string, init?: RequestInit): Promise<unknown> {
+    return this.executeWithRefresh<unknown>(`/api/v1/self-service${path}`, init);
+  }
+
+  async supportRequests() { return z.array(SupportRequestSchema).parse(await this.selfService('/requests')); }
+  async supportRequest(id: string) { return SupportRequestSchema.parse(await this.selfService(`/requests/${z.string().uuid().parse(id)}`)); }
+  async createSupportRequest(input: CreateSupportRequest) {
+    const body = CreateSupportRequestSchema.parse(input);
+    return SupportRequestSchema.parse(await this.selfService('/requests', { method: 'POST', body: JSON.stringify(body) }));
+  }
+  async supportMessages(id: string, signal?: AbortSignal) { return z.array(SupportMessageSchema).parse(await this.selfService(`/requests/${z.string().uuid().parse(id)}/messages`, { signal })); }
+  async sendSupportMessage(id: string, body: string, idempotencyKey: string) {
+    const input = z.object({ body: z.string().trim().min(1).max(2000), idempotencyKey: z.string().uuid() }).parse({ body, idempotencyKey });
+    return SupportMessageSchema.parse(await this.selfService(`/requests/${z.string().uuid().parse(id)}/messages`, { method: 'POST', body: JSON.stringify(input) }));
+  }
+  async supportAttachments(id: string) { return z.array(SupportAttachmentSchema).parse(await this.selfService(`/requests/${z.string().uuid().parse(id)}/attachments`)); }
+  async uploadSupportAttachment(id: string, input: AttachmentUpload) {
+    return SupportAttachmentSchema.parse(await this.selfService(`/requests/${z.string().uuid().parse(id)}/attachments`, { method: 'POST', body: JSON.stringify(AttachmentUploadSchema.parse(input)) }));
+  }
+  async updateOwnSupportRequest(id: string, status: 'Closed' | 'Open', reason: string, confirmed: boolean) {
+    const body = z.object({ status: z.enum(['Closed', 'Open']), reason: z.string().trim().min(3).max(2000), confirmed: z.literal(true) }).parse({ status, reason, confirmed });
+    return SupportRequestSchema.parse(await this.selfService(`/requests/${z.string().uuid().parse(id)}`, { method: 'PATCH', body: JSON.stringify(body) }));
+  }
+  async redeemMaintenance(id: string, code: string, confirmed: boolean) {
+    return SupportRequestSchema.parse(await this.selfService(`/requests/${z.string().uuid().parse(id)}/redeem`, { method: 'POST', body: JSON.stringify(RedeemMaintenanceSchema.parse({ code, confirmed })) }));
+  }
+  async appCatalog() { return z.array(CatalogAppSchema).parse(await this.selfService('/catalog')); }
+  async announcements() { return z.array(AnnouncementSchema).parse(await this.selfService('/announcements')); }
+  async acknowledgeAnnouncement(id: string) { await this.selfService(`/announcements/${z.string().uuid().parse(id)}/acknowledge`, { method: 'POST' }); }
+  async markAnnouncementAffected(id: string) { await this.selfService(`/announcements/${z.string().uuid().parse(id)}/affected`, { method: 'POST' }); }
+  async employeeNotifications() { return z.array(EmployeeNotificationSchema).parse(await this.selfService('/notifications')); }
+  async readEmployeeNotification(id: string) { await this.selfService(`/notifications/${z.string().uuid().parse(id)}/read`, { method: 'POST' }); }
+  async helpArticles() { return z.array(HelpArticleSchema).parse(await this.selfService('/help')); }
+  async registerPushDevice(token: string, platform: 'ios' | 'android') {
+    const body = z.object({ token: z.string().min(1).max(512), platform: z.enum(['ios', 'android']) }).parse({ token, platform });
+    await this.selfService('/push-devices', { method: 'POST', body: JSON.stringify(body) });
+  }
+  async deregisterPushDevice(token: string) { await this.selfService('/push-devices', { method: 'DELETE', body: JSON.stringify({ token }) }); }
 }

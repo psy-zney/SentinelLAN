@@ -12,6 +12,7 @@ export const translations = {
     dashboard: "Bảng điều khiển",
     devices: "Thiết bị",
     policies: "Chính sách",
+    selfService: "Hỗ trợ IT",
     commands: "Lệnh điều khiển",
     alerts: "Cảnh báo & Sự cố",
     auditLogs: "Nhật ký kiểm toán",
@@ -67,7 +68,7 @@ export const translations = {
 
     subtitleDashboard: "Trạng thái thiết bị được quản lý, cảnh báo đang mở và telemetry CPU/RAM/đĩa do Agent gửi.",
     subtitlePolicies: "Lưu và gán cấu hình chính sách cho thiết bị; Agent hiện chưa áp dụng khóa màn hình hoặc chế độ USB.",
-    subtitleCommands: "Lệnh Agent có chữ ký, lý do và audit; hành động trên hệ điều hành hiện được mô phỏng.",
+    subtitleCommands: "Lệnh có chữ ký, lý do và audit. Xem biên lai để biết kết quả thực thi; lệnh Simulate chỉ mô phỏng.",
     subtitleAlerts: "Cảnh báo và sự cố do người có quyền ghi nhận; chưa tự sinh cảnh báo từ ngưỡng telemetry.",
     subtitleAudit: "Nhật ký tác vụ nhạy cảm được chặn sửa/xóa qua ứng dụng; chưa có kho WORM độc lập.",
     subtitleUsers: "Danh bạ người dùng đa tổ chức (multi-tenant), phân quyền RBAC và ranh giới quyền hạn.",
@@ -328,6 +329,7 @@ export const translations = {
     dashboard: "Dashboard",
     devices: "Devices",
     policies: "Policies",
+    selfService: "IT Support",
     commands: "Commands",
     alerts: "Alerts & Incidents",
     auditLogs: "Audit logs",
@@ -383,7 +385,7 @@ export const translations = {
 
     subtitleDashboard: "Managed device status, open alerts, and CPU/RAM/disk telemetry reported by Agents.",
     subtitlePolicies: "Store and assign policy settings; the Agent does not yet enforce screen lock or USB modes.",
-    subtitleCommands: "Signed Agent commands with reasons and audit; OS actions are simulated in this version.",
+    subtitleCommands: "Signed commands with reasons and audit. Check receipts for execution results; Simulate commands only simulate.",
     subtitleAlerts: "Alerts and incidents recorded by authorized users; telemetry threshold rules are not active.",
     subtitleAudit: "Sensitive action records protected from edits through the application; no independent WORM store.",
     subtitleUsers: "Multi-tenant user identity, role assignments, and organizational access boundaries.",

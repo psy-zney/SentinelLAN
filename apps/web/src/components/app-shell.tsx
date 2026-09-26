@@ -21,6 +21,7 @@ export function useCurrentSession() {
 const linkDefs: Record<Exclude<Role, "Agent">, readonly (readonly [TranslationKey, string])[]> = {
   Admin: [
     ["dashboard", "/dashboard"],
+    ["selfService", "/support"],
     ["devices", "/devices"],
     ["scanQr", "/scan"],
     ["policies", "/policies"],
@@ -32,6 +33,7 @@ const linkDefs: Record<Exclude<Role, "Agent">, readonly (readonly [TranslationKe
   ],
   Technician: [
     ["dashboard", "/dashboard"],
+    ["selfService", "/support"],
     ["devices", "/devices"],
     ["scanQr", "/scan"],
     ["policies", "/policies"],
@@ -40,6 +42,7 @@ const linkDefs: Record<Exclude<Role, "Agent">, readonly (readonly [TranslationKe
     ["vpsNodes", "/vps-nodes"]
   ],
   Employee: [
+    ["selfService", "/support"],
     ["myDevice", "/my-device"],
     ["scanQr", "/scan"]
   ]

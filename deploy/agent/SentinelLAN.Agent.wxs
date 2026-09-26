@@ -10,15 +10,32 @@
         <Directory Id="INSTALLFOLDER" Name="Agent" />
       </Directory>
     </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="AgentMenuFolder" Name="SentinelLAN" />
+    </StandardDirectory>
     <ComponentGroup Id="AgentComponents" Directory="INSTALLFOLDER">
       <Component Id="AgentService" Guid="3F875D35-30FE-41E3-8E54-EBC002F419B8">
         <File Id="AgentExe" Source="$(var.AgentExe)" KeyPath="yes" />
         <ServiceInstall Id="ServiceInstaller" Type="ownProcess" Name="SentinelLANAgent"
                         DisplayName="SentinelLAN Endpoint Agent"
                         Description="Authorized endpoint telemetry and management agent."
-                        Start="demand" Account="NT AUTHORITY\LocalService" ErrorControl="normal" />
+                        Start="demand" Account="NT AUTHORITY\LocalService" ErrorControl="normal">
+          <PermissionEx Sddl="D:P(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLORC;;;BU)" />
+          <ServiceConfigFailureActions OnInstall="yes" OnReinstall="yes" ResetPeriod="86400">
+            <Failure Action="restartService" Delay="5000" />
+            <Failure Action="restartService" Delay="15000" />
+            <Failure Action="restartService" Delay="60000" />
+          </ServiceConfigFailureActions>
+        </ServiceInstall>
+        <RegistryValue Root="HKLM" Key="SOFTWARE\SentinelLAN\Agent" Name="ProductCode" Value="[ProductCode]" Type="string" />
         <ServiceControl Id="ServiceController" Name="SentinelLANAgent"
                         Stop="both" Remove="uninstall" Wait="yes" />
+      </Component>
+      <Component Id="MaintenancePopup" Guid="7E9543A8-9B25-4BDA-A9D6-51335883E93B">
+        <File Id="MaintenancePopupScript" Source="$(var.MaintenancePopup)" KeyPath="yes" />
+        <Shortcut Id="MaintenanceShortcut" Directory="AgentMenuFolder" Name="SentinelLAN - IT approval"
+                  Target="[#AgentExe]" Arguments="--maintenance" WorkingDirectory="INSTALLFOLDER" />
+        <RemoveFolder Id="RemoveAgentMenuFolder" Directory="AgentMenuFolder" On="uninstall" />
       </Component>
     </ComponentGroup>
     <Feature Id="MainFeature" Title="SentinelLAN Agent" Level="1">

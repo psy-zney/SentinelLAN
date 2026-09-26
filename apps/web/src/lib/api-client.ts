@@ -43,6 +43,8 @@ import type {
   ReportMyDeviceIncidentResponse
 } from "@/types/api";
 
+import type { Announcement, CatalogApp, CreateSupportRequest, EmployeeNotification, HelpArticle, SaveAnnouncement, SaveCatalogApp, SupportAttachment, SupportDecision, SupportMessage, SupportRequest, SupportStatus } from "@/types/self-service";
+
 const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 type MyDeviceApiResponse = {
@@ -475,6 +477,52 @@ export class ApiClient {
   resolveQr(code: string) {
     return this.request<AuthenticatedQrResolveResponse>(`/api/v1/qr/${encodeURIComponent(code)}`);
   }
+
+  supportRequests() { return this.request<SupportRequest[]>("/api/v1/self-service/requests"); }
+  supportRequest(id: string) { return this.request<SupportRequest>(`/api/v1/self-service/requests/${encodeURIComponent(id)}`); }
+  createSupportRequest(data: CreateSupportRequest) {
+    return this.request<SupportRequest>("/api/v1/self-service/requests", { method: "POST", body: JSON.stringify(data) });
+  }
+  updateSupportRequest(id: string, data: { status: SupportStatus; assignedTechnicianId?: string; reason: string; confirmed: boolean }) {
+    return this.request<SupportRequest>(`/api/v1/self-service/requests/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(data) });
+  }
+  decideSupportRequest(id: string, data: { approved: boolean; reason: string; confirmed: boolean }) {
+    return this.request<SupportDecision>(`/api/v1/self-service/requests/${encodeURIComponent(id)}/decision`, { method: "POST", body: JSON.stringify(data) });
+  }
+  redeemMaintenanceCode(id: string, code: string, confirmed: boolean) {
+    return this.request<SupportRequest>(`/api/v1/self-service/requests/${encodeURIComponent(id)}/redeem`, { method: "POST", body: JSON.stringify({ code, confirmed }) });
+  }
+  supportTeam() { return this.request<{ id: string; displayName: string }[]>("/api/v1/self-service/team"); }
+  supportMessages(id: string) { return this.request<SupportMessage[]>(`/api/v1/self-service/requests/${encodeURIComponent(id)}/messages`); }
+  sendSupportMessage(id: string, body: string, idempotencyKey: string) {
+    return this.request<SupportMessage>(`/api/v1/self-service/requests/${encodeURIComponent(id)}/messages`, { method: "POST", body: JSON.stringify({ body, idempotencyKey }) });
+  }
+  supportAttachments(id: string) { return this.request<SupportAttachment[]>(`/api/v1/self-service/requests/${encodeURIComponent(id)}/attachments`); }
+  uploadSupportAttachment(id: string, data: { fileName: string; contentType: string; base64: string }) {
+    return this.request<SupportAttachment>(`/api/v1/self-service/requests/${encodeURIComponent(id)}/attachments`, { method: "POST", body: JSON.stringify(data) });
+  }
+  async downloadSupportAttachment(id: string, attachmentId: string): Promise<Blob> {
+    const path = `/api/v1/self-service/requests/${encodeURIComponent(id)}/attachments/${encodeURIComponent(attachmentId)}`;
+    let response = await this.send(path);
+    if (response.status === 401 && await this.refreshSession()) response = await this.send(path);
+    if (!response.ok) throw new ApiError(response.status, "Không thể tải ảnh của yêu cầu này.");
+    const type = response.headers.get("Content-Type")?.split(";")[0];
+    if (type !== "image/png" && type !== "image/jpeg") throw new Error("Định dạng ảnh không được hỗ trợ.");
+    const blob = await response.blob();
+    if (blob.size > 2 * 1024 * 1024) throw new Error("Ảnh vượt quá 2 MB.");
+    return blob;
+  }
+  catalogApps() { return this.request<CatalogApp[]>("/api/v1/self-service/catalog"); }
+  saveCatalogApp(data: SaveCatalogApp, id?: string) {
+    return this.request<CatalogApp>(`/api/v1/self-service/catalog${id ? `/${encodeURIComponent(id)}` : ""}`, { method: id ? "PATCH" : "POST", body: JSON.stringify(data) });
+  }
+  announcements() { return this.request<Announcement[]>("/api/v1/self-service/announcements"); }
+  createAnnouncement(data: SaveAnnouncement) { return this.request<Announcement>("/api/v1/self-service/announcements", { method: "POST", body: JSON.stringify(data) }); }
+  acknowledgeAnnouncement(id: string) { return this.request<void>(`/api/v1/self-service/announcements/${encodeURIComponent(id)}/acknowledge`, { method: "POST" }); }
+  markAnnouncementAffected(id: string) { return this.request<void>(`/api/v1/self-service/announcements/${encodeURIComponent(id)}/affected`, { method: "POST" }); }
+  employeeNotifications() { return this.request<EmployeeNotification[]>("/api/v1/self-service/notifications"); }
+  readEmployeeNotification(id: string) { return this.request<void>(`/api/v1/self-service/notifications/${encodeURIComponent(id)}/read`, { method: "POST" }); }
+  helpArticles() { return this.request<HelpArticle[]>("/api/v1/self-service/help"); }
 }
 
 export type AuthSession = { expiresIn: number; role: Role; displayName: string };

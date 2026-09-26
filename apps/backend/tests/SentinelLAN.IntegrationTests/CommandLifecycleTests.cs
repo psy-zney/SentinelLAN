@@ -19,6 +19,8 @@ public sealed class CommandLifecycleTests(SentinelApiFactory factory) : IClassFi
     [InlineData("RefreshPolicy")]
     [InlineData("SimulateLock")]
     [InlineData("SimulateNetworkIsolation")]
+    [InlineData("LockWorkstation")]
+    [InlineData("IsolateNetwork")]
     public async Task SafeCommandCompletesOnceAndPreservesCreationAudit(string type)
     {
         var device = await SeedDeviceAsync();
@@ -207,6 +209,36 @@ public sealed class CommandLifecycleTests(SentinelApiFactory factory) : IClassFi
         Assert.False(verifier.TryAccept(duplicateEnvelope, remote.DeviceId, now, signatures.Verify, out var replayReason));
         Assert.Equal("Replay detected or nonce capacity reached", replayReason);
         Assert.False(new CommandVerifier().TryAccept(remote, remote.DeviceId, remote.ExpiresAt, signatures.Verify, out _));
+    }
+
+    [Fact]
+    public async Task AgentPolicyEndpointResolvesOnlyTheAuthenticatedDevicesTenant()
+    {
+        var device = await SeedDeviceAsync();
+        var other = await SeedDeviceAsync();
+        var foreign = await SeedDeviceAsync(Guid.NewGuid());
+        Guid policyId;
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<SentinelDbContext>();
+            var policy = new Policy { OrganizationId = device.OrganizationId, Name = "Real policy test", IdleTimeoutMinutes = 20, UsbMode = "ReadOnly" };
+            policyId = policy.Id;
+            db.Add(policy);
+            db.Add(new PolicyAssignment { OrganizationId = device.OrganizationId, DeviceId = device.Id, PolicyId = policy.Id });
+            db.Add(new PolicyAssignment { OrganizationId = foreign.OrganizationId, DeviceId = foreign.Id, PolicyId = policy.Id });
+            await db.SaveChangesAsync();
+        }
+        using var agent = AgentClient(device.Id);
+        var response = await agent.GetAsync("/api/v1/agent/policy");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(new AgentPolicyDto(policyId, 20, "ReadOnly"), await response.Content.ReadFromJsonAsync<AgentPolicyDto>());
+        Assert.Equal("no-store", response.Headers.CacheControl?.ToString());
+        using var otherAgent = AgentClient(other.Id);
+        using var foreignAgent = AgentClient(foreign.Id);
+        Assert.Equal(HttpStatusCode.NoContent, (await otherAgent.GetAsync("/api/v1/agent/policy")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await foreignAgent.GetAsync("/api/v1/agent/policy")).StatusCode);
+        using var anonymous = factory.CreateClient();
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync("/api/v1/agent/policy")).StatusCode);
     }
 
     private async Task<Device> SeedDeviceAsync(Guid? organizationId = null)

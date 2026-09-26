@@ -14,6 +14,9 @@ export function PrivacyManifestView() {
     'Phiên bản hệ điều hành và phiên bản SentinelLAN Agent do Agent báo cáo',
     'Tên chính sách được gán; không đồng nghĩa đã được Agent thực thi',
     'Lịch sử báo cáo sự cố phần cứng/mạng do chính người dùng gửi',
+    'Tin nhắn trao đổi với IT, nhu cầu phần mềm, lịch hẹn và trạng thái yêu cầu do bạn gửi',
+    'Ảnh lỗi JPEG/PNG do bạn chọn hoặc chủ động chụp, xem trước và đồng ý gửi; tối đa 2 MiB mỗi ảnh',
+    'Mã đăng ký thông báo của điện thoại khi bạn chủ động bật nhận thông báo; nội dung push chỉ là nhắc nhở chung',
   ];
 
   const prohibitedItems = [
@@ -22,7 +25,7 @@ export function PrivacyManifestView() {
     'Nhật ký cuộc gọi, tin nhắn SMS, danh bạ điện thoại',
     'Nội dung bộ nhớ tạm (Clipboard)',
     'Lịch sử duyệt web hoặc lưu lượng truy cập mạng (Network payload)',
-    'Tập tin cá nhân, tài liệu hoặc ảnh trên máy tính và điện thoại',
+    'Tự động đọc tập tin cá nhân, tài liệu hoặc ảnh trên máy tính và điện thoại; ảnh lỗi chỉ gửi khi bạn chọn và xác nhận',
     'Mã nhận dạng quảng cáo (Advertising ID) hoặc fingerprinting để theo dõi người dùng',
   ];
 
@@ -30,7 +33,8 @@ export function PrivacyManifestView() {
     'Chạy dưới tài khoản dịch vụ quyền hạn tối thiểu trên máy được quản lý',
     'Gửi telemetry kỹ thuật outbound tới API có xác thực; Production yêu cầu HTTPS',
     'Không mở port inbound, không chấp nhận shell từ xa tùy ý',
-    'Lệnh khóa máy và cô lập mạng trong phiên bản này chỉ trả kết quả mô phỏng, không đổi hệ điều hành',
+    'Mặc định mô phỏng các lệnh nhạy cảm; thao tác thực tế chỉ dùng khi IT bật cấu hình thử nghiệm được phép',
+    'Cài đặt chỉ từ danh sách IT duyệt; tạm dừng/gỡ yêu cầu IT duyệt và mã xác nhận một lần',
   ];
 
   return (

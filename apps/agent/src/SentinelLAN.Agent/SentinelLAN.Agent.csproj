@@ -14,5 +14,6 @@
   <ItemGroup>
     <ProjectReference Include="..\SentinelLAN.Agent.Core\SentinelLAN.Agent.Core.csproj" />
     <ProjectReference Include="..\SentinelLAN.Agent.Infrastructure\SentinelLAN.Agent.Infrastructure.csproj" />
+    <Content Include="..\..\..\..\deploy\agent\maintenance-popup.ps1" Link="maintenance-popup.ps1" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

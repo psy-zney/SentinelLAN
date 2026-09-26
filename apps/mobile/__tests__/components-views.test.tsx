@@ -238,6 +238,11 @@ describe('Component & View Smoke Tests', () => {
 
   describe('IncidentCreateView Interactions', () => {
     it('renders incident creation form with inputs and submit action', async () => {
+      await TokenVault.saveRefreshToken('incident-form-refresh');
+      global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({
+        accessToken: 'incident-form-access', expiresIn: 900, refreshToken: 'incident-form-rotated',
+        refreshTokenExpiresAt: '2026-12-26T00:00:00Z', tokenType: 'Bearer',
+      }) });
       const { IncidentCreateView } = require('../src/features/incidents/incident-create-view');
       await renderWithProviders(<IncidentCreateView />);
 
@@ -248,6 +253,7 @@ describe('Component & View Smoke Tests', () => {
 
       const submitBtn = screen.getByTestId('submit-incident-button');
       expect(submitBtn).toBeTruthy();
+      await TokenVault.wipeAll();
     });
   });
 

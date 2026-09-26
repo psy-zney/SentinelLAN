@@ -19,6 +19,6 @@ if (-not (Test-Path -LiteralPath $wixExe)) {
 }
 
 $msi = Join-Path $outputPath 'SentinelLAN.Agent.msi'
-& $wixExe build (Join-Path $PSScriptRoot 'SentinelLAN.Agent.wxs') -d "ProductVersion=$Version" -d "AgentExe=$agentExe" -o $msi
+& $wixExe build (Join-Path $PSScriptRoot 'SentinelLAN.Agent.wxs') -arch x64 -d "ProductVersion=$Version" -d "AgentExe=$agentExe" -d "MaintenancePopup=$(Join-Path $PSScriptRoot 'maintenance-popup.ps1')" -o $msi
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $msi)) { throw 'MSI build failed.' }
 Write-Host "Built $msi"

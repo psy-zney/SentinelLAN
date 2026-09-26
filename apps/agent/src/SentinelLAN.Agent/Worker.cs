@@ -2,7 +2,7 @@ using SentinelLAN.Agent.Core;
 
 namespace SentinelLAN.Agent;
 
-public sealed class Worker(ILogger<Worker> logger, IDeviceIdentityStore identityStore, ITelemetryCollector telemetry, IAgentApi api, CommandVerifier verifier, ICommandSignatureVerifier signatureVerifier, IConfiguration configuration, ResilientOfflineQueue<QueuedTelemetry>? offlineQueue = null, IPendingCommandResultStore? pendingResultStore = null) : BackgroundService
+public sealed class Worker(ILogger<Worker> logger, IDeviceIdentityStore identityStore, ITelemetryCollector telemetry, IAgentApi api, CommandVerifier verifier, ICommandSignatureVerifier signatureVerifier, IConfiguration configuration, ICommandExecutor executor, IAgentPolicyApplier policyApplier, ResilientOfflineQueue<QueuedTelemetry>? offlineQueue = null, IPendingCommandResultStore? pendingResultStore = null, IAgentMaintenanceStateStore? maintenanceStateStore = null) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -17,7 +17,8 @@ public sealed class Worker(ILogger<Worker> logger, IDeviceIdentityStore identity
         }
 
         if (!signatureVerifier.IsConfigured) logger.LogWarning("Command polling is disabled until SENTINELLAN_SIGNING_KEY is configured. Telemetry remains active.");
-        var cycle = new AgentCycle(identity, telemetry, api, verifier, signatureVerifier, TimeProvider.System, offlineQueue, pendingResultStore);
+        logger.LogInformation("Agent uses real system telemetry and OS adapters. Unavailable or unauthorized actions return failed receipts; simulation is limited to Simulate command types.");
+        var cycle = new AgentCycle(identity, telemetry, api, verifier, signatureVerifier, TimeProvider.System, offlineQueue, pendingResultStore, executor, policyApplier, maintenanceStateStore);
         var delay = TimeSpan.FromSeconds(5);
         while (!stoppingToken.IsCancellationRequested)
         {

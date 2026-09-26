@@ -216,7 +216,7 @@ public sealed class AgentApi(HttpClient httpClient, string deviceName) : IAgentA
     public async Task SendHeartbeatAsync(DeviceIdentity identity, TelemetrySnapshot telemetry, string? idempotencyKey, CancellationToken cancellationToken)
     {
         using var request = CreateAuthenticatedRequest(HttpMethod.Post, "/api/v1/agent/heartbeat", identity);
-        request.Content = JsonContent.Create(new { idempotencyKey = idempotencyKey ?? Guid.NewGuid().ToString("N"), telemetry.CpuPercent, telemetry.RamPercent, telemetry.DiskPercent, telemetry.OsVersion, telemetry.AgentVersion });
+        request.Content = JsonContent.Create(new { idempotencyKey = idempotencyKey ?? Guid.NewGuid().ToString("N"), telemetry.CpuPercent, telemetry.RamPercent, telemetry.DiskPercent, telemetry.OsVersion, telemetry.AgentVersion, telemetry.MaintenanceUntil, telemetry.MaintenanceAction });
         using var response = await httpClient.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
@@ -234,6 +234,25 @@ public sealed class AgentApi(HttpClient httpClient, string deviceName) : IAgentA
     {
         using var request = CreateAuthenticatedRequest(HttpMethod.Post, $"/api/v1/agent/commands/{commandId}/result", identity);
         request.Content = JsonContent.Create(new { result.Succeeded, result.Message });
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task<AgentPolicySnapshot?> GetPolicyAsync(DeviceIdentity identity, CancellationToken cancellationToken)
+    {
+        using var request = CreateAuthenticatedRequest(HttpMethod.Get, "/api/v1/agent/policy", identity);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<AgentPolicySnapshot>(cancellationToken);
+    }
+
+    public async Task RedeemMaintenanceAsync(DeviceIdentity identity, Guid requestId, string code, CancellationToken cancellationToken)
+    {
+        if (requestId == Guid.Empty || code.Length != 8 || code.Any(character => character is < '0' or > '9'))
+            throw new ArgumentException("Maintenance requires a valid request ID and eight decimal digits.");
+        using var request = CreateAuthenticatedRequest(HttpMethod.Post, "/api/v1/agent/self-service/maintenance/redeem", identity);
+        request.Content = JsonContent.Create(new { requestId, code });
         using var response = await httpClient.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
     }

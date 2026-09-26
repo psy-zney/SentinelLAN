@@ -85,6 +85,7 @@ builder.Services.AddSingleton<IQrCodeGenerator, QrCodeGenerator>();
 builder.Services.AddScoped<IQrManagementService, QrManagementService>();
 builder.Services.AddScoped<IMyDeviceStore, MyDeviceStore>();
 builder.Services.AddScoped<IMyDeviceService, MyDeviceService>();
+builder.Services.AddSelfService(builder.Configuration, serverVaultKey);
 builder.Services.AddSingleton<AuthCookieManager>();
 builder.Services
     .AddAuthentication(SentinelAuthenticationDefaults.Scheme)
@@ -160,6 +161,7 @@ app.MapGet("/health/live", () => Results.Ok(new { status = "live" }));
 app.MapGet("/health/ready", async (SentinelDbContext db, CancellationToken ct) => await db.Database.CanConnectAsync(ct) ? Results.Ok(new { status = "ready" }) : Results.Problem("Database unavailable", statusCode: 503));
 
 var v1 = app.MapGroup("/api/v1");
+v1.MapSelfService();
 v1.MapPost("/auth/login", async (LoginRequest request, HttpContext http, SentinelLAN.Application.AuthenticationService authentication, AuthCookieManager cookies, CancellationToken ct) =>
 {
     var session = await authentication.LoginAsync(request, ct);
@@ -564,6 +566,8 @@ v1.MapPost("/agent/heartbeat", async (HeartbeatRequest request, HttpContext http
     device.LastSeenAt = DateTimeOffset.UtcNow;
     device.OsVersion = request.OsVersion;
     device.AgentVersion = request.AgentVersion;
+    device.MaintenanceUntil = request.MaintenanceUntil?.ToUniversalTime();
+    device.MaintenanceAction = request.MaintenanceAction;
     db.Add(new DeviceHeartbeat { OrganizationId = device.OrganizationId, DeviceId = device.Id, IdempotencyKey = request.IdempotencyKey, RecordedAt = DateTimeOffset.UtcNow });
     db.Add(new TelemetrySnapshot { OrganizationId = device.OrganizationId, DeviceId = device.Id, CpuPercent = request.CpuPercent, RamPercent = request.RamPercent, DiskPercent = request.DiskPercent });
     try { await db.SaveChangesAsync(ct); }
@@ -581,6 +585,7 @@ v1.MapPost("/agent/heartbeat", async (HeartbeatRequest request, HttpContext http
 v1.MapPost("/commands", async (CreateCommandRequest request, HttpContext http, SentinelDbContext db, ICommandSigner signer, IHubContext<UpdatesHub> hub, CancellationToken ct) =>
 {
     var actor = http.User.ToActorContext()!.Value;
+    if (request.Type is "InstallApprovedApp" or "PauseAgent" or "UninstallAgent") return Results.BadRequest(new ProblemDetails { Title = "This command requires an approved self-service request and maintenance OTP when applicable", Status = 400 });
     if (!request.Confirmed || string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Length > 1000 || request.ValidForSeconds is < 30 or > 900) return Results.BadRequest(new ProblemDetails { Title = "Confirmation, a reason (up to 1000 characters) and a 30-900 second validity are required", Status = 400 });
     var device = await DeviceScope.ForActor(db.Devices, actor).SingleOrDefaultAsync(x => x.Id == request.DeviceId, ct);
     if (device is null) return Results.NotFound();
@@ -670,6 +675,17 @@ v1.MapGet("/commands/{id:guid}", async (Guid id, HttpContext http, SentinelDbCon
         item.Result?.Message
     ));
 }).RequireAuthorization(AuthorizationPolicies.ManageCommands);
+
+v1.MapGet("/agent/policy", async (HttpContext http, PolicyService policies, CancellationToken ct) =>
+{
+    http.Response.Headers.CacheControl = "no-store";
+    var policy = await policies.GetAssignedPolicyAsync(http.User.ToAgentContext()!.Value, ct);
+    return policy is null ? Results.NoContent() : Results.Ok(policy);
+}).RequireAuthorization(AuthorizationPolicies.Agent)
+    .WithSummary("Read the authenticated device's assigned Windows policy")
+    .Produces<AgentPolicyDto>(StatusCodes.Status200OK)
+    .Produces(StatusCodes.Status204NoContent)
+    .Produces(StatusCodes.Status401Unauthorized);
 
 v1.MapPost("/agent/commands/poll", async (HttpContext http, SentinelDbContext db, ICommandSigner signer, CancellationToken ct) =>
 {

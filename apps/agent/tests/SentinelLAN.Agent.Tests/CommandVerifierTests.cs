@@ -1,7 +1,7 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Diagnostics;
 using SentinelLAN.Agent.Core;
 using SentinelLAN.Agent.Infrastructure;
 
@@ -146,13 +146,13 @@ public sealed class CommandVerifierTests
     }
 
     [Fact]
-    public void RestartServiceOnlyAcceptsAllowListedNamesAndAlwaysSimulates()
+    public void CoreCannotClaimAServiceRestartWithoutAnOsAdapter()
     {
         foreach (var service in new[] { "docker", " nginx ", "CADDY" })
         {
             var result = SafeCommandExecutor.Execute(Command("RestartService", service), allowRealExecution: true);
-            Assert.True(result.Succeeded);
-            Assert.Contains("simulated", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.False(result.Succeeded);
+            Assert.Contains("unavailable", result.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("unchanged", result.Message, StringComparison.OrdinalIgnoreCase);
         }
 
@@ -170,6 +170,9 @@ public sealed class CommandVerifierTests
         var telemetry = SafeCommandExecutor.Execute(Command("CollectTelemetryNow"));
         var policy = SafeCommandExecutor.Execute(Command("RefreshPolicy"));
 
+        Assert.False(notification.Succeeded);
+        Assert.False(telemetry.Succeeded);
+        Assert.False(policy.Succeeded);
         Assert.Contains("nothing was displayed", notification.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("no immediate collection", telemetry.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("no policy was applied", policy.Message, StringComparison.OrdinalIgnoreCase);

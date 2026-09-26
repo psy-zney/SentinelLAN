@@ -2,6 +2,8 @@
 
 Status: Accepted; implementation reconciled 2026-09-06.
 
+The all-command simulation decision below is superseded by [ADR 0007](0007-real-windows-agent-actions.md). Signature, nonce, tenant and receipt requirements remain applicable.
+
 The allow-list is `ShowNotification`, `CollectTelemetryNow`, `RefreshPolicy`, `SimulateLock`, `SimulateNetworkIsolation`, and `RestartService`. All handlers return safe simulation acknowledgements. There is no arbitrary shell, real lock, network isolation, or service restart adapter. An environment flag alone does not enable an adapter that does not exist.
 
 Command creation requires an Admin/Technician in the device tenant, `confirmed: true`, a nonblank reason (at most 1000 characters), and a 30–900 second validity (default 120). Revoked devices are rejected. The server generates the nonce.

@@ -52,6 +52,22 @@ jest.mock('expo-image-picker', () => ({
     assets: [{ uri: 'file://mock/qr-image.png' }],
   })),
   MediaTypeOptions: { Images: 'Images' },
+  requestCameraPermissionsAsync: jest.fn(async () => ({ granted: true })),
+  launchCameraAsync: jest.fn(async () => ({ canceled: true, assets: [] })),
+}));
+
+jest.mock('expo-device', () => ({ isDevice: true }));
+jest.mock('expo-notifications', () => ({
+  setNotificationHandler: jest.fn(),
+  getPermissionsAsync: jest.fn(async () => ({ granted: true })),
+  requestPermissionsAsync: jest.fn(async () => ({ granted: true })),
+  getExpoPushTokenAsync: jest.fn(async () => ({ data: 'ExponentPushToken[test]' })),
+  setNotificationChannelAsync: jest.fn(async () => {}),
+  AndroidImportance: { HIGH: 4 },
+  clearLastNotificationResponseAsync: jest.fn(async () => {}),
+  getLastNotificationResponseAsync: jest.fn(async () => null),
+  addNotificationReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
 }));
 
 // Mock expo-router
@@ -64,6 +80,11 @@ jest.mock('expo-router', () => ({
   }),
   useLocalSearchParams: jest.fn(() => ({})),
   usePathname: () => '/',
+  useFocusEffect: (callback: () => (() => void) | undefined) => {
+    const React = require('react');
+    React.useEffect(callback, [callback]);
+  },
+  Redirect: () => null,
   Link: ({ children }: any) => children,
   Slot: ({ children }: any) => children,
   Stack: ({ children }: any) => children,

@@ -32,7 +32,8 @@ public interface IPendingCommandResultStore
 
 public interface IDeviceIdentityStore { Task<DeviceIdentity?> LoadAsync(CancellationToken cancellationToken); Task SaveAsync(DeviceIdentity identity, CancellationToken cancellationToken); }
 public interface ITelemetryCollector { TelemetrySnapshot Collect(); }
-public record TelemetrySnapshot(double CpuPercent, double RamPercent, double DiskPercent, string OsVersion, string AgentVersion);
+public record TelemetrySnapshot(double CpuPercent, double RamPercent, double DiskPercent, string OsVersion, string AgentVersion,
+    DateTimeOffset? MaintenanceUntil = null, string? MaintenanceAction = null);
 public record QueuedTelemetry(TelemetrySnapshot Snapshot, string IdempotencyKey);
 public interface IAgentApi
 {
@@ -41,11 +42,15 @@ public interface IAgentApi
     Task SendHeartbeatAsync(DeviceIdentity identity, TelemetrySnapshot telemetry, string? idempotencyKey, CancellationToken cancellationToken);
     Task<RemoteCommand?> PollCommandAsync(DeviceIdentity identity, CancellationToken cancellationToken);
     Task SendResultAsync(DeviceIdentity identity, Guid commandId, ExecutionResult result, CancellationToken cancellationToken);
+    Task<AgentPolicySnapshot?> GetPolicyAsync(DeviceIdentity identity, CancellationToken cancellationToken) =>
+        Task.FromException<AgentPolicySnapshot?>(new NotSupportedException("Agent policy endpoint is not configured."));
+    Task RedeemMaintenanceAsync(DeviceIdentity identity, Guid requestId, string code, CancellationToken cancellationToken) =>
+        Task.FromException(new NotSupportedException("Agent maintenance endpoint is not configured."));
 }
 
 public sealed class CommandVerifier
 {
-    private static readonly HashSet<string> Allowed = ["ShowNotification", "CollectTelemetryNow", "RefreshPolicy", "SimulateLock", "SimulateNetworkIsolation", "RestartService"];
+    private static readonly HashSet<string> Allowed = ["ShowNotification", "CollectTelemetryNow", "RefreshPolicy", "SimulateLock", "SimulateNetworkIsolation", "RestartService", "LockWorkstation", "IsolateNetwork", "InstallApprovedApp", "PauseAgent", "UninstallAgent"];
     private readonly ICommandNonceStore _nonceStore;
 
     public CommandVerifier(ICommandNonceStore? nonceStore = null) => _nonceStore = nonceStore ?? new InMemoryCommandNonceStore();
@@ -71,9 +76,9 @@ public static class SafeCommandExecutor
     {
         return command.Type switch
         {
-            "ShowNotification" => new(true, $"Notification simulated; nothing was displayed: {command.Reason}"),
-            "CollectTelemetryNow" => new(true, "Telemetry collection request simulated; no immediate collection was performed"),
-            "RefreshPolicy" => new(true, "Policy refresh request simulated; no policy was applied"),
+            "ShowNotification" => new(false, "Windows desktop adapter is unavailable; nothing was displayed"),
+            "CollectTelemetryNow" => new(false, "Immediate telemetry must execute through AgentCycle; no immediate collection was performed"),
+            "RefreshPolicy" => new(false, "Policy adapter is unavailable; no policy was applied"),
             "SimulateLock" => new(true, "Lock simulated; operating system unchanged"),
             "SimulateNetworkIsolation" => new(true, "Network isolation simulated; adapter unchanged"),
             "RestartService" => ExecuteRestartService(command.Parameter),
@@ -90,7 +95,7 @@ public static class SafeCommandExecutor
         if (!AllowedServices.Contains(normalized))
             return new(false, $"Service '{serviceName}' is not in the safe allow-list (allowed: {string.Join(", ", AllowedServices)})");
 
-        return new(true, $"Service '{normalized}' restart simulated; service state unchanged");
+        return new(false, $"Service adapter is unavailable; service '{normalized}' state unchanged");
     }
 }
 

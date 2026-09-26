@@ -320,6 +320,12 @@ namespace SentinelLAN.Infrastructure.Migrations
                     b.Property<string>("LocationRoom")
                         .HasColumnType("text");
 
+                    b.Property<string>("MaintenanceAction")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("MaintenanceUntil")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Manufacturer")
                         .HasColumnType("text");
 
@@ -895,6 +901,486 @@ namespace SentinelLAN.Infrastructure.Migrations
                     b.ToTable("SecurityEvents");
                 });
 
+            modelBuilder.Entity("SentinelLAN.Domain.SelfServiceAnnouncement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("EndsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsOutage")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("RequiresAcknowledgement")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("StartsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("SelfServiceAnnouncements");
+                });
+
+            modelBuilder.Entity("SentinelLAN.Domain.SelfServiceAnnouncementReceipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("AcknowledgedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("AffectedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("AnnouncementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "AnnouncementId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_SSReceipt_Unique");
+
+                    b.ToTable("SelfServiceAnnouncementReceipts");
+                });
+
+            modelBuilder.Entity("SentinelLAN.Domain.SelfServiceAttachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("Content")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UploadedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "RequestId");
+
+                    b.ToTable("SelfServiceAttachments");
+                });
+
+            modelBuilder.Entity("SentinelLAN.Domain.SelfServiceCatalogApp", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PackageUrl")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("PublishedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PublisherThumbprint")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("RequiresApproval")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("SelfServiceCatalogApps");
+                });
+
+            modelBuilder.Entity("SentinelLAN.Domain.SelfServiceMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AuthorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AuthorName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "RequestId", "AuthorId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("IX_SSMessage_Dedupe");
+
+                    b.ToTable("SelfServiceMessages");
+                });
+
+            modelBuilder.Entity("SentinelLAN.Domain.SelfServiceNotification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeduplicationKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "UserId", "DeduplicationKey")
+                        .IsUnique()
+                        .HasDatabaseName("IX_SSNotification_Dedupe");
+
+                    b.ToTable("SelfServiceNotifications");
+                });
+
+            modelBuilder.Entity("SentinelLAN.Domain.SelfServicePushDelivery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("AbandonedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("NotificationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PushDeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ReceiptCheckedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TicketId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("NotificationId", "PushDeviceId")
+                        .IsUnique();
+
+                    b.HasIndex("NextAttemptAt", "SentAt", "AbandonedAt");
+
+                    b.ToTable("SelfServicePushDeliveries");
+                });
+
+            modelBuilder.Entity("SentinelLAN.Domain.SelfServicePushDevice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Platform")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.ToTable("SelfServicePushDevices");
+                });
+
+            modelBuilder.Entity("SentinelLAN.Domain.SelfServiceRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("AppointmentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ApprovalExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ApprovedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ApprovedPackageJson")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("AssignedTechnicianId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AssignedTechnicianName")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("CanWork")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("CatalogAppId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("CommandId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CommandMessage")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommandStatus")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DeviceName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("MaintenanceCodeAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("MaintenanceCodeHash")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("MaintenanceCodeUsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("MaintenanceUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RequestFingerprint")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "DeviceId", "CreatedAt");
+
+                    b.HasIndex("OrganizationId", "UserId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.ToTable("SelfServiceRequests");
+                });
+
             modelBuilder.Entity("SentinelLAN.Domain.TelemetrySnapshot", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1165,6 +1651,39 @@ namespace SentinelLAN.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("WorkOrders");
+                });
+
+            modelBuilder.Entity("SentinelLAN.Domain.SelfServiceAnnouncementReceipt", b =>
+                {
+                    b.HasOne("SentinelLAN.Domain.SelfServiceAnnouncement", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "AnnouncementId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_SSReceipt_Announcement");
+                });
+
+            modelBuilder.Entity("SentinelLAN.Domain.SelfServiceAttachment", b =>
+                {
+                    b.HasOne("SentinelLAN.Domain.SelfServiceRequest", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RequestId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_SSAttachment_Request");
+                });
+
+            modelBuilder.Entity("SentinelLAN.Domain.SelfServiceMessage", b =>
+                {
+                    b.HasOne("SentinelLAN.Domain.SelfServiceRequest", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RequestId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_SSMessage_Request");
                 });
 #pragma warning restore 612, 618
         }

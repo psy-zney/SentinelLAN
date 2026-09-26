@@ -23,6 +23,14 @@ public sealed class PolicyService(IPolicyStore store)
     public Task<IReadOnlyList<PolicyDto>> GetPoliciesAsync(ActorContext actor, CancellationToken cancellationToken) =>
         store.GetPoliciesAsync(actor.OrganizationId, cancellationToken);
 
+    public async Task<AgentPolicyDto?> GetAssignedPolicyAsync(AgentContext agent, CancellationToken cancellationToken)
+    {
+        var assignment = await store.FindAssignmentAsync(agent.OrganizationId, agent.DeviceId, cancellationToken);
+        if (assignment is null) return null;
+        var policy = await store.FindPolicyAsync(agent.OrganizationId, assignment.PolicyId, cancellationToken);
+        return policy is null ? null : new AgentPolicyDto(policy.Id, policy.IdleTimeoutMinutes, policy.UsbMode);
+    }
+
     public async Task<PolicyDto?> CreatePolicyAsync(ActorContext actor, CreatePolicyRequest request, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length is < 2 or > 100) return null;

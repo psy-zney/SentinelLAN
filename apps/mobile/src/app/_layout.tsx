@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { I18nProvider } from '../lib/i18n';
 import { AuthProvider } from '../features/auth/auth-context';
 import { useAppColors } from '../components/common';
+import { EmployeePushObserver } from '../features/self-service/push-observer';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,6 +22,7 @@ function RootNavigationLayout() {
   return (
     <>
       <StatusBar style="auto" />
+      <EmployeePushObserver />
       <Stack
         screenOptions={{
           headerStyle: {
@@ -41,6 +43,12 @@ function RootNavigationLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="incident-create" options={{ title: 'Báo sự cố mới' }} />
         <Stack.Screen name="incident-detail" options={{ title: 'Chi tiết sự cố' }} />
+        <Stack.Screen name="request-create" options={{ title: 'Nhờ IT hỗ trợ' }} />
+        <Stack.Screen name="request-detail" options={{ title: 'Tiến độ và trao đổi' }} />
+        <Stack.Screen name="support-requests" options={{ title: 'Yêu cầu của tôi' }} />
+        <Stack.Screen name="app-catalog" options={{ title: 'Phần mềm công ty' }} />
+        <Stack.Screen name="self-service-help" options={{ title: 'Hướng dẫn dễ làm' }} />
+        <Stack.Screen name="employee-notifications" options={{ title: 'Thông báo' }} />
         <Stack.Screen name="privacy-manifest" options={{ title: 'Cam kết minh bạch' }} />
       </Stack>
     </>

@@ -53,6 +53,7 @@ test("Enrollment, live inventory, telemetry, simulated command, audit and heartb
 
     const queue = page.getByRole("button", { name: "Sign & Dispatch" });
     await expect(queue).toBeDisabled();
+    await page.locator('select:has(option[value="SimulateLock"])').selectOption("SimulateLock");
     await page.getByPlaceholder("Enter required reason...").fill("Authorized E2E simulation");
     await page.getByRole("checkbox", { name: /I confirm this command/ }).check();
     await queue.click();

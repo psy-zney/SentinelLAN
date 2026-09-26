@@ -1,8 +1,8 @@
+using System.Globalization;
+using System.Security.Cryptography;
 using SentinelLAN.Application;
 using SentinelLAN.Domain;
 using SentinelLAN.Infrastructure;
-using System.Globalization;
-using System.Security.Cryptography;
 
 namespace SentinelLAN.IntegrationTests;
 
