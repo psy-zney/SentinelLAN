@@ -8,7 +8,7 @@ import { useAuth } from '../../features/auth/auth-context';
 export default function TabsLayout() {
   const { t } = useI18n();
   const colors = useAppColors();
-  const { status } = useAuth();
+  const { status, user } = useAuth();
 
   if (status !== 'authenticated') return <Redirect href="/" />;
 
@@ -54,6 +54,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="my-device"
         options={{
+          href: user?.role === 'Employee' ? '/(tabs)/my-device' : null,
           title: t('tabMyDevice'),
           tabBarIcon: ({ focused }) => (
             <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.6 }}>💻</Text>
@@ -63,6 +64,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="incidents"
         options={{
+          href: user?.role === 'Employee' ? '/(tabs)/incidents' : null,
           title: t('tabIncidents'),
           tabBarIcon: ({ focused }) => (
             <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.6 }}>⚠️</Text>

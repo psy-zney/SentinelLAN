@@ -28,7 +28,7 @@ if (process.env.EAS_BUILD_PROFILE === 'preview' || process.env.EAS_BUILD_PROFILE
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'SentinelLAN Employee',
+  name: 'SentinelLAN',
   slug: 'sentinellan-employee',
   version: '1.0.0',
   orientation: 'portrait',
@@ -65,6 +65,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         autoVerify: true,
         data: [
           { scheme: 'https', host: universalLinkHost, pathPrefix: '/activate' },
+          { scheme: 'https', host: universalLinkHost, pathPrefix: '/employee/activate' },
+          { scheme: 'https', host: universalLinkHost, pathPrefix: '/company/activate' },
         ],
         category: ['BROWSABLE', 'DEFAULT'],
       }] : []),

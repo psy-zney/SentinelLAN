@@ -30,7 +30,7 @@ Kết quả unit/integration test cần đi kèm ít nhất một lần chạy t
 |---|---|
 | `apps/backend` | API ASP.NET Core, Application use cases, Domain và Infrastructure/EF Core |
 | `apps/agent` | Worker thu thập telemetry, lưu credential và nhận lệnh được ký |
-| `apps/web` | Dashboard Next.js, chỉ gọi backend qua typed API client |
+| `apps/company` | Dashboard Next.js, chỉ gọi backend qua typed API client |
 | `apps/mobile` | Ứng dụng Employee Expo; kiểm thử native cần thiết bị hoặc emulator riêng |
 | PostgreSQL | Dữ liệu tenant, thiết bị, phiên, command và audit |
 

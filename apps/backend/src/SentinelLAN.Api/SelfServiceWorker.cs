@@ -47,7 +47,9 @@ public sealed class SelfServiceWorker(IServiceScopeFactory scopes, IHttpClientFa
                 // The lock screen sees only a generic message. Details require an authenticated read.
                 using var response = await client.PostAsJsonAsync("https://exp.host/--/api/v2/push/send", new
                 {
-                    to = device.Token, title = "SentinelLAN", body = "Bạn có thông báo mới từ IT.",
+                    to = device.Token,
+                    title = "SentinelLAN",
+                    body = "Bạn có thông báo mới từ IT.",
                     data = notification.RequestId is Guid id ? new { requestId = id.ToString("D") } : null
                 }, ct);
                 if (response.StatusCode == HttpStatusCode.TooManyRequests || (int)response.StatusCode >= 500)

@@ -37,6 +37,7 @@ public sealed class AgentAuthenticationHandler(
             where credential.DeviceId == deviceId &&
                   credential.RevokedAt == null &&
                   !device.IsRevoked &&
+                  db.Organizations.Any(o => o.Id == device.OrganizationId && !o.IsSuspended) &&
                   credential.OrganizationId == device.OrganizationId
             select new { credential.SecretHash, credential.OrganizationId })
             .SingleOrDefaultAsync(Context.RequestAborted);

@@ -2,19 +2,34 @@
   "name": "sentinellan",
   "version": "0.1.0",
   "private": true,
-  "engines": { "node": ">=24.17.0 <25", "npm": ">=11.13.0 <12" },
-  "workspaces": ["apps/web", "apps/mobile", "packages/*"],
+  "engines": {
+    "node": ">=24.17.0 <25",
+    "npm": ">=11.13.0 <12"
+  },
+  "workspaces": [
+    "apps/company",
+    "apps/employee",
+    "apps/platform",
+    "apps/mobile",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "npm run dev --workspace=@sentinellan/web",
-    "dev:mobile": "npm run dev --workspace=@sentinellan/mobile",
-    "lint": "npm run lint --workspace=@sentinellan/web",
+    "dev": "npm run dev --workspace=@sentinellan/company",
+    "dev:mobile": "npm run start --workspace=@sentinellan/mobile",
+    "lint": "npm run lint --workspace=@sentinellan/company && npm run lint --workspace=@sentinellan/employee && npm run lint:platform && npm run lint --workspace=@sentinellan/web-ui",
+    "lint:platform": "node -e \"if (require('fs').existsSync('apps/platform')) require('child_process').execSync('npm run lint --workspace=@sentinellan/platform', {stdio: 'inherit'})\"",
     "lint:mobile": "npm run lint --workspace=@sentinellan/mobile",
-    "typecheck": "npm run typecheck --workspace=@sentinellan/web",
+    "typecheck": "npm run typecheck --workspace=@sentinellan/company && npm run typecheck --workspace=@sentinellan/employee && npm run typecheck:platform && npm run typecheck --workspace=@sentinellan/web-ui",
+    "typecheck:platform": "node -e \"if (require('fs').existsSync('apps/platform')) require('child_process').execSync('npm run typecheck --workspace=@sentinellan/platform', {stdio: 'inherit'})\"",
     "typecheck:mobile": "npm run typecheck --workspace=@sentinellan/mobile",
-    "test": "npm run test --workspace=@sentinellan/web",
+    "test": "npm run test --workspace=@sentinellan/web-ui",
     "test:mobile": "npm run test --workspace=@sentinellan/mobile",
-    "test:e2e": "npm run test:e2e --workspace=@sentinellan/web",
-    "build": "npm run build --workspace=@sentinellan/web"
+    "test:e2e": "npm run test:e2e --workspace=@sentinellan/company",
+    "build": "npm run build --workspace=@sentinellan/company && npm run build --workspace=@sentinellan/employee && npm run build:platform",
+    "build:platform": "node -e \"if (require('fs').existsSync('apps/platform')) require('child_process').execSync('npm run build --workspace=@sentinellan/platform', {stdio: 'inherit'})\"",
+    "dev:company": "npm run dev --workspace=@sentinellan/company",
+    "dev:employee": "npm run dev --workspace=@sentinellan/employee",
+    "dev:platform": "npm run dev --workspace=@sentinellan/platform"
   },
   "overrides": {
     "next@16.2.11": {

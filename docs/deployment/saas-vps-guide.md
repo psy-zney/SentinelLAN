@@ -1,3 +1,5 @@
+> Cập nhật 2026-09-29: stack chạy ba web `platform`, `company`, `employee`. Cần thêm `PLATFORM_OWNER_EMAIL` và `PLATFORM_OWNER_PASSWORD` trong môi trường VPS; tài khoản này đăng nhập `/platform/login`, độc lập với Admin bootstrap của công ty. Không tự nâng quyền tài khoản cũ. Xem [hướng dẫn luồng và biến môi trường](../guides/flow-audit-2026-09-29.md).
+
 # Triển khai SentinelLAN trên VPS
 
 Đọc [README](../../README.md) để xem luồng khởi tạo và kiểm thử. Stack Production ở `deploy/vps/docker-compose.prod.yaml`: PostgreSQL nội bộ, API, web và Nginx TLS. Redis đã bỏ vì ứng dụng hiện không dùng; command Pending và audit nằm trong PostgreSQL. Không có demo seed ở Production.

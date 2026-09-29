@@ -26,11 +26,13 @@ fi
 
 if [ ! -f .env ]; then
     : "${PUBLIC_DOMAIN:?Set PUBLIC_DOMAIN to a DNS name with a trusted certificate}"
+    : "${PLATFORM_OWNER_EMAIL:?Set PLATFORM_OWNER_EMAIL to the system owner email}"
     : "${BOOTSTRAP_ADMIN_EMAIL:?Set BOOTSTRAP_ADMIN_EMAIL to the initial administrator email}"
     : "${BOOTSTRAP_ORG_CODE:?Set BOOTSTRAP_ORG_CODE to the organization code}"
     : "${BOOTSTRAP_ORG_NAME:?Set BOOTSTRAP_ORG_NAME to the organization name}"
     if [[ ! "$PUBLIC_DOMAIN" =~ ^[a-zA-Z0-9.-]+$ ]] ||
        [[ ! "$BOOTSTRAP_ORG_CODE" =~ ^[a-z][a-z0-9-]{2,49}$ ]] ||
+       [[ ! "$PLATFORM_OWNER_EMAIL" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]] ||
        [[ ! "$BOOTSTRAP_ADMIN_EMAIL" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]] ||
        (( ${#BOOTSTRAP_ORG_NAME} < 2 || ${#BOOTSTRAP_ORG_NAME} > 100 )) ||
        [[ "$BOOTSTRAP_ORG_NAME" == *$'\n'* ]] || [[ "$BOOTSTRAP_ORG_NAME" == *$'\r'* ]] ||
@@ -48,6 +50,8 @@ BOOTSTRAP_ORG_CODE=${BOOTSTRAP_ORG_CODE}
 BOOTSTRAP_ORG_NAME=${BOOTSTRAP_ORG_NAME}
 BOOTSTRAP_ADMIN_EMAIL=${BOOTSTRAP_ADMIN_EMAIL}
 BOOTSTRAP_ADMIN_PASSWORD=$(openssl rand -hex 24)
+PLATFORM_OWNER_EMAIL=${PLATFORM_OWNER_EMAIL}
+PLATFORM_OWNER_PASSWORD=$(openssl rand -hex 24)
 SIGNING_KEY=$(openssl rand -hex 32)
 ACCESS_TOKEN_SIGNING_KEY=$(openssl rand -hex 32)
 SERVER_VAULT_KEY=$(openssl rand -hex 32)

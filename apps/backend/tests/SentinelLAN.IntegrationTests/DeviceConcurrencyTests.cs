@@ -57,6 +57,7 @@ public sealed class DeviceConcurrencyTests(SentinelApiFactory factory) : IClassF
         await using (var scope = factory.Services.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<SentinelDbContext>();
+            db.Add(new Organization { Id = device.OrganizationId, Code = $"test-{device.OrganizationId:N}", Name = $"Test {device.OrganizationId:N}" });
             db.Add(device);
             db.Add(new DeviceCredential { OrganizationId = device.OrganizationId, DeviceId = device.Id, SecretHash = SecretHash.Create(secret) });
             await db.SaveChangesAsync();

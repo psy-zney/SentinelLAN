@@ -8,7 +8,12 @@ public abstract class Entity
 }
 public interface ITenantOwned { Guid OrganizationId { get; } }
 
-public sealed class Organization : Entity { public required string Code { get; init; } public required string Name { get; init; } }
+public sealed class Organization : Entity
+{
+    public required string Code { get; init; }
+    public required string Name { get; init; }
+    public bool IsSuspended { get; set; }
+}
 public sealed class Department : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public required string Name { get; init; } }
 public static class UserStatuses
 {
@@ -187,11 +192,9 @@ public sealed class Alert : Entity, ITenantOwned
 public sealed class SecurityEvent : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public Guid? DeviceId { get; init; } public required string Type { get; init; } public required string Summary { get; init; } }
 public sealed class AuditLog : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public required Guid ActorId { get; init; } public Guid? DeviceId { get; init; } public required string Action { get; init; } public required string Reason { get; init; } public required string Outcome { get; set; } }
 
-public sealed class VpsNode : Entity, ITenantOwned
+public sealed class VpsNode : Entity
 {
     private static readonly HashSet<string> AllowedServices = ["nginx", "docker", "sentinellan-agent", "cron", "systemd-resolved"];
-
-    public Guid OrganizationId { get; init; }
     public required string Name { get; set; }
     public required string Host { get; set; }
     public int Port { get; set; } = 22;

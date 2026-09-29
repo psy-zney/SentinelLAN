@@ -7,18 +7,17 @@ namespace SentinelLAN.Infrastructure;
 
 public sealed class VpsNodeStore(SentinelDbContext dbContext) : IVpsNodeStore
 {
-    public async Task<IReadOnlyList<VpsNode>> GetAllAsync(Guid organizationId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<VpsNode>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         return await dbContext.VpsNodes
-            .Where(x => x.OrganizationId == organizationId)
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<VpsNode?> GetByIdAsync(Guid organizationId, Guid id, CancellationToken cancellationToken = default)
+    public async Task<VpsNode?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await dbContext.VpsNodes
-            .FirstOrDefaultAsync(x => x.OrganizationId == organizationId && x.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 
     public async Task<VpsNode> CreateAsync(VpsNode node, CancellationToken cancellationToken = default)
@@ -36,10 +35,10 @@ public sealed class VpsNodeStore(SentinelDbContext dbContext) : IVpsNodeStore
         return node;
     }
 
-    public async Task<bool> DeleteAsync(Guid organizationId, Guid id, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var node = await dbContext.VpsNodes
-            .FirstOrDefaultAsync(x => x.OrganizationId == organizationId && x.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
         if (node is null) return false;
 
@@ -48,10 +47,9 @@ public sealed class VpsNodeStore(SentinelDbContext dbContext) : IVpsNodeStore
         return true;
     }
 
-    public async Task<bool> ExistsNameAsync(Guid organizationId, string name, Guid? excludeId = null, CancellationToken cancellationToken = default)
+    public async Task<bool> ExistsNameAsync(string name, Guid? excludeId = null, CancellationToken cancellationToken = default)
     {
-        var query = dbContext.VpsNodes
-            .Where(x => x.OrganizationId == organizationId);
+        var query = dbContext.VpsNodes.AsQueryable();
 
         if (excludeId.HasValue)
         {

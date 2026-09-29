@@ -58,6 +58,9 @@ scratch/
 /docs/private/
 /deploy/vps/certs/
 
+# Super Admin / Platform Owner private portal
+/apps/platform/
+
 # Office, document, and report formats
 *.docx
 *.doc

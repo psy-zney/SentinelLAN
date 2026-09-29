@@ -1,5 +1,3 @@
 services:
   api:
     environment: { ASPNETCORE_ENVIRONMENT: Development }
-  web:
-    environment: { NODE_ENV: development }

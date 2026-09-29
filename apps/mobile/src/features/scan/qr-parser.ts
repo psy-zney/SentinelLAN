@@ -40,6 +40,7 @@ export function parseScannedQrContent(raw: string): QrParseResult {
 
       // Check path: /qr/<code-part> or sentinellan://qr/<code-part>.
       const segments = url.pathname.split('/').filter(Boolean);
+      if (url.protocol !== 'sentinellan:' && ['employee', 'company'].includes(segments[0])) segments.shift();
       let extractedCode: string | null = null;
 
       if (url.protocol !== 'sentinellan:' && segments.length === 2 && segments[0].toLowerCase() === 'qr') {

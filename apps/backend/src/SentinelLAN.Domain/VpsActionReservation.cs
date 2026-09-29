@@ -1,8 +1,7 @@
 namespace SentinelLAN.Domain;
 
-public sealed class VpsActionReservation : Entity, ITenantOwned
+public sealed class VpsActionReservation : Entity
 {
-    public Guid OrganizationId { get; init; }
     public Guid VpsNodeId { get; init; }
     public Guid ActorId { get; init; }
     public Guid Nonce { get; init; }

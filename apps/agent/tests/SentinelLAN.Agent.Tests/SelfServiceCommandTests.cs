@@ -48,8 +48,15 @@ public sealed class SelfServiceCommandTests
     {
         Assert.False(SelfServiceCommandParameters.TryReadApp(AppCommand() with { Parameter = AppParameter(_now) }, _now, out _));
         Assert.False(SelfServiceCommandParameters.TryReadApp(AppCommand() with { Parameter = AppParameter(_now.AddMinutes(31)) }, _now, out _));
-        var document = JsonSerializer.Serialize(new { requestId = Guid.NewGuid(), packageUrl = "https://packages.example.test/app.msi", sha256 = Hash,
-            publisherThumbprint = Publisher, approvalExpiresAt = _now.AddMinutes(20), arguments = "powershell.exe" });
+        var document = JsonSerializer.Serialize(new
+        {
+            requestId = Guid.NewGuid(),
+            packageUrl = "https://packages.example.test/app.msi",
+            sha256 = Hash,
+            publisherThumbprint = Publisher,
+            approvalExpiresAt = _now.AddMinutes(20),
+            arguments = "powershell.exe"
+        });
         Assert.False(SelfServiceCommandParameters.TryReadApp(AppCommand() with { Parameter = document }, _now, out _));
     }
 

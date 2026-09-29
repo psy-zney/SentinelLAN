@@ -26,17 +26,44 @@ services:
       SENTINELLAN_SIGNING_KEY: ${SENTINELLAN_SIGNING_KEY:?Set a unique SENTINELLAN_SIGNING_KEY in .env}
       SENTINELLAN_ACCESS_TOKEN_SIGNING_KEY: ${SENTINELLAN_ACCESS_TOKEN_SIGNING_KEY:?Set a unique SENTINELLAN_ACCESS_TOKEN_SIGNING_KEY in .env}
       SENTINELLAN_SERVER_VAULT_KEY: ${SENTINELLAN_SERVER_VAULT_KEY:?Set a unique SENTINELLAN_SERVER_VAULT_KEY in .env}
-      SENTINELLAN_WEB_ORIGINS: ${SENTINELLAN_WEB_ORIGINS:-http://localhost:3000}
+      SENTINELLAN_PLATFORM_OWNER_EMAIL: ${PLATFORM_OWNER_EMAIL:-}
+      SENTINELLAN_PLATFORM_OWNER_PASSWORD: ${PLATFORM_OWNER_PASSWORD:-}
+      SENTINELLAN_WEB_ORIGINS: ${SENTINELLAN_WEB_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:3002}
     ports: ["127.0.0.1:8080:8080"]
     depends_on:
       postgres: { condition: service_healthy }
-  web:
+  company:
     build:
       context: .
       dockerfile: deploy/docker/web.Dockerfile
-      args: { NEXT_PUBLIC_API_URL: "http://localhost:8080" }
-    environment: { NEXT_PUBLIC_API_URL: "http://localhost:8080" }
+      args:
+        WEB_APP: company
+        NEXT_PUBLIC_API_URL: http://localhost:8080
+        NEXT_PUBLIC_COMPANY_URL: http://localhost:3000/company
+        NEXT_PUBLIC_EMPLOYEE_URL: http://localhost:3001/employee
     ports: ["127.0.0.1:3000:3000"]
+    depends_on: [api]
+  employee:
+    build:
+      context: .
+      dockerfile: deploy/docker/web.Dockerfile
+      args:
+        WEB_APP: employee
+        NEXT_PUBLIC_API_URL: http://localhost:8080
+        NEXT_PUBLIC_COMPANY_URL: http://localhost:3000/company
+        NEXT_PUBLIC_EMPLOYEE_URL: http://localhost:3001/employee
+    ports: ["127.0.0.1:3001:3000"]
+    depends_on: [api]
+  platform:
+    build:
+      context: .
+      dockerfile: deploy/docker/web.Dockerfile
+      args:
+        WEB_APP: platform
+        NEXT_PUBLIC_API_URL: http://localhost:8080
+        NEXT_PUBLIC_COMPANY_URL: http://localhost:3000/company
+        NEXT_PUBLIC_EMPLOYEE_URL: http://localhost:3001/employee
+    ports: ["127.0.0.1:3002:3000"]
     depends_on: [api]
 volumes:
   sentinellan-postgres:

@@ -205,7 +205,7 @@ public sealed partial class SshNetVpsSshService : IVpsSshService
             dockerCount = count;
         }
 
-        // Estimated CPU: mock / lightweight default if unavailable
+        // This probe does not sample CPU; keep it unavailable rather than inventing a value.
         double? cpuPercent = null;
 
         return (osInfo, uptime, cpuPercent, ramPercent, diskPercent, dockerCount);

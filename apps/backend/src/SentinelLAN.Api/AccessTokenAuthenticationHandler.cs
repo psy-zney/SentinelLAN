@@ -27,6 +27,10 @@ public sealed class AccessTokenAuthenticationHandler(
 
         var actor = tokens.Validate(token, timeProvider.GetUtcNow());
         if (actor is null) return AuthenticateResult.Fail("Invalid or expired access token.");
+        if ((actor.Value.Role == Roles.PlatformOwner) != Request.Path.StartsWithSegments("/api/v1/platform"))
+            return AuthenticateResult.Fail("Session belongs to a different application.");
+        if ((await users.FindOrganizationAsync(actor.Value.OrganizationId, Context.RequestAborted))?.IsSuspended == true)
+            return AuthenticateResult.Fail("Company is suspended.");
         var user = await users.FindUserAsync(actor.Value.UserId, actor.Value.OrganizationId, Context.RequestAborted);
         if (user is null || user.Status != SentinelLAN.Domain.UserStatuses.Active || user.Role != actor.Value.Role ||
             user.SecurityStamp != actor.Value.SecurityStamp)
@@ -47,6 +51,6 @@ public sealed class AccessTokenAuthenticationHandler(
     {
         var authorization = Request.Headers.Authorization.ToString();
         if (authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)) return authorization[7..].Trim();
-        return Request.Cookies[AuthCookieManager.AccessCookieName];
+        return Request.Cookies[Request.Path.StartsWithSegments("/api/v1/platform") ? PlatformApi.AccessCookie : AuthCookieManager.AccessCookieName];
     }
 }

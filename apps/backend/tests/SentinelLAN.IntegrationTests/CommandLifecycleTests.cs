@@ -246,6 +246,8 @@ public sealed class CommandLifecycleTests(SentinelApiFactory factory) : IClassFi
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<SentinelDbContext>();
         var device = new Device { OrganizationId = organizationId ?? (await db.Organizations.SingleAsync(org => org.Code == "demo")).Id, Name = "Command test", OsVersion = "Windows", AgentVersion = "test" };
+        if (!await db.Organizations.AnyAsync(o => o.Id == device.OrganizationId))
+            db.Add(new Organization { Id = device.OrganizationId, Code = $"test-{device.OrganizationId:N}", Name = $"Test {device.OrganizationId:N}" });
         db.Add(device);
         db.Add(new DeviceCredential { OrganizationId = device.OrganizationId, DeviceId = device.Id, SecretHash = SecretHash.Create("test-device-secret") });
         await db.SaveChangesAsync();

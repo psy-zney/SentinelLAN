@@ -1,9 +1,9 @@
 import React from 'react';
-import { Stack } from 'expo-router';
+import { Stack, Redirect, useSegments } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import { I18nProvider } from '../lib/i18n';
-import { AuthProvider } from '../features/auth/auth-context';
+import { AuthProvider, useAuth } from '../features/auth/auth-context';
 import { useAppColors } from '../components/common';
 import { EmployeePushObserver } from '../features/self-service/push-observer';
 
@@ -18,6 +18,11 @@ const queryClient = new QueryClient({
 
 function RootNavigationLayout() {
   const colors = useAppColors();
+  const {user,status} = useAuth();
+  const segments = useSegments() as string[];
+  const employeeOnly = ['my-device','incidents','incident-create','incident-detail','request-create','app-catalog','self-service-help'];
+  if (status === 'authenticated' && user?.role !== 'Employee' && segments.some(part=>employeeOnly.includes(part))) return <Redirect href="/(tabs)"/>;
+  if (status === 'authenticated' && user?.role !== 'Admin' && segments.includes('company-users')) return <Redirect href="/(tabs)"/>;
 
   return (
     <>
@@ -45,6 +50,7 @@ function RootNavigationLayout() {
         <Stack.Screen name="incident-detail" options={{ title: 'Chi tiết sự cố' }} />
         <Stack.Screen name="request-create" options={{ title: 'Nhờ IT hỗ trợ' }} />
         <Stack.Screen name="request-detail" options={{ title: 'Tiến độ và trao đổi' }} />
+        <Stack.Screen name="company-users" options={{ title: 'Tài khoản công ty' }} />
         <Stack.Screen name="support-requests" options={{ title: 'Yêu cầu của tôi' }} />
         <Stack.Screen name="app-catalog" options={{ title: 'Phần mềm công ty' }} />
         <Stack.Screen name="self-service-help" options={{ title: 'Hướng dẫn dễ làm' }} />

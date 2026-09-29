@@ -1,3 +1,4 @@
+import { OperatorDeviceSchema, OperatorUserSchema, OperatorDashboardSchema } from '../validation/operator';
 import Constants from 'expo-constants';
 import {
   MobileAuthSessionResponseSchema,
@@ -312,6 +313,24 @@ export class MobileApiClient {
   }
 
   async supportRequests() { return z.array(SupportRequestSchema).parse(await this.selfService('/requests')); }
+  async operatorDashboard() { return OperatorDashboardSchema.parse(await this.executeWithRefresh('/api/v1/dashboard')); }
+  async operatorDevices() { return z.array(OperatorDeviceSchema).parse(await this.executeWithRefresh('/api/v1/devices')); }
+  async operatorUsers() { return z.array(OperatorUserSchema).parse(await this.executeWithRefresh('/api/v1/users')); }
+  async createCompanyUser(input: {email: string; displayName: string; role: 'Employee' | 'Technician' | 'Admin'; reason: string; confirmed: boolean}) {
+    return z.object({ activationUrl: z.string().nullable(), activationTokenExpiresAt: z.string().nullable().optional() }).passthrough().parse(await this.executeWithRefresh('/api/v1/users', { method: 'POST', body: JSON.stringify(input) }));
+  }
+  async setCompanyUserStatus(id: string, status: 'Active' | 'Locked', reason: string) {
+    return OperatorUserSchema.parse(await this.executeWithRefresh(`/api/v1/users/${z.string().uuid().parse(id)}/status`, { method: 'PUT', body: JSON.stringify({status,reason,confirmed:true}) }));
+  }
+  async issueEnrollment(reason: string) {
+    return z.object({token:z.string(),expiresAt:z.string()}).parse(await this.executeWithRefresh('/api/v1/enrollment-tokens', {method:'POST',body:JSON.stringify({validForMinutes:15,reason,confirmed:true})}));
+  }
+  async updateOperatorRequest(id: string, status: string, assignedTechnicianId: string | null, reason: string) {
+    return SupportRequestSchema.parse(await this.selfService(`/requests/${z.string().uuid().parse(id)}`, {method:'PATCH',body:JSON.stringify({status,assignedTechnicianId,reason,confirmed:true})}));
+  }
+  async decideOperatorRequest(id: string, approved: boolean, reason: string) {
+    return z.object({request:SupportRequestSchema,otp:z.string().nullable(),expiresAt:z.string().nullable()}).parse(await this.selfService(`/requests/${z.string().uuid().parse(id)}/decision`,{method:'POST',body:JSON.stringify({approved,reason,confirmed:true})}));
+  }
   async supportRequest(id: string) { return SupportRequestSchema.parse(await this.selfService(`/requests/${z.string().uuid().parse(id)}`)); }
   async createSupportRequest(input: CreateSupportRequest) {
     const body = CreateSupportRequestSchema.parse(input);

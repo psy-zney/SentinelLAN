@@ -13,11 +13,11 @@ public sealed class VpsNodeServiceTests
         public List<AuditLog> Audits { get; } = [];
         public HashSet<Guid> ReservedNonces { get; } = [];
 
-        public Task<IReadOnlyList<VpsNode>> GetAllAsync(Guid organizationId, CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<VpsNode>>(Nodes.Where(n => n.OrganizationId == organizationId).ToList());
+        public Task<IReadOnlyList<VpsNode>> GetAllAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<VpsNode>>(Nodes.ToList());
 
-        public Task<VpsNode?> GetByIdAsync(Guid organizationId, Guid id, CancellationToken cancellationToken = default) =>
-            Task.FromResult(Nodes.FirstOrDefault(n => n.OrganizationId == organizationId && n.Id == id));
+        public Task<VpsNode?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Nodes.FirstOrDefault(n => n.Id == id));
 
         public Task<VpsNode> CreateAsync(VpsNode node, CancellationToken cancellationToken = default)
         {
@@ -32,16 +32,15 @@ public sealed class VpsNodeServiceTests
             return Task.FromResult(node);
         }
 
-        public Task<bool> DeleteAsync(Guid organizationId, Guid id, CancellationToken cancellationToken = default)
+        public Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
         {
-            var removed = Nodes.RemoveAll(n => n.OrganizationId == organizationId && n.Id == id) > 0;
+            var removed = Nodes.RemoveAll(n => n.Id == id) > 0;
             return Task.FromResult(removed);
         }
 
-        public Task<bool> ExistsNameAsync(Guid organizationId, string name, Guid? excludeId = null, CancellationToken cancellationToken = default)
+        public Task<bool> ExistsNameAsync(string name, Guid? excludeId = null, CancellationToken cancellationToken = default)
         {
-            var exists = Nodes.Any(n => n.OrganizationId == organizationId &&
-                                        n.Id != (excludeId ?? Guid.Empty) &&
+            var exists = Nodes.Any(n => n.Id != (excludeId ?? Guid.Empty) &&
                                         n.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
             return Task.FromResult(exists);
         }
@@ -137,7 +136,6 @@ public sealed class VpsNodeServiceTests
 
         store.Nodes.Add(new VpsNode
         {
-            OrganizationId = orgId,
             Name = "Existing-Node",
             Host = "10.0.0.1",
             Port = 22,
@@ -164,7 +162,6 @@ public sealed class VpsNodeServiceTests
 
         var node = new VpsNode
         {
-            OrganizationId = orgId,
             Name = "Web-Node",
             Host = "10.0.0.1",
             Port = 22,
@@ -194,7 +191,6 @@ public sealed class VpsNodeServiceTests
 
         var node = new VpsNode
         {
-            OrganizationId = orgId,
             Name = "Nginx-Node",
             Host = "10.0.0.5",
             Port = 22,
@@ -225,7 +221,6 @@ public sealed class VpsNodeServiceTests
         var actor = new ActorContext(Guid.NewGuid(), orgId, "Admin");
         var node = new VpsNode
         {
-            OrganizationId = orgId,
             Name = "Old node",
             Host = "10.0.0.9",
             Username = "operator",
@@ -266,7 +261,6 @@ public sealed class VpsNodeServiceTests
         var actor = new ActorContext(Guid.NewGuid(), Guid.NewGuid(), "Technician");
         var node = new VpsNode
         {
-            OrganizationId = actor.OrganizationId,
             Name = "Pinned VPS",
             Host = "10.0.0.5",
             Username = "operator",

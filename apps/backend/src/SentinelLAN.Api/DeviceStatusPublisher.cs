@@ -14,7 +14,9 @@ public sealed class DeviceStatusPublisher(
     {
         await using var scope = scopes.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<SentinelDbContext>();
-        var devices = await db.Devices.AsNoTracking().ToListAsync(cancellationToken);
+        var devices = await db.Devices.AsNoTracking()
+            .Where(d => db.Organizations.Any(o => o.Id == d.OrganizationId && !o.IsSuspended))
+            .ToListAsync(cancellationToken);
         var now = clock.GetUtcNow();
         foreach (var device in devices)
         {

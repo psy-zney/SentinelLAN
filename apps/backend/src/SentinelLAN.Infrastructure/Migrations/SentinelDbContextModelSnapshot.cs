@@ -683,6 +683,10 @@ namespace SentinelLAN.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("IsSuspended")
+                        .IsConcurrencyToken()
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -720,6 +724,35 @@ namespace SentinelLAN.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Permissions");
+                });
+
+            modelBuilder.Entity("SentinelLAN.Domain.PlatformOperation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("Nonce")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorId", "Nonce")
+                        .IsUnique();
+
+                    b.ToTable("PlatformOperations");
                 });
 
             modelBuilder.Entity("SentinelLAN.Domain.Policy", b =>
@@ -1481,9 +1514,6 @@ namespace SentinelLAN.Infrastructure.Migrations
                     b.Property<Guid>("Nonce")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
-
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1492,9 +1522,7 @@ namespace SentinelLAN.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId");
-
-                    b.HasIndex("OrganizationId", "Nonce")
+                    b.HasIndex("Nonce")
                         .IsUnique();
 
                     b.ToTable("VpsActionReservations");
@@ -1539,9 +1567,6 @@ namespace SentinelLAN.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("OsInfo")
                         .HasColumnType("text");
 
@@ -1567,11 +1592,10 @@ namespace SentinelLAN.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId");
+                    b.HasIndex("Host");
 
-                    b.HasIndex("OrganizationId", "Host");
-
-                    b.HasIndex("OrganizationId", "Name");
+                    b.HasIndex("Name")
+                        .IsUnique();
 
                     b.ToTable("VpsNodes");
                 });

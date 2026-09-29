@@ -3,9 +3,12 @@ using SentinelLAN.Domain;
 
 namespace SentinelLAN.Infrastructure;
 
-public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> options) : DbContext(options)
+public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> options, SentinelLAN.Application.ICurrentTenantProvider? tenantProvider = null) : DbContext(options)
 {
+    private readonly SentinelLAN.Application.ICurrentTenantProvider? _tenantProvider = tenantProvider;
+    private Guid? CurrentOrganizationId => _tenantProvider?.CurrentOrganizationId;
     public DbSet<Organization> Organizations => Set<Organization>();
+    public DbSet<PlatformOperation> PlatformOperations => Set<PlatformOperation>();
     public DbSet<Department> Departments => Set<Department>();
     public DbSet<User> Users => Set<User>();
     public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
@@ -43,6 +46,8 @@ public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> option
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         SelfServiceModelConfiguration.Configure(modelBuilder);
+        modelBuilder.Entity<PlatformOperation>().HasIndex(x => new { x.ActorId, x.Nonce }).IsUnique();
+        modelBuilder.Entity<Organization>().Property(x => x.IsSuspended).IsConcurrencyToken();
         modelBuilder.Entity<Organization>().HasIndex(x => x.Code).IsUnique();
         modelBuilder.Entity<Organization>().HasIndex(x => x.Name).IsUnique();
         modelBuilder.Entity<User>().HasIndex(x => new { x.OrganizationId, x.Email }).IsUnique();
@@ -87,9 +92,9 @@ public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> option
             .IsRequired()
             .IsConcurrencyToken()
             .ValueGeneratedNever();
-        modelBuilder.Entity<VpsNode>().HasIndex(x => new { x.OrganizationId, x.Name });
-        modelBuilder.Entity<VpsNode>().HasIndex(x => new { x.OrganizationId, x.Host });
-        modelBuilder.Entity<VpsActionReservation>().HasIndex(x => new { x.OrganizationId, x.Nonce }).IsUnique();
+        modelBuilder.Entity<VpsNode>().HasIndex(x => x.Name).IsUnique();
+        modelBuilder.Entity<VpsNode>().HasIndex(x => x.Host);
+        modelBuilder.Entity<VpsActionReservation>().HasIndex(x => x.Nonce).IsUnique();
         modelBuilder.Entity<IncidentTicket>().HasIndex(x => new { x.OrganizationId, x.DeviceId });
         modelBuilder.Entity<IncidentTicket>()
             .HasIndex(x => new { x.OrganizationId, x.ReportedByUserId, x.IdempotencyKey })
@@ -98,8 +103,18 @@ public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> option
         modelBuilder.Entity<WorkOrder>().HasIndex(x => new { x.OrganizationId, x.DeviceId });
         modelBuilder.Entity<WorkOrder>().HasIndex(x => new { x.OrganizationId, x.WorkOrderNumber }).IsUnique();
         modelBuilder.Entity<AssetLoan>().HasIndex(x => new { x.OrganizationId, x.DeviceId });
+        var configureTenantMethod = typeof(SentinelDbContext).GetMethod(nameof(ConfigureTenantFilter), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         foreach (var type in modelBuilder.Model.GetEntityTypes().Where(x => typeof(ITenantOwned).IsAssignableFrom(x.ClrType)))
+        {
             modelBuilder.Entity(type.ClrType).HasIndex(nameof(ITenantOwned.OrganizationId));
+            configureTenantMethod!.MakeGenericMethod(type.ClrType).Invoke(this, new object[] { modelBuilder });
+        }
+    }
+
+    private void ConfigureTenantFilter<TEntity>(ModelBuilder modelBuilder) where TEntity : class, ITenantOwned
+    {
+        modelBuilder.Entity<TEntity>().HasQueryFilter(x =>
+            CurrentOrganizationId == null || x.OrganizationId == CurrentOrganizationId);
     }
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)

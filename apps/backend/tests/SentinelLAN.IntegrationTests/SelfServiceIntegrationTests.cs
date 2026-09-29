@@ -122,17 +122,33 @@ public sealed class SelfServiceIntegrationTests(SentinelApiFactory factory) : IC
         using var employee = await LoginAsync("employee");
         using var technician = await LoginAsync("technician");
         using var admin = await LoginAsync("admin");
-        var app = new { name = "Máy in văn phòng", description = "Trình điều khiển đã được IT duyệt", version = "1.0",
-            packageUrl = "https://packages.example.test/printer.msi", sha256 = new string('A', 64),
-            publisherThumbprint = new string('B', 40), isActive = true, requiresApproval = false,
-            reason = "Đã xác minh gói cài", confirmed = true };
+        var app = new
+        {
+            name = "Máy in văn phòng",
+            description = "Trình điều khiển đã được IT duyệt",
+            version = "1.0",
+            packageUrl = "https://packages.example.test/printer.msi",
+            sha256 = new string('A', 64),
+            publisherThumbprint = new string('B', 40),
+            isActive = true,
+            requiresApproval = false,
+            reason = "Đã xác minh gói cài",
+            confirmed = true
+        };
         Assert.Equal(HttpStatusCode.Forbidden, (await technician.PostAsJsonAsync($"{Root}/catalog", app)).StatusCode);
         var published = await admin.PostAsJsonAsync($"{Root}/catalog", app);
         Assert.Equal(HttpStatusCode.OK, published.StatusCode);
         var appId = (await published.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
-        var request = await employee.PostAsJsonAsync($"{Root}/requests", new { kind = "InstallApp", category = "Application",
-            title = "Cài máy in", canWork = true, catalogAppId = appId, confirmed = true,
-            idempotencyKey = Guid.NewGuid().ToString("N") });
+        var request = await employee.PostAsJsonAsync($"{Root}/requests", new
+        {
+            kind = "InstallApp",
+            category = "Application",
+            title = "Cài máy in",
+            canWork = true,
+            catalogAppId = appId,
+            confirmed = true,
+            idempotencyKey = Guid.NewGuid().ToString("N")
+        });
         Assert.Equal(HttpStatusCode.Created, request.StatusCode);
         var body = await request.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("Approved", body.GetProperty("status").GetString());
@@ -151,9 +167,14 @@ public sealed class SelfServiceIntegrationTests(SentinelApiFactory factory) : IC
         using var technician = await LoginAsync("technician");
         var announcement = await technician.PostAsJsonAsync($"{Root}/announcements", new
         {
-            title = "Bảo trì máy chủ kế toán", body = "Dịch vụ tạm dừng lúc 17 giờ.", isOutage = true,
-            requiresAcknowledgement = true, startsAt = DateTimeOffset.UtcNow.AddMinutes(-1),
-            endsAt = DateTimeOffset.UtcNow.AddHours(2), reason = "Thông báo bảo trì", confirmed = true
+            title = "Bảo trì máy chủ kế toán",
+            body = "Dịch vụ tạm dừng lúc 17 giờ.",
+            isOutage = true,
+            requiresAcknowledgement = true,
+            startsAt = DateTimeOffset.UtcNow.AddMinutes(-1),
+            endsAt = DateTimeOffset.UtcNow.AddHours(2),
+            reason = "Thông báo bảo trì",
+            confirmed = true
         });
         Assert.Equal(HttpStatusCode.OK, announcement.StatusCode);
         var id = (await announcement.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();

@@ -4,6 +4,8 @@ SentinelLAN quản lý thiết bị đầu cuối được tổ chức cho phép
 
 **Phạm vi chính:** một luồng quản lý thiết bị được ủy quyền, từ đăng ký Agent → heartbeat/telemetry → gán thiết bị → xử lý sự cố và ghi audit. Web và mobile là hai giao diện của cùng luồng này. Quản trị VPS qua SSH là chức năng mở rộng đã có; không phải mục tiêu chính của đồ án. SentinelLAN không quét toàn bộ LAN, bắt gói tin hay tự động cô lập thiết bị. [Phạm vi và tiêu chí kiểm chứng](docs/project-overview.md) là điểm tham chiếu khi thêm tính năng hoặc viết báo cáo.
 
+Xem [kết quả rà soát luồng](docs/guides/flow-audit-2026-09-29.md) và [quyết định tách ứng dụng](docs/adr/0008-separate-portals-and-platform-owner.md). Chủ hệ thống đăng nhập `/platform/login`; Admin/IT công ty `/company/login`; nhân viên `/employee/login`. Tài khoản chủ hệ thống được cấp riêng bằng biến môi trường, không phải tài khoản Admin của công ty.
+
 ## Cấu trúc dự án
 
 | Đường dẫn | Trách nhiệm |
@@ -13,8 +15,11 @@ SentinelLAN quản lý thiết bị đầu cuối được tổ chức cho phép
 | `apps/backend/src/SentinelLAN.Infrastructure` | EF Core/PostgreSQL, kho dữ liệu, hash, mã hóa, SSH adapter |
 | `apps/backend/src/SentinelLAN.Api` | HTTP, xác thực, rate limit, SignalR, composition root |
 | `apps/agent/src` | Worker, thu thập telemetry và credential store của Agent |
-| `apps/web` | Dashboard Next.js, typed API client, E2E |
-| `apps/mobile` | Ứng dụng nhân viên Expo; chạy và kiểm tra riêng |
+| `apps/platform` | Chủ hệ thống: cấp công ty/Admin, theo dõi sử dụng, tạm ngưng/mở lại |
+| `apps/company` | Quản trị công ty cho Admin/IT |
+| `apps/employee` | Nhân viên: máy được giao, yêu cầu hỗ trợ, QR |
+| `packages/web-ui` | Component, typed API client, hook và kiểm thử web dùng chung |
+| `apps/mobile` | Một ứng dụng Expo, màn hình theo quyền Nhân viên/IT/Admin công ty |
 | `deploy` | Dockerfile, reverse proxy và bộ cài Agent |
 | `scripts` | Khởi tạo, kiểm thử, sao lưu và diễn tập khôi phục |
 
@@ -36,7 +41,7 @@ curl --fail http://localhost:8080/health/live
 curl --fail http://localhost:8080/health/ready
 ```
 
-Tạo ba khóa khác nhau bằng cách chạy `openssl rand -hex 32` ba lần rồi điền vào `.env`; trên PowerShell có thể chạy `[Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))` ba lần. Compose từ chối khởi động nếu thiếu một trong ba khóa. Trên PowerShell, thay `cp` bằng `Copy-Item .env.example .env` và dùng `Invoke-WebRequest http://localhost:8080/health/ready`. Dashboard: `http://localhost:3000`; API: `http://localhost:8080`; OpenAPI chỉ mở trong Development tại `http://localhost:8080/openapi/v1.json`. Tài khoản thử: tổ chức `demo`, `admin@sentinellan.local`, mật khẩu đúng bằng `SENTINELLAN_DEMO_ADMIN_PASSWORD` trong `.env`. Đổi mật khẩu mẫu trước khi cho máy khác truy cập môi trường này. Giữ khóa vault cục bộ nếu muốn đọc lại SSH key đã mã hóa sau khi tạo lại container.
+Tạo ba khóa khác nhau bằng cách chạy `openssl rand -hex 32` ba lần rồi điền vào `.env`; trên PowerShell có thể chạy `[Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))` ba lần. Compose từ chối khởi động nếu thiếu một trong ba khóa. Trên PowerShell, thay `cp` bằng `Copy-Item .env.example .env` và dùng `Invoke-WebRequest http://localhost:8080/health/ready`. Web công ty: `http://localhost:3000/company/login`; nhân viên: `http://localhost:3001/employee/login`; chủ hệ thống: `http://localhost:3002/platform/login`; API: `http://localhost:8080`; OpenAPI chỉ mở trong Development tại `http://localhost:8080/openapi/v1.json`. Tài khoản thử: tổ chức `demo`, `admin@sentinellan.local`, mật khẩu đúng bằng `SENTINELLAN_DEMO_ADMIN_PASSWORD` trong `.env`. Đổi mật khẩu mẫu trước khi cho máy khác truy cập môi trường này. Giữ khóa vault cục bộ nếu muốn đọc lại SSH key đã mã hóa sau khi tạo lại container.
 
 Nếu readiness trả 503, kiểm tra `docker compose logs postgres api`. `health/live` chỉ xác nhận tiến trình còn chạy; `health/ready` thực sự thử kết nối database. Sau khi sửa `.env`, khởi động lại dịch vụ bằng `docker compose up -d --build`.
 
@@ -63,7 +68,8 @@ export PUBLIC_DOMAIN=sentinel.example.com
 export BOOTSTRAP_ORG_CODE=example
 export BOOTSTRAP_ORG_NAME='Example Organization'
 export BOOTSTRAP_ADMIN_EMAIL=admin@example.com
-sudo --preserve-env=PUBLIC_DOMAIN,BOOTSTRAP_ORG_CODE,BOOTSTRAP_ORG_NAME,BOOTSTRAP_ADMIN_EMAIL bash deploy/vps/setup-vps.sh
+export PLATFORM_OWNER_EMAIL=owner@example.com
+sudo --preserve-env=PUBLIC_DOMAIN,BOOTSTRAP_ORG_CODE,BOOTSTRAP_ORG_NAME,BOOTSTRAP_ADMIN_EMAIL,PLATFORM_OWNER_EMAIL bash deploy/vps/setup-vps.sh
 ```
 
 Script tạo `deploy/vps/.env` với quyền `0600` và khóa ngẫu nhiên, kiểm tra Compose, khởi động dịch vụ rồi thử `https://$PUBLIC_DOMAIN/health/ready`. Nó không in mật khẩu ra terminal, không tự cài Docker, không tự cấp chứng chỉ và không dừng toàn bộ stack trước khi cập nhật. Lấy mật khẩu bootstrap từ `.env` bằng terminal quản trị được bảo vệ, đăng nhập với mã tổ chức đã đặt, rồi lưu mật khẩu trong kho bí mật của tổ chức. Giữ `SERVER_VAULT_KEY` để giải mã dữ liệu VPS sau khôi phục; mất khóa này thì backup DB không đủ để đọc SSH key đã mã hóa. [Runbook triển khai](docs/deployment/saas-vps-guide.md) cần được đối chiếu với môi trường mạng thực tế.

@@ -23,7 +23,7 @@ export function parseActivationUrl(rawUrl: string): ActivationLinkParseResult {
       }
     } else if (!isTrustedWebUrl(url)) {
       return { valid: false, error: `Untrusted host: ${url.hostname}` };
-    } else if (url.pathname !== '/activate') {
+    } else if (!['/activate','/employee/activate','/company/activate'].includes(url.pathname)) {
       return { valid: false, error: `Invalid activation path: ${url.pathname}` };
     }
 

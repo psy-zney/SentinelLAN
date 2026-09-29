@@ -12,6 +12,8 @@ public sealed class AuthenticationOpenApiTransformer : IOpenApiDocumentTransform
     private const string AgentIdScheme = "agentDeviceId";
     private const string AgentSecretScheme = "agentDeviceSecret";
     private const string BearerScheme = "bearerAuth";
+    private const string PlatformAccessScheme = "platformAccessCookie";
+    private const string PlatformRefreshScheme = "platformRefreshCookie";
 
     public Task TransformAsync(OpenApiDocument document, OpenApiDocumentTransformerContext context, CancellationToken cancellationToken)
     {
@@ -19,6 +21,8 @@ public sealed class AuthenticationOpenApiTransformer : IOpenApiDocumentTransform
         document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
         document.Components.SecuritySchemes[AccessCookieScheme] = ApiKey(ParameterLocation.Cookie, AuthCookieManager.AccessCookieName, "Short-lived HttpOnly browser access cookie.");
         document.Components.SecuritySchemes[RefreshCookieScheme] = ApiKey(ParameterLocation.Cookie, AuthCookieManager.RefreshCookieName, "Rotating HttpOnly browser refresh cookie.");
+        document.Components.SecuritySchemes[PlatformAccessScheme] = ApiKey(ParameterLocation.Cookie, PlatformApi.AccessCookie, "Isolated platform owner cookie; never authorizes tenant APIs.");
+        document.Components.SecuritySchemes[PlatformRefreshScheme] = ApiKey(ParameterLocation.Cookie, PlatformApi.RefreshCookie, "Rotating platform owner refresh cookie.");
         document.Components.SecuritySchemes[CsrfScheme] = ApiKey(ParameterLocation.Header, AuthCookieManager.CsrfHeaderName, "Required with value 1 on state-changing cookie requests.");
         document.Components.SecuritySchemes[AgentIdScheme] = ApiKey(ParameterLocation.Header, AgentAuthenticationDefaults.DeviceIdHeader, "Enrolled device identifier.");
         document.Components.SecuritySchemes[AgentSecretScheme] = ApiKey(ParameterLocation.Header, AgentAuthenticationDefaults.DeviceSecretHeader, "Per-device secret; never place it in a URL or request body.");
@@ -38,6 +42,17 @@ public sealed class AuthenticationOpenApiTransformer : IOpenApiDocumentTransform
         var authorization = metadata.OfType<IAuthorizeData>().ToArray();
         var path = context.Description.RelativePath ?? string.Empty;
         var method = context.Description.HttpMethod ?? HttpMethods.Get;
+        if (path.StartsWith("api/v1/platform", StringComparison.OrdinalIgnoreCase))
+        {
+            if (path.EndsWith("/refresh", StringComparison.Ordinal) || path.EndsWith("/logout", StringComparison.Ordinal))
+                AddRequirement(operation, context.Document!, PlatformRefreshScheme, CsrfScheme);
+            else if (authorization.Length > 0)
+            {
+                if (HttpMethods.IsGet(method)) AddRequirement(operation, context.Document!, PlatformAccessScheme);
+                else AddRequirement(operation, context.Document!, PlatformAccessScheme, CsrfScheme);
+            }
+            return Task.CompletedTask;
+        }
 
         if (authorization.Any(item => item.Policy == SentinelLAN.Application.AuthorizationPolicies.Agent))
         {

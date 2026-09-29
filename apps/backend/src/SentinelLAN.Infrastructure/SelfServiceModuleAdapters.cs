@@ -24,13 +24,31 @@ public sealed class SelfServiceCommands(SentinelDbContext db, ICommandSigner sig
     public DeviceCommand Queue(Guid org, Guid device, Guid actor, string type, string reason, string parameter, DateTimeOffset now, DateTimeOffset expiresAt)
     {
         if (type is not ("InstallApprovedApp" or "PauseAgent" or "UninstallAgent" or "IsolateNetwork")) throw new InvalidOperationException("Unsupported self-service command.");
-        var command = new DeviceCommand { OrganizationId = org, DeviceId = device, IssuedByUserId = actor,
-            Type = type, Reason = reason, Parameter = parameter, Nonce = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)),
-            Signature = "pending", IssuedAt = now, ExpiresAt = expiresAt, Status = DeviceCommandStatus.Pending };
+        var command = new DeviceCommand
+        {
+            OrganizationId = org,
+            DeviceId = device,
+            IssuedByUserId = actor,
+            Type = type,
+            Reason = reason,
+            Parameter = parameter,
+            Nonce = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)),
+            Signature = "pending",
+            IssuedAt = now,
+            ExpiresAt = expiresAt,
+            Status = DeviceCommandStatus.Pending
+        };
         command.Signature = signer.Sign(command);
         db.Commands.Add(command);
-        db.AuditLogs.Add(new AuditLog { OrganizationId = org, ActorId = actor, DeviceId = device,
-            Action = $"CommandCreated:{type}", Reason = reason, Outcome = "Pending" });
+        db.AuditLogs.Add(new AuditLog
+        {
+            OrganizationId = org,
+            ActorId = actor,
+            DeviceId = device,
+            Action = $"CommandCreated:{type}",
+            Reason = reason,
+            Outcome = "Pending"
+        });
         return command;
     }
     public async Task<(DeviceCommand? Command, CommandResult? Result)> GetAsync(Guid org, Guid id, CancellationToken ct)

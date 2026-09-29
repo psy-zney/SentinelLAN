@@ -48,6 +48,8 @@ jobs:
           BOOTSTRAP_ORG_CODE: ci-org
           BOOTSTRAP_ORG_NAME: CI Organization
           BOOTSTRAP_ADMIN_EMAIL: admin@example.test
+          PLATFORM_OWNER_EMAIL: owner@example.test
+          PLATFORM_OWNER_PASSWORD: ci-only-platform-password
           BOOTSTRAP_ADMIN_PASSWORD: ci-only-admin-password
           SIGNING_KEY: ci-command-signing-key-at-least-32-characters
           ACCESS_TOKEN_SIGNING_KEY: ci-access-token-key-at-least-32-characters
@@ -117,6 +119,7 @@ jobs:
         run: npm run test:e2e
         env:
           ConnectionStrings__SentinelLAN: ""
+          SENTINELLAN_E2E_API_COMMAND: dotnet ../backend/src/SentinelLAN.Api/bin/Release/net10.0/SentinelLAN.Api.dll
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
@@ -125,7 +128,7 @@ jobs:
           name: test-results
           path: |
             **/TestResults/**
-            apps/web/playwright-report/**
-            apps/web/test-results/**
+            apps/company/playwright-report/**
+            apps/company/test-results/**
           if-no-files-found: ignore
           retention-days: 7

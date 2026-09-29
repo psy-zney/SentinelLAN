@@ -24,7 +24,7 @@ export function ScannerView({ isActiveScreen = true }: { isActiveScreen?: boolea
   const { t } = useI18n();
   const colors = useAppColors();
   const router = useRouter();
-  const { apiClient } = useAuth();
+  const { apiClient, user } = useAuth();
 
   const [permission, requestPermission] = useCameraPermissions();
   const [manualModalOpen, setManualModalOpen] = useState(false);
@@ -67,7 +67,7 @@ export function ScannerView({ isActiveScreen = true }: { isActiveScreen?: boolea
         const result = await apiClient.resolveQr(parseResult.code);
         if (result.authorized) {
           // Valid assigned equipment -> navigate to My Device tab
-          router.replace('/(tabs)/my-device');
+          router.replace(user?.role === 'Employee' ? '/(tabs)/my-device' : '/(tabs)');
         } else {
           setErrorNotice(
             result.message ||
@@ -86,7 +86,7 @@ export function ScannerView({ isActiveScreen = true }: { isActiveScreen?: boolea
         setResolving(false);
       }
     },
-    [apiClient, router, t]
+    [apiClient, router, t, user?.role]
   );
 
   const handleBarcodeScanned = useCallback(
