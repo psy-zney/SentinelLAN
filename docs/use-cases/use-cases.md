@@ -10,7 +10,7 @@ Các use case lõi cùng phục vụ vòng đời một thiết bị đầu cu�
 | Employee | Xem `/my-device` của máy được gán, telemetry được công bố, chính sách và incident liên quan; báo sự cố cho máy đó |
 | Agent | Đăng ký bằng token một lần, gửi heartbeat idempotent, nhận command có chữ ký và gửi biên lai |
 
-Quản trị VPS qua SSH là use case mở rộng cho Admin/Technician có quyền; không nằm trong chuỗi Agent → thiết bị được gán → sự cố → audit của lõi.
+Quản trị VPS qua SSH là use case mở rộng chỉ dành cho PlatformOwner: kết nối, theo dõi tài nguyên/dịch vụ/container, cấu hình tự chạy và reboot VPS. Portal chủ hệ thống kiểm tra theo chu kỳ khi mở tab Hạ tầng; xem [hướng dẫn vận hành VPS](../deployment/vps-operations.md).
 
 ## Kịch bản cần kiểm tra
 
@@ -20,6 +20,6 @@ Quản trị VPS qua SSH là use case mở rộng cho Admin/Technician có quy�
 4. User/thiết bị thuộc tenant khác không được đọc hoặc sửa; QR công khai chỉ trả dữ liệu tối thiểu, giải mã có xác thực phải theo tenant và assignment.
 5. Audit ghi actor, target, lý do, thời gian UTC và outcome mà không lưu token, mật khẩu hoặc khóa. Bảo vệ ở tầng EF chưa thay cho kiểm soát DB và lưu trữ WORM.
 
-Use case mở rộng VPS: restart dịch vụ qua SSH yêu cầu host-key pin, quyền, lý do, xác nhận, nonce và allow-list; đây là thao tác thật trên máy chủ được đăng ký riêng.
+Use case mở rộng VPS: restart dịch vụ, reboot có lịch và đổi cấu hình tự chạy qua SSH yêu cầu host-key pin, quyền PlatformOwner, lý do, xác nhận, nonce dùng một lần, hạn tối đa 5 phút và allow-list; đây là thao tác thật trên máy chủ được đăng ký riêng.
 
 Các bước demo và checklist thực thi nằm trong [kịch bản demo](../demo/demo-script.md). [Thương lượng lệnh](../architecture/command-delivery.md) và [threat model](../security/threat-model.md) giải thích giới hạn bảo mật.

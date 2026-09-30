@@ -104,7 +104,8 @@ public static class PlatformApi
             var actor = http.User.ToActorContext()!.Value;
             var node = await vpsService.RefreshMetricsAsync(actor, id, ct);
             return node is null ? Results.NotFound() : Results.Ok(node);
-        }).RequireAuthorization(Roles.PlatformOwner);
+        }).RequireAuthorization(Roles.PlatformOwner).Produces<VpsNodeDto>().Produces(StatusCodes.Status404NotFound)
+            .WithSummary("Collect a current Linux VPS, systemd and Docker resource snapshot via pinned SSH.");
 
         group.MapPost("/vps-nodes/{id:guid}/restart-service", async (Guid id, RestartVpsServiceRequest req, HttpContext http, VpsNodeService vpsService, CancellationToken ct) =>
         {
@@ -112,6 +113,14 @@ public static class PlatformApi
             var result = await vpsService.RestartServiceAsync(actor, id, req, ct);
             return result.Success ? Results.Ok(result) : Results.BadRequest(result);
         }).RequireAuthorization(Roles.PlatformOwner);
+
+        group.MapPost("/vps-nodes/{id:guid}/operations", async (Guid id, VpsOperationRequest request, HttpContext http, VpsNodeService service, CancellationToken ct) =>
+        {
+            http.Response.Headers.CacheControl = "no-store";
+            var result = await service.ExecuteOperationAsync(http.User.ToActorContext()!.Value, id, request, ct);
+            return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+        }).RequireAuthorization(Roles.PlatformOwner).Produces<VpsCommandResultDto>().Produces<VpsCommandResultDto>(StatusCodes.Status400BadRequest)
+            .WithSummary("Schedule reboot or configure service/container startup using confirmed, expiring, single-use commands.");
     }
 
     private static IResult Error(ManagementResultStatus status) => status switch

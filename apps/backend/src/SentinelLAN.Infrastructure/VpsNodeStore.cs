@@ -70,6 +70,7 @@ public sealed class VpsNodeStore(SentinelDbContext dbContext) : IVpsNodeStore
 
     public async Task<bool> TryReserveActionAsync(VpsActionReservation reservation, CancellationToken cancellationToken = default)
     {
+        if (await dbContext.VpsActionReservations.AnyAsync(action => action.Nonce == reservation.Nonce, cancellationToken)) return false;
         dbContext.VpsActionReservations.Add(reservation);
         try
         {

@@ -1,137 +1,72 @@
-using System.Globalization;
-using System.Net.Sockets;
 using System.Text;
-using System.Text.RegularExpressions;
 using Renci.SshNet;
-using Renci.SshNet.Common;
 using SentinelLAN.Application;
-using SentinelLAN.Domain;
 
 namespace SentinelLAN.Infrastructure;
 
-public sealed partial class SshNetVpsSshService : IVpsSshService
+public sealed class SshNetVpsSshService : IVpsSshService
 {
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(5);
 
     public async Task<VpsConnectionTestResultDto> TestConnectionAsync(
         string host, int port, string username, string decryptedPrivateKey, string hostKeyFingerprint, CancellationToken cancellationToken = default)
     {
-        return await Task.Run(() =>
-        {
-            try
-            {
-                using var client = CreateClient(host, port, username, decryptedPrivateKey, hostKeyFingerprint);
-                client.Connect();
-
-                using var cmd = client.CreateCommand("uname -srm; uptime -p; free -m; df -k /; docker ps -q 2>/dev/null | wc -l");
-                cmd.CommandTimeout = TimeSpan.FromSeconds(15);
-                cmd.Execute();
-                client.Disconnect();
-
-                var parsed = ParseProbeOutput(cmd.Result);
-                return new VpsConnectionTestResultDto(
-                    Success: true,
-                    Message: "SSH connection established successfully",
-                    OsInfo: parsed.OsInfo,
-                    Uptime: parsed.Uptime,
-                    CpuPercent: parsed.CpuPercent,
-                    RamPercent: parsed.RamPercent,
-                    DiskPercent: parsed.DiskPercent,
-                    DockerContainersCount: parsed.DockerContainersCount
-                );
-            }
-            catch (SshAuthenticationException ex)
-            {
-                return new VpsConnectionTestResultDto(false, $"SSH Authentication failed: {ex.Message}");
-            }
-            catch (SocketException ex)
-            {
-                return new VpsConnectionTestResultDto(false, $"Host unreachable ({host}:{port}): {ex.Message}");
-            }
-            catch (SshConnectionException ex)
-            {
-                return new VpsConnectionTestResultDto(false, $"SSH connection error: {ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                return new VpsConnectionTestResultDto(false, $"Connection test failed: {ex.Message}");
-            }
-        }, cancellationToken);
+        var metrics = await CollectMetricsAsync(host, port, username, decryptedPrivateKey, hostKeyFingerprint, cancellationToken);
+        return new(metrics.Success, metrics.Message, metrics.OsInfo, metrics.Uptime, metrics.CpuPercent, metrics.RamPercent, metrics.DiskPercent, metrics.DockerContainersCount);
     }
 
     public async Task<VpsMetricsResultDto> CollectMetricsAsync(
         string host, int port, string username, string decryptedPrivateKey, string hostKeyFingerprint, CancellationToken cancellationToken = default)
     {
-        return await Task.Run(() =>
+        try
         {
-            try
-            {
-                using var client = CreateClient(host, port, username, decryptedPrivateKey, hostKeyFingerprint);
-                client.Connect();
-
-                using var cmd = client.CreateCommand("uname -srm; uptime -p; free -m; df -k /; docker ps -q 2>/dev/null | wc -l");
-                cmd.CommandTimeout = TimeSpan.FromSeconds(15);
-                cmd.Execute();
-                client.Disconnect();
-
-                var parsed = ParseProbeOutput(cmd.Result);
-                return new VpsMetricsResultDto(
-                    Success: true,
-                    Message: "Metrics collected successfully",
-                    OsInfo: parsed.OsInfo,
-                    Uptime: parsed.Uptime,
-                    CpuPercent: parsed.CpuPercent,
-                    RamPercent: parsed.RamPercent,
-                    DiskPercent: parsed.DiskPercent,
-                    DockerContainersCount: parsed.DockerContainersCount
-                );
-            }
-            catch (Exception ex)
-            {
-                return new VpsMetricsResultDto(false, $"Failed to collect metrics: {ex.Message}");
-            }
-        }, cancellationToken);
+            using var client = CreateClient(host, port, username, decryptedPrivateKey, hostKeyFingerprint);
+            await client.ConnectAsync(cancellationToken);
+            using var cmd = client.CreateCommand(VpsCommandCatalog.Probe.Replace("\r\n", "\n", StringComparison.Ordinal));
+            cmd.CommandTimeout = TimeSpan.FromSeconds(60);
+            await cmd.ExecuteAsync(cancellationToken);
+            if (cmd.ExitStatus != 0) return new(false, "Probe VPS thất bại. Kiểm tra Linux, systemd và quyền tài khoản SSH.");
+            return VpsProbeParser.Parse(cmd.Result);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) { return new(false, $"Không kiểm tra được VPS qua SSH: {ex.Message}"); }
     }
 
-    public async Task<VpsCommandResultDto> RestartServiceAsync(
+    public Task<VpsCommandResultDto> RestartServiceAsync(
         string host, int port, string username, string decryptedPrivateKey, string hostKeyFingerprint, string serviceName, CancellationToken cancellationToken = default)
     {
-        if (!VpsNode.IsAllowedService(serviceName))
+        string command;
+        try { command = VpsCommandCatalog.BuildRestart(serviceName); }
+        catch (ArgumentException) { return Task.FromResult(new VpsCommandResultDto(false, "Dịch vụ không thuộc danh sách cho phép.")); }
+        return ExecuteAsync(host, port, username, decryptedPrivateKey, hostKeyFingerprint, command, "Đã khởi động lại dịch vụ và xác minh trạng thái hoạt động.", cancellationToken);
+    }
+
+    public Task<VpsCommandResultDto> ExecuteOperationAsync(
+        string host, int port, string username, string decryptedPrivateKey, string hostKeyFingerprint, VpsOperationRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request.ExpiresAt <= DateTimeOffset.UtcNow) return Task.FromResult(new VpsCommandResultDto(false, "Yêu cầu đã hết hạn."));
+        string command;
+        try { command = VpsCommandCatalog.BuildOperation(request); }
+        catch (ArgumentException) { return Task.FromResult(new VpsCommandResultDto(false, "Lệnh VPS không hợp lệ.")); }
+        return ExecuteAsync(host, port, username, decryptedPrivateKey, hostKeyFingerprint, command,
+            request.Action == "Reboot" ? "VPS đã nhận lịch khởi động lại sau khoảng 1 phút. Các dịch vụ sẽ tạm gián đoạn; kiểm tra lại để xác minh VPS trở lại." : "Đã áp dụng và xác minh cấu hình tự khởi động.", cancellationToken, request.ExpiresAt);
+    }
+
+    private static async Task<VpsCommandResultDto> ExecuteAsync(string host, int port, string username, string key, string fingerprint,
+        string command, string message, CancellationToken cancellationToken, DateTimeOffset? expiresAt = null)
+    {
+        try
         {
-            return new VpsCommandResultDto(false, $"Service '{serviceName}' is not allowed for remote restart.");
+            using var client = CreateClient(host, port, username, key, fingerprint);
+            await client.ConnectAsync(cancellationToken);
+            if (expiresAt <= DateTimeOffset.UtcNow) return new(false, "Yêu cầu hết hạn trong lúc kết nối SSH.");
+            using var cmd = client.CreateCommand(command);
+            cmd.CommandTimeout = TimeSpan.FromSeconds(25);
+            await cmd.ExecuteAsync(cancellationToken);
+            return cmd.ExitStatus == 0 ? new(true, message) : new(false, $"VPS từ chối lệnh hoặc chưa xác minh được kết quả (exit {cmd.ExitStatus}). Kiểm tra quyền sudo/Docker và trạng thái VPS.");
         }
-
-        return await Task.Run(() =>
-        {
-            try
-            {
-                using var client = CreateClient(host, port, username, decryptedPrivateKey, hostKeyFingerprint);
-                client.Connect();
-
-                // Safe restart command without shell expansion
-                using var cmd = client.CreateCommand($"systemctl restart {serviceName} || sudo -n systemctl restart {serviceName}");
-                cmd.CommandTimeout = TimeSpan.FromSeconds(20);
-                cmd.Execute();
-
-                if (cmd.ExitStatus != 0)
-                {
-                    return new VpsCommandResultDto(false, $"Command failed with exit code {cmd.ExitStatus}: {cmd.Error?.Trim()}", cmd.Result);
-                }
-
-                using var verify = client.CreateCommand($"systemctl is-active --quiet {serviceName}");
-                verify.CommandTimeout = TimeSpan.FromSeconds(10);
-                verify.Execute();
-                client.Disconnect();
-                if (verify.ExitStatus != 0)
-                    return new VpsCommandResultDto(false, $"Restart returned success but service '{serviceName}' is not active.", verify.Result);
-
-                return new VpsCommandResultDto(true, $"Service '{serviceName}' restarted successfully.", cmd.Result?.Trim());
-            }
-            catch (Exception ex)
-            {
-                return new VpsCommandResultDto(false, $"Failed to execute restart on {host}: {ex.Message}");
-            }
-        }, cancellationToken);
+        catch (OperationCanceledException) { throw; }
+        catch (Exception) { return new(false, "Lỗi kết nối hoặc hết thời gian chờ SSH. Kiểm tra VPS trước khi gửi lệnh mới."); }
     }
 
     private static SshClient CreateClient(string host, int port, string username, string decryptedPrivateKey, string hostKeyFingerprint)
@@ -160,54 +95,4 @@ public sealed partial class SshNetVpsSshService : IVpsSshService
         return client;
     }
 
-    private static (string? OsInfo, string? Uptime, double? CpuPercent, double? RamPercent, double? DiskPercent, int? DockerContainersCount)
-        ParseProbeOutput(string output)
-    {
-        if (string.IsNullOrWhiteSpace(output))
-            return (null, null, null, null, null, null);
-
-        var lines = output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        string? osInfo = null;
-        string? uptime = null;
-        double? ramPercent = null;
-        double? diskPercent = null;
-        int? dockerCount = null;
-
-        if (lines.Length > 0) osInfo = lines[0];
-        if (lines.Length > 1 && lines[1].StartsWith("up ", StringComparison.OrdinalIgnoreCase)) uptime = lines[1];
-
-        // Parse free -m: Mem: total used free shared buff/cache available
-        var memLine = lines.FirstOrDefault(l => l.StartsWith("Mem:", StringComparison.OrdinalIgnoreCase));
-        if (memLine != null)
-        {
-            var parts = Regex.Split(memLine, @"\s+");
-            if (parts.Length >= 3 && double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var totalMem) &&
-                double.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var usedMem) && totalMem > 0)
-            {
-                ramPercent = Math.Round((usedMem / totalMem) * 100, 1);
-            }
-        }
-
-        // Parse df -k /: Filesystem 1K-blocks Used Available Use% Mounted on
-        var dfLine = lines.FirstOrDefault(l => l.EndsWith(" /", StringComparison.Ordinal) || l.Contains(" /"));
-        if (dfLine != null)
-        {
-            var match = Regex.Match(dfLine, @"(\d+)%");
-            if (match.Success && double.TryParse(match.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var diskVal))
-            {
-                diskPercent = diskVal;
-            }
-        }
-
-        // Parse docker count from last line if it is numeric
-        if (lines.Length > 0 && int.TryParse(lines[^1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var count))
-        {
-            dockerCount = count;
-        }
-
-        // This probe does not sample CPU; keep it unavailable rather than inventing a value.
-        double? cpuPercent = null;
-
-        return (osInfo, uptime, cpuPercent, ramPercent, diskPercent, dockerCount);
-    }
 }

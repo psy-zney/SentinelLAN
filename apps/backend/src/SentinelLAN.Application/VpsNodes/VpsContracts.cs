@@ -17,7 +17,8 @@ public sealed record VpsNodeDto(
     DateTimeOffset? LastCheckedAt,
     string? ErrorMessage,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt
+    DateTimeOffset UpdatedAt,
+    VpsRuntimeDto? Runtime = null
 );
 
 public sealed record CreateVpsNodeRequest(
@@ -56,7 +57,8 @@ public sealed record VpsMetricsResultDto(
     double? CpuPercent = null,
     double? RamPercent = null,
     double? DiskPercent = null,
-    int? DockerContainersCount = null
+    int? DockerContainersCount = null,
+    VpsRuntimeDto? Runtime = null
 );
 
 public sealed record VpsCommandResultDto(
@@ -76,6 +78,7 @@ public interface IVpsSshService
     Task<VpsConnectionTestResultDto> TestConnectionAsync(string host, int port, string username, string decryptedPrivateKey, string hostKeyFingerprint, CancellationToken cancellationToken = default);
     Task<VpsMetricsResultDto> CollectMetricsAsync(string host, int port, string username, string decryptedPrivateKey, string hostKeyFingerprint, CancellationToken cancellationToken = default);
     Task<VpsCommandResultDto> RestartServiceAsync(string host, int port, string username, string decryptedPrivateKey, string hostKeyFingerprint, string serviceName, CancellationToken cancellationToken = default);
+    Task<VpsCommandResultDto> ExecuteOperationAsync(string host, int port, string username, string decryptedPrivateKey, string hostKeyFingerprint, VpsOperationRequest request, CancellationToken cancellationToken = default);
 }
 
 public interface IVpsNodeStore

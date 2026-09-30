@@ -68,7 +68,6 @@ export type VpsNodeStatus = "Online" | "Offline" | "Error" | "Connecting";
 
 export type VpsNode = {
   id: string;
-  organizationId: string;
   name: string;
   host: string;
   port: number;
@@ -85,6 +84,22 @@ export type VpsNode = {
   errorMessage?: string | null;
   createdAt: string;
   updatedAt: string;
+  runtime?: VpsRuntime | null;
+};
+
+export type VpsRuntime = {
+  systemState: string;
+  dockerAvailable: boolean;
+  dockerError: string | null;
+  services: { name: string; activeState: string; startupState: string }[];
+  containers: VpsContainer[];
+};
+
+export type VpsContainer = {
+  id: string; name: string; image: string; state: string; status: string;
+  health: string | null; restartPolicy: string | null; cpuPercent: number | null;
+  memoryUsage: string | null; memoryPercent: number | null; storageUsage: string | null;
+  networkIo: string | null; blockIo: string | null;
 };
 
 export type CreateVpsNodeRequest = {

@@ -35,6 +35,8 @@ docker compose --env-file deploy/vps/.env -f deploy/vps/docker-compose.prod.yaml
 
 ## Backup và cập nhật
 
+Quản lý trạng thái host, dịch vụ/container, tự khởi động và reboot từ portal chủ hệ thống theo [hướng dẫn vận hành VPS](vps-operations.md). [ADR 0010](../adr/0010-vps-monitoring-and-fixed-operations.md) mô tả lịch kiểm tra trong trình duyệt admin và giới hạn quyền/lệnh.
+
 ```bash
 bash scripts/backup-postgres.sh deploy/vps/docker-compose.prod.yaml deploy/vps/.env
 bash scripts/restore-drill-postgres.sh backups/postgres/<file>.dump deploy/vps/docker-compose.prod.yaml deploy/vps/.env

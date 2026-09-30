@@ -9,18 +9,21 @@ public sealed class VpsNodeService(
 {
     public async Task<IReadOnlyList<VpsNodeDto>> GetNodesAsync(ActorContext actor, CancellationToken cancellationToken)
     {
+        if (actor.Role != Roles.PlatformOwner) throw new UnauthorizedAccessException();
         var nodes = await store.GetAllAsync(cancellationToken);
         return nodes.Select(ToDto).ToList();
     }
 
     public async Task<VpsNodeDto?> GetNodeByIdAsync(ActorContext actor, Guid id, CancellationToken cancellationToken)
     {
+        if (actor.Role != Roles.PlatformOwner) throw new UnauthorizedAccessException();
         var node = await store.GetByIdAsync(id, cancellationToken);
         return node is null ? null : ToDto(node);
     }
 
     public async Task<VpsNodeDto?> CreateNodeAsync(ActorContext actor, CreateVpsNodeRequest request, CancellationToken cancellationToken)
     {
+        if (actor.Role != Roles.PlatformOwner) throw new UnauthorizedAccessException();
         if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length is < 2 or > 100) return null;
         if (string.IsNullOrWhiteSpace(request.Host) || request.Host.Trim().Length is < 3 or > 255) return null;
         if (request.Port is < 1 or > 65535) return null;
@@ -92,6 +95,7 @@ public sealed class VpsNodeService(
 
     public async Task<bool> DeleteNodeAsync(ActorContext actor, Guid id, CancellationToken cancellationToken)
     {
+        if (actor.Role != Roles.PlatformOwner) throw new UnauthorizedAccessException();
         var node = await store.GetByIdAsync(id, cancellationToken);
         if (node is null) return false;
 
@@ -113,6 +117,7 @@ public sealed class VpsNodeService(
 
     public async Task<VpsConnectionTestResultDto> TestConnectionAsync(ActorContext actor, Guid id, CancellationToken cancellationToken)
     {
+        if (actor.Role != Roles.PlatformOwner) throw new UnauthorizedAccessException();
         var node = await store.GetByIdAsync(id, cancellationToken);
         if (node is null) return new VpsConnectionTestResultDto(false, "VPS Node not found");
         if (!IsValidHostKeyFingerprint(node.HostKeyFingerprint)) return new VpsConnectionTestResultDto(false, "SSH host key fingerprint is missing or invalid. Re-register this node with a verified SHA256 fingerprint.");
@@ -161,6 +166,7 @@ public sealed class VpsNodeService(
 
     public async Task<VpsNodeDto?> RefreshMetricsAsync(ActorContext actor, Guid id, CancellationToken cancellationToken)
     {
+        if (actor.Role != Roles.PlatformOwner) throw new UnauthorizedAccessException();
         var node = await store.GetByIdAsync(id, cancellationToken);
         if (node is null) return null;
         if (!IsValidHostKeyFingerprint(node.HostKeyFingerprint))
@@ -191,12 +197,12 @@ public sealed class VpsNodeService(
         {
             node.Status = "Online";
             node.ErrorMessage = null;
-            if (metrics.OsInfo is not null) node.OsInfo = metrics.OsInfo;
-            if (metrics.Uptime is not null) node.Uptime = metrics.Uptime;
-            if (metrics.CpuPercent.HasValue) node.CpuPercent = metrics.CpuPercent;
-            if (metrics.RamPercent.HasValue) node.RamPercent = metrics.RamPercent;
-            if (metrics.DiskPercent.HasValue) node.DiskPercent = metrics.DiskPercent;
-            if (metrics.DockerContainersCount.HasValue) node.DockerContainersCount = metrics.DockerContainersCount;
+            node.OsInfo = metrics.OsInfo;
+            node.Uptime = metrics.Uptime;
+            node.CpuPercent = metrics.CpuPercent;
+            node.RamPercent = metrics.RamPercent;
+            node.DiskPercent = metrics.DiskPercent;
+            node.DockerContainersCount = metrics.DockerContainersCount;
         }
         else
         {
@@ -216,11 +222,12 @@ public sealed class VpsNodeService(
             Outcome = metrics.Success ? "Success" : "Failed"
         }, cancellationToken);
 
-        return ToDto(node);
+        return ToDto(node) with { Runtime = metrics.Runtime };
     }
 
     public async Task<VpsCommandResultDto> RestartServiceAsync(ActorContext actor, Guid id, RestartVpsServiceRequest request, CancellationToken cancellationToken)
     {
+        if (actor.Role != Roles.PlatformOwner) throw new UnauthorizedAccessException();
         if (!request.Confirmed)
             return new VpsCommandResultDto(false, "Explicit confirmation is required");
         var now = DateTimeOffset.UtcNow;
@@ -273,6 +280,50 @@ public sealed class VpsNodeService(
             Outcome = result.Success ? "Success" : "Failed"
         }, cancellationToken);
 
+        return result;
+    }
+
+    public async Task<VpsCommandResultDto> ExecuteOperationAsync(ActorContext actor, Guid id, VpsOperationRequest request, CancellationToken cancellationToken)
+    {
+        if (actor.Role != Roles.PlatformOwner) throw new UnauthorizedAccessException();
+        var now = DateTimeOffset.UtcNow;
+        if (!request.Confirmed || request.Reason?.Trim().Length is not (>= 3 and <= 1000) ||
+            request.Nonce == Guid.Empty || request.ExpiresAt <= now || request.ExpiresAt > now.AddMinutes(5))
+            return new(false, "Cần lý do, xác nhận, nonce mới và thời hạn tối đa 5 phút.");
+        if (!request.HasAllowedCommand()) return new(false, "Thao tác, đối tượng hoặc giá trị không thuộc danh sách cho phép.");
+        var node = await store.GetByIdAsync(id, cancellationToken);
+        if (node is null) return new(false, "Không tìm thấy VPS.");
+        if (!IsValidHostKeyFingerprint(node.HostKeyFingerprint)) return new(false, "Cần xác minh fingerprint SSH của VPS.");
+        string key;
+        try { key = vaultService.Decrypt(node.EncryptedPrivateKey); }
+        catch (Exception) { return new(false, "Không giải mã được khóa SSH."); }
+        if (!await store.TryReserveActionAsync(new VpsActionReservation
+        {
+            VpsNodeId = id, ActorId = actor.UserId, Nonce = request.Nonce, ExpiresAt = request.ExpiresAt
+        }, cancellationToken)) return new(false, "Yêu cầu này đã được sử dụng.");
+
+        // Persist intent before a command can reboot the machine hosting this API.
+        var reason = $"VPS {node.Id} ({node.Name}); action={request.Action}; target={request.Target}; value={request.Value}; nonce={request.Nonce}; expires={request.ExpiresAt:O}; {request.Reason.Trim()}";
+        await store.RecordAuditAsync(new AuditLog
+        {
+            OrganizationId = actor.OrganizationId, ActorId = actor.UserId,
+            Action = "VpsOperationRequested", Reason = reason, Outcome = "Accepted"
+        }, cancellationToken);
+        VpsCommandResultDto result;
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (request.ExpiresAt <= DateTimeOffset.UtcNow) result = new(false, "Yêu cầu đã hết hạn trước khi thực thi.");
+            else result = await sshService.ExecuteOperationAsync(node.Host, node.Port, node.Username, key, node.HostKeyFingerprint!, request, cancellationToken);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception) { result = new(false, "Không xác minh được kết quả lệnh SSH. Kiểm tra VPS trước khi gửi yêu cầu mới."); }
+        await store.RecordAuditAsync(new AuditLog
+        {
+            OrganizationId = actor.OrganizationId, ActorId = actor.UserId,
+            Action = "VpsOperationCompleted", Reason = reason,
+            Outcome = result.Success ? (request.Action == "Reboot" ? "Scheduled" : "Success") : "Failed"
+        }, cancellationToken);
         return result;
     }
 
