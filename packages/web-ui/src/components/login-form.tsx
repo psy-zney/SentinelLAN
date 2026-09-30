@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ApiClient } from "@/lib/api-client";
 import { homePathForRole } from "@/lib/auth-routing";
 import { useTranslation } from "@/lib/i18n";
-import { portal, portalAllows, portalBaseUrl, portalHomeUrl, portalTitle, platformBaseUrl } from "@/lib/portal";
+import { portal, portalAllows, portalBaseUrl, portalHomeUrl, portalTitle } from "@/lib/portal";
 
 export function LoginForm() {
   const router = useRouter();
@@ -53,7 +53,6 @@ export function LoginForm() {
 
   const otherPortalUrl = portal === "employee" ? `${portalBaseUrl("Admin")}/login` : `${portalBaseUrl("Employee")}/login`;
   const otherPortalLabel = portal === "employee" ? (lang === "vi" ? "🏢 Cổng Quản Trị Công Ty (Admin/IT) →" : "🏢 Company Management Portal →") : (lang === "vi" ? "💻 Cổng Nhân Viên Tự Phục Vụ →" : "💻 Employee Portal →");
-  const platformLoginUrl = `${platformBaseUrl()}/login`;
 
   return (
     <form className="login" onSubmit={submit}>
@@ -158,9 +157,6 @@ export function LoginForm() {
       <div style={{ marginTop: 20, paddingTop: 14, borderTop: "1px solid var(--border)", fontSize: ".8rem", textAlign: "center", display: "grid", gap: 8 }}>
         <a href={otherPortalUrl} style={{ color: "var(--accent)", textDecoration: "none", fontWeight: 500 }}>
           {otherPortalLabel}
-        </a>
-        <a href={platformLoginUrl} style={{ color: "#38bdf8", textDecoration: "none", fontWeight: 600 }}>
-          🛡️ {lang === "vi" ? "Cổng Chủ Hệ Thống (Platform Owner) →" : "Platform Root Authority Portal →"}
         </a>
       </div>
     </form>

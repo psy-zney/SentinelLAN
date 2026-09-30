@@ -127,6 +127,22 @@ public sealed class PlatformIntegrationTests(SentinelApiFactory factory) : IClas
         Assert.Equal("INSPECT-PC", detail.Alerts[0].DeviceName);
         Assert.Equal("Company audit", Assert.Single(detail.RecentAudits).Reason);
 
+        // Reading the platform summary must not grant control over the inspected device.
+        Assert.Equal(HttpStatusCode.Unauthorized, (await owner.PostAsJsonAsync("/api/v1/commands",
+            new CreateCommandRequest(device.Id, "CollectTelemetryNow", "Attempt from platform session", 120, true))).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await owner.PutAsJsonAsync($"/api/v1/devices/{device.Id}/assignment",
+            new { assignedUserId = (Guid?)null, reason = "Attempt from platform session", confirmed = true })).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await owner.PostAsJsonAsync($"/api/v1/devices/{device.Id}/revoke",
+            new { reason = "Attempt from platform session", confirmed = true })).StatusCode);
+        using (var verifyScope = factory.Services.CreateScope())
+        {
+            var db = verifyScope.ServiceProvider.GetRequiredService<SentinelDbContext>();
+            var unchanged = await db.Devices.IgnoreQueryFilters().SingleAsync(d => d.Id == device.Id);
+            Assert.Equal(device.AssignedUserId, unchanged.AssignedUserId);
+            Assert.False(unchanged.IsRevoked);
+            Assert.False(await db.Commands.IgnoreQueryFilters().AnyAsync(c => c.DeviceId == device.Id));
+        }
+
         // System status
         var statusResponse = await owner.GetAsync("/api/v1/platform/system/status");
         Assert.Equal(HttpStatusCode.OK, statusResponse.StatusCode);

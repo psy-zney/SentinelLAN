@@ -41,6 +41,22 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Check private portal and documentation boundaries
+        run: |
+          test -z "$(git ls-files apps/platform)"
+          while IFS= read -r file; do
+            case "$file" in
+              README.md|docs/downloads.md) ;;
+              *) echo "Internal Markdown must not be tracked: $file"; exit 1 ;;
+            esac
+          done < <(git ls-files '*.md')
+          while IFS= read -r file; do
+            case "$file" in
+              docs/downloads.md|docs/site/index.html|docs/site/site.css|docs/site/downloads.js) ;;
+              *) echo "Private documentation must not be tracked: $file"; exit 1 ;;
+            esac
+          done < <(git ls-files docs)
+
       - name: Validate VPS Compose Configuration
         env:
           PUBLIC_DOMAIN: sentinel.example.test

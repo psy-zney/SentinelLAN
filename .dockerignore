@@ -41,7 +41,7 @@ publish
 **/agent-data
 backups
 scratch
-docs/local
-docs/private
+docs
+**/*.md
 deploy/vps/certs
 INFRASTRUCTURE_CONG_VPS.txt

@@ -127,7 +127,6 @@ jobs:
             Agent only: no VPS credentials, database, certificate or deployment environment is bundled.
             Windows: install SentinelLAN.Agent.msi, then run configure-windows-agent.ps1 with your organization's HTTPS API URL. The script asks for a one-time enrollment token.
             SentinelLAN.Agent.exe is the secondary Windows option for IT.
-            Linux: download SentinelLAN.Agent, install-linux-agent.sh and sentinellan-agent.service into one directory, then follow the Agent enrollment guide.
-            Server source, Compose template and .env.production.example remain in the repository; each organization configures its own VPS.
-            Guide: https://github.com/psy-zney/SentinelLAN/blob/main/docs/guides/agent-enrollment-guide.md
+            Linux: download SentinelLAN.Agent, install-linux-agent.sh and sentinellan-agent.service into one directory, then follow the download and installation guide.
+            Guide: https://github.com/psy-zney/SentinelLAN/blob/main/docs/downloads.md
           generate_release_notes: true

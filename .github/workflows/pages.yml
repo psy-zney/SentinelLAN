@@ -5,7 +5,6 @@ on:
     branches: ["main"]
     paths:
       - "docs/site/**"
-      - "docs/system-map.html"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -24,13 +23,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - name: Check public documentation allowlist
+        run: |
+          while IFS= read -r file; do
+            case "$file" in
+              docs/downloads.md|docs/site/index.html|docs/site/site.css|docs/site/downloads.js) ;;
+              *) echo "Private documentation must not be tracked: $file"; exit 1 ;;
+            esac
+          done < <(git ls-files docs)
       - name: Build static site
         run: |
           mkdir -p dist/site
           cp docs/site/index.html docs/site/site.css docs/site/downloads.js dist/site/
-          cp docs/system-map.html dist/site/system-map.html
           test -s dist/site/index.html
-          test -s dist/site/system-map.html
+          test -s dist/site/site.css
+          test -s dist/site/downloads.js
+          test "$(find dist/site -type f | wc -l)" -eq 3
       - uses: actions/upload-pages-artifact@v4
         with:
           path: dist/site

@@ -11,9 +11,6 @@ export function portalHomeUrl(role: Role) {
 export function portalBaseUrl(role: Role) {
   return role === "Employee" ? process.env.NEXT_PUBLIC_EMPLOYEE_URL ?? "/employee" : process.env.NEXT_PUBLIC_COMPANY_URL ?? "/company";
 }
-export function platformBaseUrl() {
-  return process.env.NEXT_PUBLIC_PLATFORM_URL ?? (process.env.NODE_ENV === "development" ? "http://localhost:3002/platform" : "/platform");
-}
 export function crossPortalQrRoute(nextRoute: string): string | null {
   if (/^\/devices\/[0-9a-f-]{36}$/i.test(nextRoute) && portal !== "company") return `${portalBaseUrl("Admin")}${nextRoute}`;
   if (nextRoute === "/my-device" && portal !== "employee") return `${portalBaseUrl("Employee")}${nextRoute}`;

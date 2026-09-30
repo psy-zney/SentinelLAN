@@ -5,7 +5,6 @@ import { CommandsView } from "@/components/commands-view";
 import { AlertsView } from "@/components/alerts-view";
 import { AuditView } from "@/components/audit-view";
 import { UsersView } from "@/components/users-view";
-import { VpsNodesView } from "@/components/vps-nodes-view";
 import type { TranslationKey } from "@/lib/i18n";
 import type { Role } from "@/types/api";
 
@@ -18,13 +17,6 @@ type SectionConfig = {
 };
 
 const sections: Record<string, SectionConfig> = {
-  "vps-nodes": {
-    title: "Cloud VPS",
-    eyebrow: "Optional extension",
-    subtitleKey: "subtitleVps",
-    allowedRoles: ["Admin", "Technician"],
-    render: () => <VpsNodesView />
-  },
   policies: {
     title: "Policies",
     eyebrow: "Governance",

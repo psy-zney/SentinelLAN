@@ -58,6 +58,18 @@ scratch/
 /docs/private/
 /deploy/vps/certs/
 
+# Documentation is private by default. Publish introduction and downloads only.
+*.md
+!/README.md
+!/docs/downloads.md
+/docs/*
+!/docs/downloads.md
+!/docs/site/
+/docs/site/*
+!/docs/site/index.html
+!/docs/site/site.css
+!/docs/site/downloads.js
+
 # Super Admin / Platform Owner private portal
 /apps/platform/
 

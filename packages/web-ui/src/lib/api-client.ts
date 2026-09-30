@@ -12,9 +12,6 @@ import type {
   Role,
   TelemetrySnapshot,
   UserItem,
-  VpsNode,
-  CreateVpsNodeRequest,
-  VpsConnectionTestResult,
   DeviceAssetDetail,
   UpdateAssetProfileRequest,
   IncidentItem,
@@ -330,51 +327,6 @@ export class ApiClient {
 
   organization() {
     return this.request<OrganizationItem>("/api/v1/organizations");
-  }
-
-  // CLOUD VPS NODES (AGENTLESS SSH)
-  vpsNodes() {
-    return this.request<VpsNode[]>("/api/v1/vps-nodes");
-  }
-
-  vpsNode(id: string) {
-    return this.request<VpsNode>(`/api/v1/vps-nodes/${id}`);
-  }
-
-  createVpsNode(data: CreateVpsNodeRequest) {
-    return this.request<VpsNode>("/api/v1/vps-nodes", {
-      method: "POST",
-      body: JSON.stringify(data)
-    });
-  }
-
-  deleteVpsNode(id: string) {
-    return this.request<void>(`/api/v1/vps-nodes/${id}`, { method: "DELETE" });
-  }
-
-  testVpsConnection(id: string) {
-    return this.request<VpsConnectionTestResult>(`/api/v1/vps-nodes/${id}/test-connection`, {
-      method: "POST"
-    });
-  }
-
-  refreshVpsMetrics(id: string) {
-    return this.request<VpsNode>(`/api/v1/vps-nodes/${id}/refresh-metrics`, {
-      method: "POST"
-    });
-  }
-
-  restartVpsService(id: string, serviceName: string, reason: string, confirmed: boolean) {
-    return this.request<{ success: boolean; message: string; output?: string }>(`/api/v1/vps-nodes/${id}/restart-service`, {
-      method: "POST",
-      body: JSON.stringify({
-        serviceName,
-        reason,
-        confirmed,
-        nonce: globalThis.crypto.randomUUID(),
-        expiresAt: new Date(Date.now() + 2 * 60_000).toISOString()
-      })
-    });
   }
 
   // --- ITAM & CMMS Asset Management ---
