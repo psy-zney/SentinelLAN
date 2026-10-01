@@ -20,10 +20,5 @@ Invoke-Check $npmProgram @('run', 'build')
 Invoke-Check $npmProgram @('run', 'lint:mobile')
 Invoke-Check $npmProgram @('run', 'typecheck:mobile')
 Invoke-Check $npmProgram @('run', 'test', '--workspace=@sentinellan/mobile', '--', '--runInBand')
-Push-Location apps/mobile
-try {
-    Invoke-Check $npxProgram @('expo', 'export', '--platform', 'android', '--output-dir', '../../dist/mobile-android')
-    Invoke-Check $npxProgram @('expo', 'export', '--platform', 'ios', '--output-dir', '../../dist/mobile-ios')
-} finally { Pop-Location }
 Invoke-Check $npmProgram @('audit', '--omit=dev', '--audit-level=high')
 if (-not $SkipBrowser) { Invoke-Check $npmProgram @('run', 'test:e2e') }

@@ -15,6 +15,5 @@ npm run build
 npm run lint:mobile
 npm run typecheck:mobile
 npm run test --workspace=@sentinellan/mobile -- --runInBand
-(cd apps/mobile && npx expo export --platform android --output-dir ../../dist/mobile-android && npx expo export --platform ios --output-dir ../../dist/mobile-ios)
 npm audit --omit=dev --audit-level=high
 if [[ "${SKIP_BROWSER:-0}" != "1" ]]; then npm run test:e2e; fi

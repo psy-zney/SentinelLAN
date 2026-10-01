@@ -252,7 +252,7 @@ public sealed class SelfServiceCommandTests
     private RemoteCommand Command(string type) => new(Guid.NewGuid(), DeviceId, type, "Authorized fixture request", Guid.NewGuid().ToString("N"),
         "fixture-signature", _now, _now.AddMinutes(5));
     private RemoteCommand AppCommand(string url = "https://packages.example.test/app.msi") => Command("InstallApprovedApp") with { Parameter = AppParameter(_now.AddMinutes(20), url) };
-    private string AppParameter(DateTimeOffset expires, string url = "https://packages.example.test/app.msi", string? hash = null) =>
+    private static string AppParameter(DateTimeOffset expires, string url = "https://packages.example.test/app.msi", string? hash = null) =>
         JsonSerializer.Serialize(new { requestId = Guid.NewGuid(), packageUrl = url, sha256 = hash ?? Hash, publisherThumbprint = Publisher, approvalExpiresAt = expires });
     private RemoteCommand MaintenanceCommand(string type, DateTimeOffset? expires = null) => Command(type) with
     { Parameter = JsonSerializer.Serialize(new { requestId = Guid.NewGuid(), maintenanceExpiresAt = expires ?? _now.AddMinutes(5), pauseMinutes = 15 }) };

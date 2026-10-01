@@ -236,7 +236,7 @@ public sealed partial class SelfServiceService
         return true;
     }, ct);
 
-    public IReadOnlyList<HelpArticleDto> Help(ActorContext actor)
+    public static IReadOnlyList<HelpArticleDto> Help(ActorContext actor)
     {
         Human(actor);
         return

@@ -50,7 +50,7 @@ public static class SelfServiceApi
         group.MapPost("/notifications/{id:guid}/read", (Guid id, HttpContext http, SelfServiceService service, CancellationToken ct) => service.ReadNotificationAsync(Actor(http), id, ct));
         group.MapPost("/push-devices", (RegisterPushDevice request, HttpContext http, SelfServiceService service, CancellationToken ct) => service.RegisterPushAsync(Actor(http), request, ct)).RequireRateLimiting("sensitive");
         group.MapDelete("/push-devices", ([FromBody] DeletePushDevice request, HttpContext http, SelfServiceService service, CancellationToken ct) => service.RemovePushAsync(Actor(http), request.Token, ct)).RequireRateLimiting("sensitive");
-        group.MapGet("/help", (HttpContext http, SelfServiceService service) => service.Help(Actor(http)));
+        group.MapGet("/help", (HttpContext http) => SelfServiceService.Help(Actor(http)));
 
         root.MapPost("/agent/self-service/maintenance/redeem", (AgentRedeemMaintenanceRequest request, HttpContext http, SelfServiceService service, CancellationToken ct) => service.RedeemAgentAsync(http.User.ToAgentContext()!.Value, request, ct))
             .RequireAuthorization(AuthorizationPolicies.Agent).RequireRateLimiting("sensitive")
