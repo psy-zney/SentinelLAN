@@ -247,7 +247,7 @@ export function CommandsView() {
                     <option value="LockWorkstation">{lang === "vi" ? "Khóa Windows thật (máy lab được phép)" : "Lock Windows (authorized lab)"}</option>
                     <option value="IsolateNetwork">{lang === "vi" ? "Cô lập Firewall thật có khôi phục (lab)" : "Firewall Isolation with Recovery (lab)"}</option>
                     <option value="RestartService">{lang === "vi" ? "Khởi động lại dịch vụ Windows" : "Restart Windows Service"}</option>
-                    <option value="CollectTelemetryNow">{lang === "vi" ? "Đo và gửi telemetry ngay" : "Measure and Send Telemetry Now"}</option>
+                    <option value="CollectTelemetryNow">{lang === "vi" ? "Cập nhật thông số máy" : "Measure and Send Telemetry Now"}</option>
                     <option value="RefreshPolicy">{lang === "vi" ? "Tải và áp chính sách Windows" : "Fetch and Apply Windows Policy"}</option>
                     <option value="SimulateNetworkIsolation">{lang === "vi" ? "Mô phỏng cách ly mạng" : "Simulate Network Isolation"}</option>
                     <option value="ShowNotification">{lang === "vi" ? "Hiển thị thông báo Windows" : "Show Windows Notification"}</option>
@@ -263,7 +263,7 @@ export function CommandsView() {
 
                 {commandType === "RestartService" && (
                   <div className="form-group">
-                    <label htmlFor="cmd-svc">{lang === "vi" ? "Tên Service (Chỉ trong Allow-list an toàn)" : "Service Name (Allow-listed only)"}</label>
+                    <label htmlFor="cmd-svc">{lang === "vi" ? "Dịch vụ cần khởi động lại" : "Service Name (Allow-listed only)"}</label>
                     <select
                       id="cmd-svc"
                       className="form-select"
@@ -301,7 +301,7 @@ export function CommandsView() {
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                   />
-                  <small>{lang === "vi" ? "Lý do được lưu bất biến vào nhật ký kiểm toán cùng danh tính của bạn." : "Appended to tamper-evident audit log along with your operator ID."}</small>
+                  <small>{lang === "vi" ? "Lý do và người thực hiện sẽ được lưu trong lịch sử hoạt động." : "Appended to tamper-evident audit log along with your operator ID."}</small>
                 </div>
 
                 <div className="form-group">

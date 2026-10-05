@@ -123,6 +123,13 @@ public sealed class DeviceEnrollmentToken : Entity, ITenantOwned
     public required string TokenHash { get; init; }
     public DateTimeOffset ExpiresAt { get; init; }
     public DateTimeOffset? UsedAt { get; private set; }
+    public Guid? EnrolledDeviceId { get; private set; }
+    public void CompleteRegistration(Guid deviceId)
+    {
+        if (UsedAt is null || EnrolledDeviceId is not null || deviceId == Guid.Empty)
+            throw new InvalidOperationException("Enrollment must be consumed once before binding its device.");
+        EnrolledDeviceId = deviceId;
+    }
     public bool TryUse(DateTimeOffset now)
     {
         if (UsedAt is not null || now >= ExpiresAt) return false;

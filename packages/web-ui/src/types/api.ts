@@ -55,7 +55,7 @@ export type UserItem = {
   createdAt: string;
 };
 
-export type EnrollmentToken = { token: string; expiresAt: string };
+export type EnrollmentToken = { token: string; expiresAt: string; connectionCode: string };
 
 export type OrganizationItem = {
   id: string;
@@ -100,7 +100,18 @@ export type VpsContainer = {
   health: string | null; restartPolicy: string | null; cpuPercent: number | null;
   memoryUsage: string | null; memoryPercent: number | null; storageUsage: string | null;
   networkIo: string | null; blockIo: string | null;
+  ports?: VpsPortBinding[] | null; listeningPorts?: VpsListeningPort[] | null; networkMode?: string | null;
 };
+
+export type VpsPortBinding = { containerPort: number; protocol: string; hostIp: string | null; hostPort: number | null };
+export type VpsListeningPort = { address: string; port: number; protocol: string; process?: string | null };
+export type VpsHostSnapshot = {
+  name: string; host: string; capturedAtUtc: string; osInfo: string; uptimeSeconds: number;
+  cpuPercent: number; ramPercent: number; diskPercent: number; memoryTotalBytes: number;
+  memoryUsedBytes: number; diskTotalBytes: number; diskUsedBytes: number; runtime: VpsRuntime;
+  listeningPorts: VpsListeningPort[]; warnings: string[];
+};
+export type VpsHostStatus = { configured: boolean; available: boolean; stale: boolean; message: string; snapshot: VpsHostSnapshot | null };
 
 export type CreateVpsNodeRequest = {
   name: string;

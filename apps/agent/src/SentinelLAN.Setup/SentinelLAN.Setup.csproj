@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <AssemblyMetadata Include="CompanyServerUrl" Value="$(CompanyServerUrl)" />
+    <AssemblyMetadata Include="CommandPublicKey" Value="$(CommandPublicKey)" />
+    <AssemblyMetadata Include="CommandKeyId" Value="$(CommandKeyId)" />
+    <ProjectReference Include="..\..\..\..\packages\enrollment\SentinelLAN.Enrollment.csproj" />
+    <EmbeddedResource Include="..\..\..\..\deploy\agent\configure-windows-agent.ps1" LogicalName="configure-windows-agent.ps1" />
+    <EmbeddedResource Include="$(MsiPackagePath)" LogicalName="SentinelLAN.Agent.msi" Condition="'$(MsiPackagePath)' != ''" />
+  </ItemGroup>
+</Project>

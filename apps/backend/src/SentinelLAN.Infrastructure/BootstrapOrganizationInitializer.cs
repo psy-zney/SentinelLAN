@@ -16,7 +16,7 @@ public static class BootstrapOrganizationInitializer
         string? adminPassword,
         CancellationToken cancellationToken = default)
     {
-        if (await db.Organizations.AnyAsync(cancellationToken))
+        if (await db.Organizations.AnyAsync(x => x.Code != PlatformIdentity.OrganizationCode, cancellationToken))
         {
             var demo = await db.Organizations.AsNoTracking().SingleOrDefaultAsync(x => x.Code == "demo", cancellationToken);
             if (demo is not null)

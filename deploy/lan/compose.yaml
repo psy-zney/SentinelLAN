@@ -1,0 +1,85 @@
+name: sentinellan-lan
+
+services:
+  postgres:
+    image: postgres:18.1-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sentinellan}
+      POSTGRES_USER: ${POSTGRES_USER:-sentinellan}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in deploy/lan/.env}
+    volumes:
+      - sentinellan-lan-postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  api:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/api.Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__SentinelLAN: Host=postgres;Port=5432;Database=${POSTGRES_DB:-sentinellan};Username=${POSTGRES_USER:-sentinellan};Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      SENTINELLAN_BOOTSTRAP_ORG_CODE: ${BOOTSTRAP_ORG_CODE:?Set BOOTSTRAP_ORG_CODE}
+      SENTINELLAN_BOOTSTRAP_ORG_NAME: ${BOOTSTRAP_ORG_NAME:?Set BOOTSTRAP_ORG_NAME}
+      SENTINELLAN_BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:?Set BOOTSTRAP_ADMIN_EMAIL}
+      SENTINELLAN_BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:?Set BOOTSTRAP_ADMIN_PASSWORD}
+      SENTINELLAN_COMMAND_PRIVATE_KEY_PEM: ${COMMAND_PRIVATE_KEY_PEM:?Set COMMAND_PRIVATE_KEY_PEM}
+      SENTINELLAN_COMMAND_KEY_ID: ${COMMAND_KEY_ID:?Set COMMAND_KEY_ID}
+      SENTINELLAN_ACCESS_TOKEN_SIGNING_KEY: ${ACCESS_TOKEN_SIGNING_KEY:?Set ACCESS_TOKEN_SIGNING_KEY}
+      SENTINELLAN_SERVER_VAULT_KEY: ${SERVER_VAULT_KEY:?Set SERVER_VAULT_KEY}
+      SENTINELLAN_DEPLOYMENT_MODE: SelfHost
+      SENTINELLAN_WEB_ORIGINS: https://${PUBLIC_DOMAIN:?Set PUBLIC_DOMAIN}
+      SENTINELLAN_AGENT_PUBLIC_URL: ${SENTINELLAN_AGENT_PUBLIC_URL:-https://${PUBLIC_DOMAIN}}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  company:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/web.Dockerfile
+      args:
+        WEB_APP: company
+        NEXT_PUBLIC_API_URL: https://${PUBLIC_DOMAIN:?Set PUBLIC_DOMAIN}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    depends_on: [api]
+
+  employee:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/web.Dockerfile
+      args:
+        WEB_APP: employee
+        NEXT_PUBLIC_API_URL: https://${PUBLIC_DOMAIN:?Set PUBLIC_DOMAIN}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    depends_on: [api]
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - api
+      - company
+      - employee
+
+volumes:
+  sentinellan-lan-postgres:
+

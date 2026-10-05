@@ -37,7 +37,7 @@ export function DashboardView() {
         </div>
         <div className="metric">
           <span>{t("offlineDevices")}</span>
-          <strong style={{ color: "var(--danger)" }}>{data.offlineDevices}</strong>
+          <strong>{data.offlineDevices}</strong>
         </div>
         <div className="metric">
           <span>{t("openAlerts")}</span>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ApiClient } from "@/lib/api-client";
 import { homePathForRole } from "@/lib/auth-routing";
 import { useTranslation } from "@/lib/i18n";
-import { portal, portalAllows, portalBaseUrl, portalHomeUrl, portalTitle } from "@/lib/portal";
+import { portal, portalAllows, portalBaseUrl, portalHomeUrl } from "@/lib/portal";
 
 export function LoginForm() {
   const router = useRouter();
@@ -18,6 +18,7 @@ export function LoginForm() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy) return;
     setBusy(true);
     setError("");
     try {
@@ -52,24 +53,25 @@ export function LoginForm() {
   }
 
   const otherPortalUrl = portal === "employee" ? `${portalBaseUrl("Admin")}/login` : `${portalBaseUrl("Employee")}/login`;
-  const otherPortalLabel = portal === "employee" ? (lang === "vi" ? "🏢 Cổng Quản Trị Công Ty (Admin/IT) →" : "🏢 Company Management Portal →") : (lang === "vi" ? "💻 Cổng Nhân Viên Tự Phục Vụ →" : "💻 Employee Portal →");
+  const otherPortalLabel = portal === "employee" ? (lang === "vi" ? "Đăng nhập cho quản trị viên và IT" : "Administrator and IT sign in") : (lang === "vi" ? "Đăng nhập cho nhân viên" : "Employee sign in");
 
   return (
     <form className="login" onSubmit={submit}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <p className="eyebrow" style={{ margin: 0 }}>SentinelLAN</p>
+      <div className="login-brand">
+        <div className="brand"><span className="brand-mark" aria-hidden="true">S</span><span>SentinelLAN</span></div>
         <button
           type="button"
           className="lang-btn"
           onClick={() => setLang(lang === "vi" ? "en" : "vi")}
-          style={{ fontSize: ".75rem", padding: "4px 8px" }}
+          aria-label={lang === "vi" ? "Chuyển sang tiếng Anh" : "Switch to Vietnamese"}
         >
-          🌐 {lang === "vi" ? "EN" : "VI"}
+          {lang === "vi" ? "EN" : "VI"}
         </button>
       </div>
-      <h1 style={{ fontSize: "1.8rem" }}>{portalTitle}</h1>
-      <p className="subtitle" style={{ fontSize: ".85rem", marginTop: 6, marginBottom: 20 }}>
-        {t("signInSubtitle")}
+      <p className="eyebrow">{portal === "employee" ? (lang === "vi" ? "Dành cho nhân viên" : "For employees") : (lang === "vi" ? "Quản trị công ty" : "Company management")}</p>
+      <h1>{t("signInBtn")}</h1>
+      <p className="subtitle">
+        {portal === "employee" ? (lang === "vi" ? "Nhờ IT hỗ trợ và xem máy tính của bạn." : "Get IT help and view your computer.") : (lang === "vi" ? "Quản lý thiết bị và hỗ trợ nhân viên." : "Manage devices and help your team.")}
       </p>
 
       <label className="field">
@@ -81,8 +83,9 @@ export function LoginForm() {
           required
           value={orgCode}
           onChange={(e) => setOrgCode(e.target.value)}
-          placeholder="vd: demo"
+          placeholder={lang === "vi" ? "Ví dụ: sentinellan" : "Example: sentinellan"}
         />
+        <small>{lang === "vi" ? "Mã do quản trị viên công ty cung cấp." : "Provided by your company administrator."}</small>
       </label>
       <label className="field">
         {t("emailPrompt")}
@@ -109,16 +112,16 @@ export function LoginForm() {
         />
       </label>
 
-      {error && <p role="alert" className="subtitle" style={{ color: "var(--danger)" }}>{error}</p>}
+      {error && <p role="alert" className="login-error">{error}</p>}
 
-      <button className="action" type="submit" disabled={busy} style={{ width: "100%", marginTop: 12 }}>
+      <button className="action login-submit" type="submit" disabled={busy}>
         {busy ? t("signingIn") : t("signInBtn")}
       </button>
 
       {/* Dev helper buttons */}
-      <div style={{ marginTop: 16, padding: "10px", background: "rgba(0,0,0,0.15)", borderRadius: 8, textAlign: "center" }}>
-        <p style={{ margin: "0 0 6px", fontSize: ".75rem", color: "var(--text-muted)" }}>
-          {lang === "vi" ? "Thử nghiệm nhanh (Demo):" : "Quick test credentials:"}
+      {process.env.NODE_ENV === "development" && <div className="dev-helper">
+        <p>
+          {lang === "vi" ? "Tài khoản thử nghiệm" : "Test accounts"}
         </p>
         <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
           {portal === "company" ? (
@@ -129,7 +132,7 @@ export function LoginForm() {
                 style={{ padding: "3px 8px", fontSize: ".75rem" }}
                 onClick={() => fillDemo("admin")}
               >
-                ⚡ Admin
+                {lang === "vi" ? "Quản trị viên" : "Administrator"}
               </button>
               <button
                 type="button"
@@ -137,7 +140,7 @@ export function LoginForm() {
                 style={{ padding: "3px 8px", fontSize: ".75rem" }}
                 onClick={() => fillDemo("technician")}
               >
-                ⚡ IT / Tech
+                IT
               </button>
             </>
           ) : (
@@ -147,15 +150,15 @@ export function LoginForm() {
               style={{ padding: "3px 8px", fontSize: ".75rem" }}
               onClick={() => fillDemo("employee")}
             >
-              ⚡ Nhân viên
+              {lang === "vi" ? "Nhân viên" : "Employee"}
             </button>
           )}
         </div>
-      </div>
+      </div>}
 
       {/* Reciprocal cross-links */}
-      <div style={{ marginTop: 20, paddingTop: 14, borderTop: "1px solid var(--border)", fontSize: ".8rem", textAlign: "center", display: "grid", gap: 8 }}>
-        <a href={otherPortalUrl} style={{ color: "var(--accent)", textDecoration: "none", fontWeight: 500 }}>
+      <div className="login-footer">
+        <a href={otherPortalUrl}>
           {otherPortalLabel}
         </a>
       </div>

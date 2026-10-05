@@ -104,7 +104,7 @@ export function ActivateView() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "radial-gradient(circle at 50% 0%, #d6ece6 0, transparent 24rem), #f4f7f5", padding: "20px 16px" }}>
+    <main className="login-wrap">
       <div style={{ width: "100%", maxWidth: 440 }}>
         {/* Brand header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
@@ -114,7 +114,7 @@ export function ActivateView() {
             </div>
             <div>
               <strong style={{ fontSize: "1.1rem" }}>SentinelLAN</strong>
-              <div style={{ fontSize: ".72rem", color: "var(--muted)" }}>Secure Endpoint Governance</div>
+              <div style={{ fontSize: ".72rem", color: "var(--muted)" }}>Quản lý thiết bị và hỗ trợ nhân viên</div>
             </div>
           </div>
           <button
@@ -123,18 +123,18 @@ export function ActivateView() {
             style={{ padding: "4px 10px", fontSize: ".75rem" }}
             onClick={() => setLang(lang === "vi" ? "en" : "vi")}
           >
-            🌐 {lang === "vi" ? "EN" : "VI"}
+            {lang === "vi" ? "EN" : "VI"}
           </button>
         </div>
 
-        <div className="panel" style={{ padding: 28, boxShadow: "0 20px 45px rgba(20, 55, 50, .08)" }}>
+        <div className="panel" style={{ padding: 28 }}>
           {validating ? (
             <div style={{ textAlign: "center", padding: "24px 0" }}>
               <p className="subtitle">{lang === "vi" ? "Đang xác thực liên kết kích hoạt..." : "Validating activation link..."}</p>
             </div>
           ) : success ? (
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "2.8rem", marginBottom: 12 }}>🎉</div>
+              <div style={{ fontSize: "2.8rem", marginBottom: 12 }}></div>
               <h2 style={{ fontSize: "1.35rem", margin: "0 0 8px" }}>{t("activationSuccess")}</h2>
               <p className="subtitle" style={{ fontSize: ".88rem", marginBottom: 20 }}>
                 {lang === "vi"
@@ -147,7 +147,7 @@ export function ActivateView() {
             </div>
           ) : !tokenInfo?.valid ? (
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "2.8rem", marginBottom: 12 }}>⚠️</div>
+              <div style={{ fontSize: "2.8rem", marginBottom: 12 }}></div>
               <h2 style={{ fontSize: "1.35rem", margin: "0 0 8px" }}>{t("tokenInvalidOrExpired")}</h2>
               <p className="subtitle" style={{ fontSize: ".88rem", marginBottom: 20 }}>
                 {lang === "vi"
@@ -168,7 +168,7 @@ export function ActivateView() {
               {tokenInfo.organizationName && (
                 <div style={{ background: "#f6faf8", padding: "10px 14px", borderRadius: 8, border: "1px solid #dbe6e2", marginBottom: 16 }}>
                   <div style={{ fontSize: ".74rem", color: "var(--muted)", textTransform: "uppercase", fontWeight: 700 }}>
-                    {lang === "vi" ? "Tổ chức & Tài khoản" : "Organization & Account"}
+                    {lang === "vi" ? "Công ty và tài khoản" : "Company and account"}
                   </div>
                   <strong style={{ fontSize: ".92rem", color: "var(--ink)" }}>{tokenInfo.displayName ?? tokenInfo.email}</strong>
                   <div style={{ fontSize: ".78rem", color: "var(--muted)" }}>{tokenInfo.email} · {tokenInfo.organizationName}</div>
@@ -231,6 +231,6 @@ export function ActivateView() {
           )}
         </div>
       </div>
-    </div>
+    </main>
   );
 }

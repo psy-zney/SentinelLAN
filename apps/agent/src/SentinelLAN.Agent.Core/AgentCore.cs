@@ -37,6 +37,7 @@ public record TelemetrySnapshot(double CpuPercent, double RamPercent, double Dis
 public record QueuedTelemetry(TelemetrySnapshot Snapshot, string IdempotencyKey);
 public interface IAgentApi
 {
+    Task ConfirmEnrollmentStoredAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     Task<DeviceIdentity> EnrollAsync(string token, CancellationToken cancellationToken);
     Task SendHeartbeatAsync(DeviceIdentity identity, TelemetrySnapshot telemetry, CancellationToken cancellationToken);
     Task SendHeartbeatAsync(DeviceIdentity identity, TelemetrySnapshot telemetry, string? idempotencyKey, CancellationToken cancellationToken);

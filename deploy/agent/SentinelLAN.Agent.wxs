@@ -1,10 +1,17 @@
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
   <Package Name="SentinelLAN Endpoint Agent" Manufacturer="SentinelLAN"
            Version="$(var.ProductVersion)" UpgradeCode="A8F534F6-65F9-417A-B985-055721867CD4"
            Scope="perMachine">
     <SummaryInformation Description="Authorized SentinelLAN endpoint agent" />
     <MajorUpgrade DowngradeErrorMessage="A newer SentinelLAN Agent is already installed." />
     <MediaTemplate EmbedCab="yes" />
+    <ui:WixUI Id="WixUI_Minimal" />
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.SetupNotice)" />
+    <Property Id="WixShellExecTarget" Value="[#SetupExe]" />
+    <CustomAction Id="LaunchSetup" BinaryRef="Wix4UtilCA_X64" DllEntry="WixShellExec" Execute="immediate" Return="check" />
+    <UI>
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchSetup" Order="1" Condition="NOT Installed AND NOT REMOVE" />
+    </UI>
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="COMPANYFOLDER" Name="SentinelLAN">
         <Directory Id="INSTALLFOLDER" Name="Agent" />
@@ -14,6 +21,11 @@
       <Directory Id="AgentMenuFolder" Name="SentinelLAN" />
     </StandardDirectory>
     <ComponentGroup Id="AgentComponents" Directory="INSTALLFOLDER">
+      <Component Id="AgentConfigurator" Guid="62C8B645-CC7C-40B4-8F31-060D44F9D32A">
+        <File Id="SetupExe" Source="$(var.SetupExe)" KeyPath="yes" />
+        <Shortcut Id="ConfigureShortcut" Directory="AgentMenuFolder" Name="SentinelLAN - Ket noi thiet bi"
+                  Target="[#SetupExe]" WorkingDirectory="INSTALLFOLDER" />
+      </Component>
       <Component Id="AgentService" Guid="3F875D35-30FE-41E3-8E54-EBC002F419B8">
         <File Id="AgentExe" Source="$(var.AgentExe)" KeyPath="yes" />
         <ServiceInstall Id="ServiceInstaller" Type="ownProcess" Name="SentinelLANAgent"

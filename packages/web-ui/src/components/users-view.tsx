@@ -224,7 +224,7 @@ export function UsersView() {
                           style={{ padding: "3px 8px", fontSize: ".76rem" }}
                           onClick={() => { setReissueTarget(user); setReissueReason(""); }}
                         >
-                          🔄 {t("reissueInvite")}
+                          {t("reissueInvite")}
                         </button>
                         <button
                           type="button"
@@ -258,7 +258,7 @@ export function UsersView() {
       <div className="panel-head"><h2>{t("rbacTitle")}</h2></div>
       <p className="subtitle">
         {lang === "vi"
-          ? "Admin tạo tài khoản, quản lý lời mời và khóa/mở khóa có ghi audit. Tài khoản bị khóa mất quyền truy cập ngay; khi mở khóa phải đăng nhập lại."
+          ? "Quản trị viên tạo tài khoản, gửi lời mời và khóa hoặc mở khóa tài khoản. Người bị khóa sẽ mất quyền truy cập; sau khi mở khóa cần đăng nhập lại."
           : "Admins create accounts, manage invitations and lock or unlock accounts with an audit trail. Locking removes access immediately; unlocking requires a new sign-in."}
       </p>
     </div>
@@ -328,7 +328,7 @@ export function UsersView() {
                 checked={form.confirmed}
                 onChange={e => setForm({ ...form, confirmed: e.target.checked })}
               />
-              <span>{lang === "vi" ? "Tôi xác nhận tạo tài khoản này và chịu trách nhiệm kiểm toán." : "I confirm this account creation and accept audit accountability."}</span>
+              <span>{lang === "vi" ? "Tôi được phép tạo tài khoản này cho công ty." : "I confirm this account creation and accept audit accountability."}</span>
             </label>
             {message && <p role="alert" className="subtitle">{message}</p>}
             <div className="btn-row">
@@ -347,11 +347,11 @@ export function UsersView() {
       <div className="modal-backdrop" role="dialog" aria-modal="true">
         <div className="modal" style={{ maxWidth: 520 }}>
           <div className="modal-header">
-            <h3>🔗 {t("activationLinkTitle")}</h3>
+            <h3>{t("activationLinkTitle")}</h3>
             <button className="modal-close" onClick={() => setActivationModal(prev => ({ ...prev, open: false }))}>×</button>
           </div>
           <div className="privacy" style={{ borderColor: "var(--warn)", margin: "12px 0" }}>
-            <strong>⚠️ {t("activationLinkWarning")}</strong>
+            <strong>{t("activationLinkWarning")}</strong>
           </div>
           <div style={{ margin: "14px 0" }}>
             <label style={{ fontSize: ".82rem", color: "var(--muted)" }}>
@@ -371,7 +371,7 @@ export function UsersView() {
                 style={{ whiteSpace: "nowrap" }}
                 onClick={copyActivationUrl}
               >
-                {activationModal.copied ? `✓ ${t("linkCopied")}` : `📋 ${t("copyLink")}`}
+                {activationModal.copied ? `✓ ${t("linkCopied")}` : `${t("copyLink")}`}
               </button>
             </div>
           </div>
@@ -393,7 +393,7 @@ export function UsersView() {
       <div className="modal-backdrop" role="dialog" aria-modal="true">
         <div className="modal">
           <div className="modal-header">
-            <h3>🔄 {t("reissueInvite")}</h3>
+            <h3>{t("reissueInvite")}</h3>
             <button className="modal-close" onClick={() => setReissueTarget(null)}>×</button>
           </div>
           <form onSubmit={handleReissue}>

@@ -41,6 +41,25 @@ public sealed class VpsProbeTests
         Assert.Null(runtime.Containers[1].CpuPercent);
     }
 
+    [Fact]
+    public void PublishedPortsRemainDistinctFromDeclarationsAndProtocols()
+    {
+        var result = VpsProbeParser.Parse("""
+            HOST|Linux
+            DOCKER|available
+            PS|{"ID":"abc","Names":"gateway","Image":"nginx","State":"running"}
+            INSPECT|{"Id":"abc","NetworkMode":"bridge","Ports":{"8080/tcp":null,"8443/tcp":[{"HostIp":"127.0.0.1","HostPort":"3180"},{"HostIp":"::1","HostPort":"3180"}],"53/udp":[{"HostIp":"0.0.0.0","HostPort":"5353"}],"bad/tcp":null}}
+            """);
+        var container = Assert.Single(result.Runtime!.Containers);
+        Assert.Equal("bridge", container.NetworkMode);
+        Assert.Equal(4, container.Ports!.Count);
+        Assert.Null(container.Ports[0].HostPort);
+        Assert.Equal("::1", container.Ports[2].HostIp);
+        Assert.Equal(5353, container.Ports[3].HostPort);
+        Assert.Equal("udp", container.Ports[3].Protocol);
+        Assert.Null(container.ListeningPorts); // SSH probe does not guess sockets from EXPOSE metadata.
+    }
+
     [Theory]
     [InlineData("missing")]
     [InlineData("unavailable")]

@@ -50,7 +50,7 @@ export function AuditView() {
     <>
       <section className="metrics" aria-label="Audit summary">
         <div className="metric">
-          <span>{lang === "vi" ? "Tổng sự kiện kiểm toán" : "Logged Events"}</span>
+          <span>{lang === "vi" ? "Hoạt động đã ghi nhận" : "Logged Events"}</span>
           <strong>{logs.length}</strong>
         </div>
         <div className="metric">

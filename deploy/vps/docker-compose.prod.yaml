@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-sentinellan}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in deploy/vps/.env}
     volumes:
-      - sentinellan-prod-postgres:/var/lib/postgresql/data
+      - sentinellan-prod-postgres:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -35,6 +35,7 @@ services:
       SENTINELLAN_PLATFORM_OWNER_EMAIL: ${PLATFORM_OWNER_EMAIL:?Set PLATFORM_OWNER_EMAIL}
       SENTINELLAN_PLATFORM_OWNER_PASSWORD: ${PLATFORM_OWNER_PASSWORD:?Set PLATFORM_OWNER_PASSWORD}
       SENTINELLAN_WEB_ORIGINS: https://${PUBLIC_DOMAIN:?Set PUBLIC_DOMAIN}
+      SENTINELLAN_AGENT_PUBLIC_URL: ${SENTINELLAN_AGENT_PUBLIC_URL:-https://${PUBLIC_DOMAIN}}
     depends_on:
       postgres:
         condition: service_healthy

@@ -1,0 +1,11 @@
+[Unit]
+Description=Update SentinelLAN VPS status every minute
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=60s
+AccuracySec=5s
+Unit=sentinellan-host-monitor.service
+
+[Install]
+WantedBy=timers.target

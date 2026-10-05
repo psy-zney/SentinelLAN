@@ -123,11 +123,10 @@ export function MyDeviceView() {
   if (empty) {
     return (
       <div className="panel empty-state" role="status" style={{ textAlign: "center", padding: 32 }}>
-        <div style={{ fontSize: "2.8rem", marginBottom: 10 }}>💻</div>
-        <h2>{lang === "vi" ? "Chưa có thiết bị được gán" : "No assigned device"}</h2>
+        <h2>{lang === "vi" ? "Chưa có máy tính được giao cho bạn" : "No assigned computer"}</h2>
         <p className="subtitle" style={{ maxWidth: 460, margin: "8px auto 20px" }}>
           {lang === "vi"
-            ? "Quản trị viên chưa gán thiết bị nào cho tài khoản của bạn. Khi được gán máy, thông số kỹ thuật và trạng thái sức khỏe thiết bị sẽ xuất hiện tại đây."
+            ? "Hãy nhờ IT giao máy vào tài khoản của bạn. Thông tin máy tính sẽ xuất hiện ở đây sau khi được giao."
             : "An administrator has not assigned a corporate device to your account yet. When assigned, its health telemetry and profile will appear here."}
         </p>
         <button
@@ -163,7 +162,7 @@ export function MyDeviceView() {
       {/* Header Bar with Action Button */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 18 }}>
         <div>
-          <h1 style={{ fontSize: "1.4rem", margin: 0 }}>💻 {device.name}</h1>
+          <h2 style={{ fontSize: "1.25rem", margin: 0 }}>{device.name}</h2>
           <p className="subtitle" style={{ fontSize: ".84rem", margin: "2px 0 0" }}>
             {device.manufacturer ?? "Hãng"} · {device.model ?? device.assetType ?? "Máy tính làm việc"}
           </p>
@@ -174,12 +173,12 @@ export function MyDeviceView() {
           onClick={() => { incidentIdempotencyKey.current = null; setReportOpen(true); }}
           style={{ display: "flex", alignItems: "center", gap: 6 }}
         >
-          🚨 {t("reportMyDeviceIssue")}
+          {t("reportMyDeviceIssue")}
         </button>
       </div>
 
       {/* Key Metric Cards */}
-      <section className="metrics" aria-label="Assigned device summary">
+      <section className="metrics employee-summary" aria-label={lang === "vi" ? "Tình trạng máy tính" : "Computer status"}>
         <div className="metric">
           <span>{t("status")}</span>
           <strong className="metric-text" style={{ color: device.isOnline ? "var(--accent)" : "var(--danger)" }}>
@@ -187,33 +186,39 @@ export function MyDeviceView() {
           </strong>
         </div>
         <div className="metric">
-          <span>{lang === "vi" ? "Heartbeat gần nhất" : "Last Heartbeat"}</span>
+          <span>{lang === "vi" ? "Kết nối gần nhất" : "Last connection"}</span>
           <strong className="metric-text">
-            {device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleTimeString() : t("none")}
+            {device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleTimeString(lang === "vi" ? "vi-VN" : "en-US") : t("none")}
           </strong>
         </div>
+      </section>
+
+      <details className="panel device-technical" style={{ marginBottom: 20 }}>
+        <summary>{lang === "vi" ? "Thông số máy tính" : "Computer details"}</summary>
+        <section className="metrics" aria-label={lang === "vi" ? "Thông số máy tính" : "Computer metrics"}>
         <div className="metric">
-          <span>CPU %</span>
+          <span>{t("cpuUsage")}</span>
           <strong>{latestTelemetry?.cpuPercent !== null && latestTelemetry?.cpuPercent !== undefined ? `${latestTelemetry.cpuPercent}%` : "—"}</strong>
         </div>
         <div className="metric">
-          <span>RAM %</span>
+          <span>{t("ramUsage")}</span>
           <strong>{latestTelemetry?.ramPercent !== null && latestTelemetry?.ramPercent !== undefined ? `${latestTelemetry.ramPercent}%` : "—"}</strong>
         </div>
         <div className="metric">
-          <span>Disk %</span>
+          <span>{t("diskUsage")}</span>
           <strong>{latestTelemetry?.diskPercent !== null && latestTelemetry?.diskPercent !== undefined ? `${latestTelemetry.diskPercent}%` : "—"}</strong>
         </div>
         <div className="metric">
           <span>{t("appliedPolicy")}</span>
           <strong className="metric-text">{device.appliedPolicy ?? t("none")}</strong>
         </div>
-      </section>
+        </section>
+      </details>
 
       {/* Technical Profile Card */}
       <div className="panel" style={{ marginBottom: 20 }}>
         <div className="panel-head">
-          <h2>{lang === "vi" ? "Thông số phần cứng & Hồ sơ máy" : "Hardware & Profile Details"}</h2>
+          <h2>{lang === "vi" ? "Thông tin máy tính" : "Computer information"}</h2>
         </div>
         <dl className="device-facts">
           <div>
@@ -234,7 +239,7 @@ export function MyDeviceView() {
           </div>
           <div>
             <dt>{lang === "vi" ? "Ngày bàn giao" : "Assigned Date"}</dt>
-            <dd>{device.assignedAt ? new Date(device.assignedAt).toLocaleDateString() : t("none")}</dd>
+            <dd>{device.assignedAt ? new Date(device.assignedAt).toLocaleDateString(lang === "vi" ? "vi-VN" : "en-US") : t("none")}</dd>
           </div>
         </dl>
       </div>
@@ -242,7 +247,7 @@ export function MyDeviceView() {
       {/* Recent Incidents Panel */}
       <div className="panel" style={{ marginBottom: 20 }}>
         <div className="panel-head" style={{ justifyContent: "space-between", alignItems: "center" }}>
-          <h2>🚨 {t("recentIncidents")}</h2>
+          <h2>{t("recentIncidents")}</h2>
           <button
             type="button"
             className="action-outline"
@@ -261,7 +266,7 @@ export function MyDeviceView() {
               <thead>
                 <tr>
                   <th>{lang === "vi" ? "Tiêu đề sự cố" : "Issue Title"}</th>
-                  <th>{lang === "vi" ? "Mức độ" : "Severity"}</th>
+                  <th>{lang === "vi" ? "Ảnh hưởng công việc" : "Work impact"}</th>
                   <th>{t("status")}</th>
                   <th>{t("created")}</th>
                 </tr>
@@ -272,12 +277,12 @@ export function MyDeviceView() {
                     <td><strong>{inc.title}</strong></td>
                     <td>
                       <span className={`badge ${inc.severity === "Critical" || inc.severity === "High" ? "badge-danger" : "badge-warn"}`}>
-                        {inc.severity}
+                        {lang === "vi" ? ({ Low: "Vẫn làm việc được", Medium: "Công việc bị gián đoạn", High: "Không làm việc được", Critical: "Cần hỗ trợ ngay" } as Record<string, string>)[inc.severity] ?? inc.severity : inc.severity}
                       </span>
                     </td>
                     <td>
                       <span className={`badge ${inc.status === "Resolved" || inc.status === "Closed" ? "badge-success" : "badge-neutral"}`}>
-                        {inc.status}
+                        {lang === "vi" ? ({ Open: "Đã gửi", Acknowledged: "IT đã tiếp nhận", InProgress: "Đang xử lý", Resolved: "Đã xử lý", Closed: "Đã đóng" } as Record<string, string>)[inc.status] ?? inc.status : inc.status}
                       </span>
                     </td>
                     <td>{new Date(inc.createdAt).toLocaleString()}</td>
@@ -291,17 +296,13 @@ export function MyDeviceView() {
 
       {/* Full Transparency & Privacy Manifest Card */}
       {manifest && (
-        <div className="panel" style={{ marginBottom: 24, borderLeft: "4px solid var(--accent)" }}>
-          <div className="panel-head">
-            <div>
-              <h2 style={{ fontSize: "1.1rem" }}>🛡️ {t("privacyCommitment")}</h2>
+        <details className="panel privacy-details" style={{ marginBottom: 24 }}>
+              <summary>{t("privacyCommitment")}</summary>
               <p className="subtitle" style={{ fontSize: ".82rem" }}>
                 {t("transparencyManifest")} · {t("dataRetention")}: <strong>{manifest.dataRetentionDays} {t("days")}</strong>
               </p>
-            </div>
-          </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginTop: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(240px, 100%), 1fr))", gap: 16, marginTop: 12 }}>
             {/* Monitored Data */}
             <div style={{ background: "#f8faf9", padding: "14px 16px", borderRadius: 10, border: "1px solid #e2ebe8" }}>
               <strong style={{ color: "var(--accent)", fontSize: ".88rem" }}>✓ {t("privacyCollected")}</strong>
@@ -322,7 +323,7 @@ export function MyDeviceView() {
               </ul>
             </div>
           </div>
-        </div>
+        </details>
       )}
 
       {/* Modal: Report Incident */}
@@ -330,7 +331,7 @@ export function MyDeviceView() {
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal">
             <div className="modal-header">
-              <h3>🚨 {t("reportMyDeviceIssue")}</h3>
+              <h3>{t("reportMyDeviceIssue")}</h3>
               <button className="modal-close" onClick={() => setReportOpen(false)}>×</button>
             </div>
             <form onSubmit={handleReportIncident}>
@@ -350,15 +351,16 @@ export function MyDeviceView() {
                 />
               </div>
               <div className="form-group">
-                <label>{lang === "vi" ? "Mức độ khẩn cấp" : "Severity Level"}</label>
+                <label htmlFor="work-impact">{lang === "vi" ? "Bạn còn làm việc được không?" : "Can you continue working?"}</label>
                 <select
+                  id="work-impact"
                   className="form-select"
                   value={reportSeverity}
                   onChange={(e) => setReportSeverity(e.target.value)}
                 >
-                  <option value="Low">Low ({lang === "vi" ? "Nhẹ, vẫn dùng được" : "Low"})</option>
-                  <option value="Medium">Medium ({lang === "vi" ? "Ảnh hưởng công việc" : "Medium"})</option>
-                  <option value="High">High ({lang === "vi" ? "Nghiêm trọng / Không dùng được" : "Critical / High"})</option>
+                  <option value="Low">{lang === "vi" ? "Có, tôi vẫn làm việc được" : "Yes, I can keep working"}</option>
+                  <option value="Medium">{lang === "vi" ? "Có, nhưng công việc bị gián đoạn" : "Yes, with interruptions"}</option>
+                  <option value="High">{lang === "vi" ? "Không, tôi cần IT hỗ trợ" : "No, I need IT help"}</option>
                 </select>
               </div>
               <div className="form-group">

@@ -29,6 +29,7 @@ services:
       SENTINELLAN_PLATFORM_OWNER_EMAIL: ${PLATFORM_OWNER_EMAIL:-}
       SENTINELLAN_PLATFORM_OWNER_PASSWORD: ${PLATFORM_OWNER_PASSWORD:-}
       SENTINELLAN_WEB_ORIGINS: ${SENTINELLAN_WEB_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:3002}
+      SENTINELLAN_AGENT_PUBLIC_URL: ${SENTINELLAN_AGENT_PUBLIC_URL:-http://localhost:8080}
     ports: ["127.0.0.1:8080:8080"]
     depends_on:
       postgres: { condition: service_healthy }

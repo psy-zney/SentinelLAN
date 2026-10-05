@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\SentinelLAN.Application\SentinelLAN.Application.csproj" />
     <ProjectReference Include="..\SentinelLAN.Infrastructure\SentinelLAN.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\..\packages\enrollment\SentinelLAN.Enrollment.csproj" />
   </ItemGroup>
 
   <ItemGroup>

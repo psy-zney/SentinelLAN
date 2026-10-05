@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { executionLabel, validateSupportImage } from "../src/lib/self-service";
+import { executionLabel, itStatusOptions, validateSupportImage } from "../src/lib/self-service";
 
 describe("employee outcomes", () => {
+  it("keeps pending installation approval separate from completed work", () => {
+    expect(itStatusOptions({ kind: "InstallApp", status: "Approved", commandId: "id", commandStatus: "Pending" })).not.toContain("Resolved");
+    expect(itStatusOptions({ kind: "InstallApp", status: "Approved", commandId: "id", commandStatus: "Succeeded" })).toContain("Resolved");
+    expect(itStatusOptions({ kind: "PauseAgent", status: "Approved", commandId: null, commandStatus: null })).not.toContain("Open");
+  });
+  it("requires accepting a new incident before resolving it", () => {
+    expect(itStatusOptions({ kind: "Incident", status: "Open", commandId: null, commandStatus: null })).toEqual(["Open", "InProgress"]);
+  });
   it("never describes approval, delivery or a missing command as successful isolation", () => {
     for (const commandStatus of [null, "Pending", "Delivered", "Expired", "Failed"]) {
       const label = executionLabel({ kind: "Panic", status: "Approved", commandId: commandStatus ? "id" : null, commandStatus });

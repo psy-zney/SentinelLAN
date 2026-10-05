@@ -28,6 +28,9 @@ public sealed class SelfServiceIntegrationTests(SentinelApiFactory factory) : IC
         Assert.Equal(HttpStatusCode.Conflict, (await employee.PostAsJsonAsync($"{Root}/requests", new { kind = "Incident", category = "Printer", title = "Khác", canWork = true, confirmed = true, idempotencyKey = key })).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await technician.PostAsJsonAsync($"{Root}/requests/{created}/decision", new { approved = true, reason = "Đã duyệt", confirmed = true })).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await employee.PatchAsJsonAsync($"{Root}/requests/{created}", new { status = "Closed", reason = "Đã dùng được", confirmed = false })).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await employee.PatchAsJsonAsync($"{Root}/requests/{created}", new { status = "Closed", reason = "Chưa xử lý", confirmed = true })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await technician.PatchAsJsonAsync($"{Root}/requests/{created}", new { status = "InProgress", reason = "IT tiếp nhận", confirmed = true })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await technician.PatchAsJsonAsync($"{Root}/requests/{created}", new { status = "Resolved", reason = "IT đã kiểm tra", confirmed = true })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await employee.PatchAsJsonAsync($"{Root}/requests/{created}", new { status = "Closed", reason = "Đã dùng được", confirmed = true })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await employee.PatchAsJsonAsync($"{Root}/requests/{created}", new { status = "Open", reason = "Vẫn còn lỗi", confirmed = true })).StatusCode);
     }
@@ -44,6 +47,9 @@ public sealed class SelfServiceIntegrationTests(SentinelApiFactory factory) : IC
         var otp = approved.GetProperty("otp").GetString()!;
         Assert.Matches("^[0-9]{8}$", otp);
         Assert.Equal(HttpStatusCode.Conflict, (await admin.PostAsJsonAsync($"{Root}/requests/{created}/decision", new { approved = true, reason = "Lặp lại", confirmed = true })).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await admin.PatchAsJsonAsync($"{Root}/requests/{created}", new { status = "Open", reason = "Không được duyệt lại", confirmed = true })).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await admin.PatchAsJsonAsync($"{Root}/requests/{created}", new { status = "InProgress", reason = "Chưa nhập mã OTP", confirmed = true })).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await employee.PatchAsJsonAsync($"{Root}/requests/{created}", new { status = "Closed", reason = "Chưa thực hiện", confirmed = true })).StatusCode);
         var redemptions = await Task.WhenAll(Enumerable.Range(0, 3).Select(_ => employee.PostAsJsonAsync($"{Root}/requests/{created}/redeem", new { code = otp, confirmed = true })));
         Assert.Single(redemptions, response => response.StatusCode == HttpStatusCode.OK);
         Assert.Equal(2, redemptions.Count(response => response.StatusCode == HttpStatusCode.Conflict));

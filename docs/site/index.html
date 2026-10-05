@@ -43,11 +43,10 @@
       <p id="release-status" role="status" aria-live="polite">Đang kiểm tra bản phát hành. Bạn có thể mở GitHub Releases để chọn bản do IT chỉ định.</p>
       <div class="download-grid">
         <article class="card">
-          <h3>Windows x64</h3><p>Ưu tiên MSI. Tải script cấu hình từ cùng bản phát hành.</p>
-          <a class="button" data-asset="SentinelLAN.Agent.msi" href="https://github.com/psy-zney/SentinelLAN/releases">Tìm gói MSI trên Releases</a>
-          <ul><li><a data-asset="configure-windows-agent.ps1" href="https://github.com/psy-zney/SentinelLAN/releases">Script cấu hình Windows</a></li><li><a data-asset="SentinelLAN.Agent.exe" href="https://github.com/psy-zney/SentinelLAN/releases">Binary EXE cho IT triển khai thủ công</a></li></ul>
-          <h4>Cài đặt</h4><ol><li>Mở MSI, hoàn tất cài với quyền quản trị.</li><li>Mở PowerShell bằng Run as administrator tại thư mục chứa script.</li><li>Thay địa chỉ ví dụ bằng địa chỉ IT cấp rồi chạy lệnh bên dưới.</li></ol>
-          <pre><code>.\configure-windows-agent.ps1 -ServerUrl 'https://sentinel.example.com'</code></pre>
+          <h3>Windows x64</h3><p>Mở bộ cài và dán một mã kết nối do IT cấp. Không cần nhập địa chỉ máy chủ hoặc chạy lệnh.</p>
+          <a class="button" data-asset="SentinelLAN.Setup.exe" href="https://github.com/psy-zney/SentinelLAN/releases">Tìm bộ cài EXE trên Releases</a>
+          <ul><li><a data-asset="SentinelLAN.Agent.msi" href="https://github.com/psy-zney/SentinelLAN/releases">Bộ cài MSI có cửa sổ kết nối</a></li><li><a data-asset="SentinelLAN.Agent.exe" href="https://github.com/psy-zney/SentinelLAN/releases">Binary dịch vụ cho IT</a></li></ul>
+          <h4>Cài đặt</h4><ol><li>Mở bộ cài, cho phép cài bằng tài khoản quản trị Windows của IT.</li><li>Dán mã kết nối và bấm Cài đặt và kết nối.</li><li>Chờ thông báo Kết nối thành công, sau đó nhờ IT gán máy cho tài khoản của bạn.</li></ol>
         </article>
         <article class="card">
           <h3>Linux x64</h3><p>Cần systemd, OpenSSL và sudo. Giữ binary, script và service trong cùng thư mục.</p>
@@ -57,7 +56,7 @@
           <pre><code>sudo bash ./install-linux-agent.sh --server https://sentinel.example.com</code></pre>
         </article>
       </div>
-      <div class="install-note"><h3>Kiểm tra trước và sau khi cài</h3><p>Đối chiếu SHA-256 với <a data-asset="SHA256SUMS.txt" href="https://github.com/psy-zney/SentinelLAN/releases">SHA256SUMS.txt</a> từ cùng bản phát hành. Script hỏi mã đăng ký bằng prompt ẩn; không đưa mã vào dòng lệnh hoặc ảnh báo lỗi.</p><p>Nhờ IT xác nhận có heartbeat mới và gán máy đúng người. Nếu mã hết hạn, HTTPS lỗi hoặc máy chưa xuất hiện, liên hệ IT. Dịch vụ chạy chưa đủ chứng minh kết nối thành công.</p><p><a href="https://github.com/psy-zney/SentinelLAN/blob/main/docs/downloads.md">Xem hướng dẫn cài đặt và xử lý lỗi</a></p></div>
+      <div class="install-note"><h3>Kiểm tra trước và sau khi cài</h3><p>Đối chiếu SHA-256 với <a data-asset="SHA256SUMS.txt" href="https://github.com/psy-zney/SentinelLAN/releases">SHA256SUMS.txt</a> từ cùng bản phát hành. Mã chỉ dùng một lần; đã dùng thì không thể dùng lại dù còn hạn. Không đưa mã vào ảnh báo lỗi.</p><p>Nhờ IT xác nhận có heartbeat mới và gán máy đúng người. Nếu mã hết hạn, đã dùng, HTTPS lỗi hoặc máy chưa xuất hiện, liên hệ IT. Bản phát hành cũ dùng hướng dẫn script của chính bản đó.</p><p><a href="https://github.com/psy-zney/SentinelLAN/blob/main/docs/downloads.md">Xem hướng dẫn cài đặt và xử lý lỗi</a></p></div>
       <noscript><p>JavaScript đang tắt. Các nút mở <a href="https://github.com/psy-zney/SentinelLAN/releases">GitHub Releases</a>; chọn bản do IT chỉ định và tải các tệp được liệt kê.</p></noscript>
     </section>
   </main>

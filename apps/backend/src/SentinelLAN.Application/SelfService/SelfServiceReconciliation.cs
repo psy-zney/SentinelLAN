@@ -23,7 +23,7 @@ public sealed partial class SelfServiceService
                     request.CommandMessage = message;
                     request.UpdatedAt = Now;
                     if (status is not ("Succeeded" or "Failed" or "Expired")) continue;
-                    if (status == "Succeeded") request.Status = "AwaitingEmployee";
+                    if (status == "Succeeded" && request.Status is not ("Closed" or "Resolved")) request.Status = "AwaitingEmployee";
                     var title = status == "Succeeded" ? "Máy đã báo hoàn tất thao tác" : "Thao tác trên máy chưa hoàn tất";
                     await NotifyAsync(organizationId, request.UserId, title, "Mở yêu cầu để xem kết quả và xác nhận với IT.", request.Id, $"command:{command.Id}:{status}", ct);
                     await NotifyItAsync(organizationId, title, "Có kết quả thao tác cần IT theo dõi.", request.Id, $"command:{command.Id}:{status}", ct);

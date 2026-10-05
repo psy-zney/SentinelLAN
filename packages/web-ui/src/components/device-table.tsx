@@ -107,7 +107,7 @@ export function DeviceTable({ initialDevices }: { initialDevices: Device[] }) {
       <div className="panel-head">
         <h2>{t("managedDevices")}</h2>
         <Link href="/devices" style={{ fontSize: ".85rem", color: "var(--accent)", fontWeight: 700 }}>
-          {lang === "vi" ? "Xem danh mục chi tiết →" : "View inventory →"}
+          {lang === "vi" ? "Xem tất cả" : "View inventory →"}
         </Link>
       </div>
       <table>
@@ -115,7 +115,7 @@ export function DeviceTable({ initialDevices }: { initialDevices: Device[] }) {
           <tr>
             <th>{t("deviceName")}</th>
             <th>{t("status")}</th>
-            <th>{lang === "vi" ? "Phân công" : "Assignment"}</th>
+            <th>{lang === "vi" ? "Người sử dụng" : "Assignment"}</th>
             <th>{t("osVersion")}</th>
             <th>{t("lastSeen")}</th>
             <th style={{ textAlign: "right" }}>{t("actions")}</th>
@@ -127,7 +127,7 @@ export function DeviceTable({ initialDevices }: { initialDevices: Device[] }) {
               <tr key={device.id}>
                 <td>
                   <Link href={`/devices/${device.id}`} style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
-                    <span>💻</span>
+                    <span></span>
                     <span>{device.name}</span>
                   </Link>
                 </td>
@@ -141,20 +141,20 @@ export function DeviceTable({ initialDevices }: { initialDevices: Device[] }) {
                   {device.isRevoked ? (
                     <span className="badge badge-danger">{lang === "vi" ? "Đã thu hồi" : "Revoked"}</span>
                   ) : device.assignedUserId ? (
-                    <span className="badge badge-info">{lang === "vi" ? "Đã gán" : "Assigned"}</span>
+                    <span className="badge badge-info">{lang === "vi" ? "Đã giao máy" : "Assigned"}</span>
                   ) : (
-                    <span className="badge badge-neutral">{lang === "vi" ? "Chưa gán" : "Unassigned"}</span>
+                    <span className="badge badge-neutral">{lang === "vi" ? "Chưa giao máy" : "Unassigned"}</span>
                   )}
                 </td>
                 <td>{device.osVersion}</td>
                 <td>
                   {device.lastSeenAt
-                    ? new Date(device.lastSeenAt).toLocaleTimeString()
+                    ? new Date(device.lastSeenAt).toLocaleTimeString(lang === "vi" ? "vi-VN" : "en-US")
                     : t("none")}
                 </td>
                 <td style={{ textAlign: "right" }}>
                   <div style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
-                    <Link href={`/devices/${device.id}`} className="action-outline" title={t("qrCode")}>📷 QR</Link>
+                    <Link href={`/devices/${device.id}`} className="action-outline" title={t("qrCode")}>QR</Link>
                     <button
                       type="button"
                       className="action-outline"
@@ -162,7 +162,7 @@ export function DeviceTable({ initialDevices }: { initialDevices: Device[] }) {
                       onClick={() => openCommand(device)}
                       title={t("quickCommand")}
                     >
-                      ⚡ {lang === "vi" ? "Lệnh" : "Cmd"}
+                      {lang === "vi" ? "Thao tác" : "Action"}
                     </button>
                     <button
                       type="button"
@@ -171,7 +171,7 @@ export function DeviceTable({ initialDevices }: { initialDevices: Device[] }) {
                       onClick={() => openIncident(device)}
                       title={t("reportIncident")}
                     >
-                      🚨 {lang === "vi" ? "Hỏng" : "Issue"}
+                      {lang === "vi" ? "Báo hỏng" : "Issue"}
                     </button>
                     <Link
                       href={`/devices/${device.id}`}
@@ -193,7 +193,7 @@ export function DeviceTable({ initialDevices }: { initialDevices: Device[] }) {
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal">
             <div className="modal-header">
-              <h3>⚡ {t("quickCommand")}: {selectedDevice.name}</h3>
+              <h3>{t("quickCommand")}: {selectedDevice.name}</h3>
               <button className="modal-close" onClick={() => setCommandModalOpen(false)}>×</button>
             </div>
             <form onSubmit={handleSendCommand}>
@@ -205,7 +205,7 @@ export function DeviceTable({ initialDevices }: { initialDevices: Device[] }) {
                   onChange={(e) => setCmdType(e.target.value as CommandType)}
                 >
                   <option value="ShowNotification">{lang === "vi" ? "Gửi thông báo màn hình (ShowNotification)" : "Show Notification"}</option>
-                  <option value="CollectTelemetryNow">{lang === "vi" ? "Thu thập telemetry tức thời (CollectTelemetryNow)" : "Collect Telemetry Now"}</option>
+                  <option value="CollectTelemetryNow">{lang === "vi" ? "Cập nhật thông số máy" : "Collect Telemetry Now"}</option>
                   <option value="RefreshPolicy">{lang === "vi" ? "Làm mới chính sách (RefreshPolicy)" : "Refresh Policy"}</option>
                   <option value="LockWorkstation">{lang === "vi" ? "Khóa Windows thật (máy lab được phép)" : "Lock Windows (authorized lab)"}</option>
                   <option value="SimulateLock">{lang === "vi" ? "Mô phỏng khóa màn hình (SimulateLock)" : "Simulate Screen Lock"}</option>
@@ -248,7 +248,7 @@ export function DeviceTable({ initialDevices }: { initialDevices: Device[] }) {
                   {t("cancel")}
                 </button>
                 <button type="submit" className="action" disabled={cmdLoading || !cmdReason.trim()}>
-                  {cmdLoading ? t("loading") : (lang === "vi" ? "Ký số & Gửi lệnh" : "Sign & Dispatch")}
+                  {cmdLoading ? t("loading") : (lang === "vi" ? "Gửi thao tác" : "Sign & Dispatch")}
                 </button>
               </div>
             </form>
@@ -261,7 +261,7 @@ export function DeviceTable({ initialDevices }: { initialDevices: Device[] }) {
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal">
             <div className="modal-header">
-              <h3>🚨 {t("reportIncident")}: {selectedDevice.name}</h3>
+              <h3>{t("reportIncident")}: {selectedDevice.name}</h3>
               <button className="modal-close" onClick={() => setIncidentModalOpen(false)}>×</button>
             </div>
             <form onSubmit={handleReportIncident}>

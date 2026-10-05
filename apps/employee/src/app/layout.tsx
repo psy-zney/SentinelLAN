@@ -3,8 +3,8 @@ import "./globals.css";
 import { I18nProvider } from "@/lib/i18n";
 
 export const metadata: Metadata = {
-  title: "SentinelLAN — Quản lý thiết bị đầu cuối được ủy quyền",
-  description: "Đăng ký Agent, giám sát telemetry kỹ thuật và xử lý sự cố cho thiết bị được tổ chức cho phép"
+  title: "SentinelLAN · Nhân viên",
+  description: "Nhờ IT hỗ trợ và xem thông tin máy tính của bạn."
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

@@ -201,14 +201,42 @@ internal static class NonWindowsIdentityCipher
 }
 
 
-public sealed class AgentApi(HttpClient httpClient, string deviceName) : IAgentApi
+public sealed class AgentApi(HttpClient httpClient, string deviceName, IEnrollmentAttemptStore? enrollmentAttempts = null) : IAgentApi
 {
+    private string? volatileSecret;
+    private string? volatileToken;
     public async Task<DeviceIdentity> EnrollAsync(string token, CancellationToken cancellationToken)
     {
-        using var response = await httpClient.PostAsJsonAsync("/api/v1/agent/enroll", new { token, deviceName, osVersion = RuntimeInformation.OSDescription, agentVersion = "0.1.0" }, cancellationToken);
+        if (volatileToken != token) { volatileSecret = null; volatileToken = token; }
+        var deviceSecret = enrollmentAttempts is null
+            ? volatileSecret ??= Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
+            : await enrollmentAttempts.GetOrCreateSecretAsync(token, httpClient.BaseAddress!.AbsoluteUri, cancellationToken);
+        using var response = await httpClient.PostAsJsonAsync("/api/v1/agent/enroll", new { token, deviceName, deviceSecret, osVersion = RuntimeInformation.OSDescription, agentVersion = "0.1.0" }, cancellationToken);
+        if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+        {
+            var code = "EnrollmentRejected";
+            try
+            {
+                using var error = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
+                if (error.RootElement.ValueKind == JsonValueKind.Object && error.RootElement.TryGetProperty("code", out var value) &&
+                    value.ValueKind == JsonValueKind.String && value.GetString() is "TokenUsed" or "TokenExpired")
+                    code = value.GetString()!;
+            }
+            catch (JsonException) { /* Never surface arbitrary server response content or secrets. */ }
+            throw new EnrollmentRejectedException(code);
+        }
         response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<DeviceIdentity>(cancellationToken))!;
+        DeviceIdentity? identity;
+        try { identity = await response.Content.ReadFromJsonAsync<DeviceIdentity>(cancellationToken); }
+        catch (JsonException) { throw new HttpRequestException("The enrollment response could not be confirmed."); }
+        if (identity is null || identity.DeviceId == Guid.Empty || string.IsNullOrEmpty(identity.DeviceSecret) ||
+            identity.DeviceSecret.Length != 64 || identity.DeviceSecret.Any(c => !char.IsAsciiHexDigit(c)))
+            throw new HttpRequestException("The enrollment response could not be confirmed.");
+        return identity;
     }
+
+    public Task ConfirmEnrollmentStoredAsync(CancellationToken cancellationToken) =>
+        enrollmentAttempts?.ClearAsync(cancellationToken) ?? Task.CompletedTask;
 
     public Task SendHeartbeatAsync(DeviceIdentity identity, TelemetrySnapshot telemetry, CancellationToken cancellationToken) =>
         SendHeartbeatAsync(identity, telemetry, null, cancellationToken);

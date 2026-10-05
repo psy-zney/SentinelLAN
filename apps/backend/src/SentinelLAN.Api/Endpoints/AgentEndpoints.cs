@@ -12,21 +12,28 @@ public static class AgentEndpoints
 {
     public static void MapAgentEndpoints(this RouteGroupBuilder v1)
     {
-        v1.MapPost("/agent/enroll", async (EnrollRequest request, SentinelDbContext db, IHubContext<UpdatesHub> hub, CancellationToken ct) =>
+        v1.MapPost("/agent/enroll", async (EnrollRequest request, HttpContext http, SentinelDbContext db, IHubContext<UpdatesHub> hub, CancellationToken ct) =>
         {
+            http.Response.Headers.CacheControl = "no-store";
             using var developmentWrite = db.Database.IsRelational() ? null : await DevelopmentWriteGate.EnterAsync(ct);
             if (!DeviceRequestValidation.IsValid(request)) return Results.BadRequest(new ProblemDetails { Title = "Valid token, device name, OS and Agent version are required", Status = 400 });
+            if (request.DeviceSecret is not null && !IsEnrollmentSecret(request.DeviceSecret))
+                return EnrollmentError("EnrollmentRejected", "Thông tin đăng ký máy không hợp lệ.");
+            if (!http.RequestServices.GetRequiredService<DeploymentSettings>().PlatformEnabled && request.DeviceSecret is null)
+                return EnrollmentError("EnrollmentRejected", "Bộ cài cũ chưa hỗ trợ đăng ký công ty. Nhờ IT cung cấp bộ cài mới.");
             var hash = SecretHash.Create(request.Token);
             var token = await db.EnrollmentTokens.SingleOrDefaultAsync(x => x.TokenHash == hash, ct);
             var now = DateTimeOffset.UtcNow;
             if (token is null)
             {
-                return Results.BadRequest(new ProblemDetails { Title = "Invalid enrollment token", Status = 400 });
+                return EnrollmentError("EnrollmentRejected", "Mã kết nối không hợp lệ. Vui lòng liên hệ IT.");
             }
             if (!await db.Organizations.AnyAsync(o => o.Id == token.OrganizationId && !o.IsSuspended, ct))
                 return Results.BadRequest(new ProblemDetails { Title = "Organization unavailable", Status = 400 });
             if (!token.TryUse(now))
             {
+                var recovered = await TryRecoverEnrollmentAsync(db, token, request, now, ct);
+                if (recovered is not null) return Results.Ok(recovered);
                 var failureReason = token.UsedAt is not null ? "Token already used" : "Token expired";
                 db.Add(new AuditLog
                 {
@@ -38,11 +45,14 @@ public static class AgentEndpoints
                     Outcome = "Failed"
                 });
                 await db.SaveChangesAsync(ct);
-                return Results.BadRequest(new ProblemDetails { Title = "Invalid enrollment token", Status = 400 });
+                return token.UsedAt is not null
+                    ? EnrollmentError("TokenUsed", "Mã kết nối đã được sử dụng. Vui lòng liên hệ IT để cấp mã mới.")
+                    : EnrollmentError("TokenExpired", "Mã kết nối đã hết hạn. Vui lòng liên hệ IT để cấp mã mới.");
             }
 
-            var secret = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+            var secret = request.DeviceSecret ?? Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
             var device = new Device { OrganizationId = token.OrganizationId, Name = request.DeviceName, OsVersion = request.OsVersion, AgentVersion = request.AgentVersion };
+            token.CompleteRegistration(device.Id);
             db.Add(device);
             db.Add(new DeviceCredential { OrganizationId = token.OrganizationId, DeviceId = device.Id, SecretHash = SecretHash.Create(secret) });
             db.Add(new AuditLog
@@ -58,13 +68,20 @@ public static class AgentEndpoints
             catch (DbUpdateConcurrencyException)
             {
                 db.ChangeTracker.Clear();
+                var committedToken = await db.EnrollmentTokens.SingleAsync(x => x.TokenHash == hash, ct);
+                var recovered = await TryRecoverEnrollmentAsync(db, committedToken, request, now, ct);
+                if (recovered is not null) return Results.Ok(recovered);
                 db.Add(new AuditLog { OrganizationId = token.OrganizationId, ActorId = token.Id, Action = "AgentEnrollmentFailed", Reason = "Token already used", Outcome = "Failed" });
                 await db.SaveChangesAsync(ct);
-                return Results.BadRequest(new ProblemDetails { Title = "Invalid enrollment token", Status = 400 });
+                return EnrollmentError("TokenUsed", "Mã kết nối đã được sử dụng. Vui lòng liên hệ IT để cấp mã mới.");
             }
             await hub.Clients.Group(TenantGroup.Name(token.OrganizationId)).SendAsync("device-status", new { device.Id, online = false, device.LastSeenAt }, ct);
             return Results.Ok(new EnrollResponse(device.Id, secret));
-        }).RequireRateLimiting("sensitive");
+        }).RequireRateLimiting("sensitive")
+            .WithSummary("Register one device using an unused, unexpired enrollment token")
+            .WithDescription("Consumes the token atomically with device creation. SelfHost requires a client-generated 32-byte DeviceSecret persisted before sending. Before token expiry, an identical device with proof of that secret can recover a lost response; other attempts return TokenUsed. Revoked devices cannot recover. HTTP 400 includes TokenUsed, TokenExpired or EnrollmentRejected.")
+            .Produces<EnrollResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest);
 
         v1.MapPost("/agent/heartbeat", async (HeartbeatRequest request, HttpContext http, SentinelDbContext db, IHubContext<UpdatesHub> hub, CancellationToken ct) =>
         {
@@ -157,4 +174,31 @@ public static class AgentEndpoints
             return Results.Accepted();
         }).RequireAuthorization(AuthorizationPolicies.Agent);
     }
+
+    private static bool IsEnrollmentSecret(string value) => value.Length == 64 && value.All(char.IsAsciiHexDigit);
+
+    private static async Task<EnrollResponse?> TryRecoverEnrollmentAsync(SentinelDbContext db,
+        DeviceEnrollmentToken token, EnrollRequest request, DateTimeOffset now, CancellationToken ct)
+    {
+        if (token.UsedAt is null || token.EnrolledDeviceId is not Guid id || now >= token.ExpiresAt ||
+            request.DeviceSecret is null || !IsEnrollmentSecret(request.DeviceSecret)) return null;
+        var device = await db.Devices.AsNoTracking().SingleOrDefaultAsync(d =>
+            d.Id == id && d.OrganizationId == token.OrganizationId && !d.IsRevoked, ct);
+        if (device is null || device.Name != request.DeviceName) return null;
+        var credential = await db.DeviceCredentials.AsNoTracking().SingleOrDefaultAsync(c =>
+            c.DeviceId == id && c.OrganizationId == token.OrganizationId && c.RevokedAt == null, ct);
+        if (credential is null || !SecretHash.Matches(request.DeviceSecret, credential.SecretHash)) return null;
+        db.Add(new AuditLog { OrganizationId = token.OrganizationId, ActorId = id, DeviceId = id,
+            Action = "AgentEnrollmentRecovered", Reason = "Original device proved its pre-persisted enrollment secret", Outcome = "Success" });
+        await db.SaveChangesAsync(ct);
+        return new EnrollResponse(id, request.DeviceSecret);
+    }
+
+    private static IResult EnrollmentError(string code, string detail) => Results.BadRequest(new ProblemDetails
+    {
+        Title = "Invalid enrollment token",
+        Detail = detail,
+        Status = 400,
+        Extensions = { ["code"] = code }
+    });
 }

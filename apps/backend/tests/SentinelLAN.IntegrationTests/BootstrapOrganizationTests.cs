@@ -33,6 +33,22 @@ public sealed class BootstrapOrganizationTests
     }
 
     [Fact]
+    public async Task PlatformOrganizationDoesNotPreventCompanyBootstrap()
+    {
+        await using var db = CreateDatabase();
+        db.Organizations.Add(new SentinelLAN.Domain.Organization
+        {
+            Code = PlatformIdentity.OrganizationCode,
+            Name = "Platform"
+        });
+        await db.SaveChangesAsync();
+        await BootstrapOrganizationInitializer.EnsureCreatedAsync(db, new Pbkdf2PasswordHasher(),
+            "ops", "Operations", "admin@example.test", "UniqueBootstrapPassword123!");
+        Assert.Equal(2, await db.Organizations.CountAsync());
+        Assert.Equal(Roles.Admin, (await db.Users.SingleAsync()).Role);
+    }
+
+    [Fact]
     public async Task ExistingDemoWithKnownPasswordBlocksProductionStartup()
     {
         await using var db = CreateDatabase();

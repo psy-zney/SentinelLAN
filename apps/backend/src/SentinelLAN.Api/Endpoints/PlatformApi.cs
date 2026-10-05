@@ -61,6 +61,13 @@ public static class PlatformApi
             Results.Ok(await service.GetSystemStatusAsync(http.User.ToActorContext()!.Value, ct))
         ).RequireAuthorization(Roles.PlatformOwner);
 
+        group.MapGet("/host/status", async (HttpContext http, VpsHostMonitorService service, CancellationToken ct) =>
+        {
+            http.Response.Headers.CacheControl = "no-store";
+            return Results.Ok(await service.GetStatusAsync(http.User.ToActorContext()!.Value, ct));
+        }).RequireAuthorization(Roles.PlatformOwner).Produces<VpsHostStatusDto>()
+            .WithSummary("Read the hosting VPS resource, service, Docker and listening-port snapshot. Platform owner only.");
+
         // CLOUD VPS NODES (AGENTLESS SSH)
         group.MapGet("/vps-nodes", async (HttpContext http, VpsNodeService vpsService, CancellationToken ct) =>
         {

@@ -173,6 +173,16 @@ public sealed partial class SelfServiceService(ISelfServiceStore store, ISelfSer
         Confirm(input.Reason, input.Confirmed);
         var request = await ScopedRequestAsync(actor, id, ct);
         Require(States.Contains(input.Status ?? ""), 400, "Trạng thái không hợp lệ.");
+        if (request.Status == "Approved" && request.CommandId is null)
+            Require(input.Status == "Approved", 409, "Cần hoàn tất bước xác nhận riêng trước khi bắt đầu thao tác đã duyệt.");
+        Require(SupportRequestTransitions.CanChange(request.Kind, request.Status, input.Status!, actor.Role == Roles.Employee),
+            409, "Yêu cầu chưa thể chuyển sang trạng thái này. Hãy tải lại và thực hiện bước xử lý tiếp theo.");
+        if (input.Status is "Resolved" or "AwaitingEmployee" or "Closed" && request.CommandId is not null)
+        {
+            var (command, _) = await commands.GetAsync(actor.OrganizationId, request.CommandId.Value, ct);
+            Require(command?.Status == DeviceCommandStatus.Succeeded, 409,
+                "Máy chưa xác nhận thao tác hoàn tất. Vui lòng xem trạng thái lệnh trước khi đóng yêu cầu.");
+        }
         if (actor.Role == Roles.Employee)
         {
             Require(input.Status is "Closed" or "Open" && input.AssignedTechnicianId is null, 403, "Bạn chỉ có thể xác nhận đã dùng được hoặc báo vẫn còn lỗi.");
@@ -182,13 +192,8 @@ public sealed partial class SelfServiceService(ISelfServiceStore store, ISelfSer
         else
         {
             Require(IsIt(actor), 403, "Chỉ IT được cập nhật yêu cầu.");
-            Require(input.Status is not ("Approved" or "Rejected"), 400, "Vui lòng sử dụng thao tác phê duyệt riêng.");
-            if (input.Status is "Resolved" or "AwaitingEmployee" && request.CommandId is not null)
-            {
-                var (command, _) = await commands.GetAsync(actor.OrganizationId, request.CommandId.Value, ct);
-                Require(command?.Status == DeviceCommandStatus.Succeeded, 409,
-                    "Máy chưa xác nhận thao tác hoàn tất. Vui lòng xem trạng thái lệnh trước khi đóng yêu cầu.");
-            }
+            Require(input.Status is not ("Approved" or "Rejected") || input.Status == request.Status,
+                400, "Vui lòng sử dụng thao tác phê duyệt riêng.");
             if (input.AssignedTechnicianId is Guid technicianId)
             {
                 var technician = await directory.FindUserAsync(actor.OrganizationId, technicianId, ct);

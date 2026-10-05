@@ -2,9 +2,12 @@ bin/
 obj/
 publish/
 dist/
+.wix/
 .vs/
 .idea/
 .vscode/
+__pycache__/
+*.pyc
 node_modules/
 .next/
 coverage/

@@ -4,6 +4,20 @@ export const categoryNames: Record<SupportCategory, string> = { Network: "Không
 export const kindNames: Record<RequestKind, string> = { Incident: "Báo sự cố", InstallApp: "Cài phần mềm", Privilege: "Cài đặt cần IT duyệt", Panic: "Báo khẩn cấp", PauseAgent: "Tạm dừng SentinelLAN", UninstallAgent: "Gỡ SentinelLAN", Appointment: "Hẹn IT hỗ trợ" };
 export const statusNames: Record<SupportStatus, string> = { Open: "Đã tiếp nhận", InProgress: "IT đang xử lý", AwaitingEmployee: "Chờ bạn kiểm tra", Approved: "Đã được duyệt", Rejected: "Chưa được duyệt", Resolved: "Đã xử lý", Closed: "Đã dùng được" };
 
+export function itStatusOptions(request: Pick<SupportRequest, "kind" | "status" | "commandId" | "commandStatus">): SupportStatus[] {
+  const reopen = ["Incident", "Appointment", "Panic"].includes(request.kind);
+  const options: SupportStatus[] = [request.status];
+  if (request.status === "Approved" && !request.commandId) return options;
+  switch (request.status) {
+    case "Open": if (reopen) options.push("InProgress"); break;
+    case "InProgress": options.push("AwaitingEmployee", "Resolved"); break;
+    case "Approved": options.push("InProgress", "AwaitingEmployee", "Resolved"); break;
+    case "AwaitingEmployee": options.push("InProgress", "Resolved"); if (reopen) options.push("Open"); break;
+    case "Resolved": case "Closed": if (reopen) options.push("Open"); break;
+  }
+  return options.filter(value => !request.commandId || request.commandStatus === "Succeeded" || !["AwaitingEmployee", "Resolved"].includes(value));
+}
+
 export function executionLabel(request: Pick<SupportRequest, "commandId" | "commandStatus" | "kind" | "status">): string | null {
   if (!request.commandId) {
     if (request.kind === "Panic") return "Đã báo IT. Chưa có xác nhận máy được cô lập.";

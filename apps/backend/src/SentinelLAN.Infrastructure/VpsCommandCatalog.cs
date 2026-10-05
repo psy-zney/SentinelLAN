@@ -34,7 +34,7 @@ public static class VpsCommandCatalog
           else printf 'DOCKER_ERROR|Không đọc được danh sách container.\n'; fi
           ids=$(timeout 8s docker ps -aq --no-trunc 2>/dev/null) || true
           if [ -n "$ids" ]; then
-            if inspected=$(timeout 10s docker inspect --format '{"Id":{{json .Id}},"RestartPolicy":{{json .HostConfig.RestartPolicy.Name}},"Health":{{if .State.Health}}{{json .State.Health.Status}}{{else}}null{{end}}}' $ids 2>/dev/null); then
+            if inspected=$(timeout 10s docker inspect --format '{"Id":{{json .Id}},"RestartPolicy":{{json .HostConfig.RestartPolicy.Name}},"Health":{{with (index .State "Health")}}{{json .Status}}{{else}}null{{end}},"Ports":{{json .NetworkSettings.Ports}},"NetworkMode":{{json .HostConfig.NetworkMode}}}' $ids 2>/dev/null); then
               printf '%s\n' "$inspected" | sed 's/^/INSPECT|/'
             else printf 'DOCKER_ERROR|Không đọc được health/restart policy.\n'; fi
             if stats=$(timeout 10s docker stats --no-stream --no-trunc --format '{{json .}}' 2>/dev/null); then

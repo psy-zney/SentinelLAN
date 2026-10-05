@@ -82,13 +82,14 @@ describe("cookie session client", () => {
   it("uses the frozen admin mutation contracts and preserves nullable assignment", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ id: "u1", email: "employee@example.com", displayName: "Employee", role: "Employee", createdAt: "2026-01-01T00:00:00Z" }), { status: 201 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ token: "one-time", expiresAt: "2026-01-01T00:15:00Z" }), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: "one-time", connectionCode: "SL1.fixture", expiresAt: "2026-01-01T00:15:00Z" }), { status: 201 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ id: "d1", assignedUserId: null, isRevoked: false }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ id: "d1", assignedUserId: null, isRevoked: true }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     const client = new ApiClient();
     await client.createUser({ email: "employee@example.com", displayName: "Employee", role: "Employee", password: "long-password", reason: "Onboarding", confirmed: true });
-    await client.createEnrollmentToken({ validForMinutes: 15, reason: "Onboarding", confirmed: true });
+    const enrollment = await client.createEnrollmentToken({ validForMinutes: 15, reason: "Onboarding", confirmed: true });
+    expect(enrollment.connectionCode).toBe("SL1.fixture");
     await client.assignDevice("d1", null, "Return to pool", true);
     await client.revokeDevice("d1", "Retirement", true);
     expect(fetchMock.mock.calls.map(call => String(call[0]))).toEqual([

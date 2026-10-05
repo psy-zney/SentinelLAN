@@ -53,9 +53,10 @@ public static class WebApplicationExtensions
                     app.Configuration["SENTINELLAN_BOOTSTRAP_ADMIN_EMAIL"],
                     app.Configuration["SENTINELLAN_BOOTSTRAP_ADMIN_PASSWORD"]);
             }
-            await PlatformOwnerInitializer.EnsureCreatedAsync(db, passwordHasher,
-                app.Configuration["SENTINELLAN_PLATFORM_OWNER_EMAIL"], app.Configuration["SENTINELLAN_PLATFORM_OWNER_PASSWORD"],
-                app.Environment.IsDevelopment());
+            if (app.Services.GetRequiredService<DeploymentSettings>().PlatformEnabled)
+                await PlatformOwnerInitializer.EnsureCreatedAsync(db, passwordHasher,
+                    app.Configuration["SENTINELLAN_PLATFORM_OWNER_EMAIL"], app.Configuration["SENTINELLAN_PLATFORM_OWNER_PASSWORD"],
+                    app.Environment.IsDevelopment());
         }
     }
 }

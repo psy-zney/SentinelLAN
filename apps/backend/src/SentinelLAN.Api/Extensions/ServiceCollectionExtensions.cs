@@ -11,6 +11,8 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddSentinelLan(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
+        var deployment = DeploymentSettings.FromConfiguration(configuration);
+        services.AddSingleton(deployment);
         services.AddProblemDetails();
         services.AddOpenApi(options =>
         {
@@ -41,9 +43,13 @@ public static class ServiceCollectionExtensions
         var signingKey = configuration["SENTINELLAN_SIGNING_KEY"] ?? "development-signing-key-change-before-deployment";
         var accessTokenSigningKey = configuration["SENTINELLAN_ACCESS_TOKEN_SIGNING_KEY"] ?? "development-access-token-signing-key-change-before-deployment";
         var serverVaultKey = configuration["SENTINELLAN_SERVER_VAULT_KEY"] ?? "development-server-vault-key-32-bytes-long!";
+        var privateCommandKey = configuration["SENTINELLAN_COMMAND_PRIVATE_KEY_PEM"];
+        var useRsaCommands = !string.IsNullOrWhiteSpace(privateCommandKey);
+        if (!deployment.PlatformEnabled && !useRsaCommands)
+            throw new InvalidOperationException("SelfHost requires SENTINELLAN_COMMAND_PRIVATE_KEY_PEM and a company installer with the corresponding public key.");
         if (!environment.IsDevelopment())
         {
-            if (IsUnsafeProductionSecret(signingKey))
+            if (!useRsaCommands && IsUnsafeProductionSecret(signingKey))
                 throw new InvalidOperationException("SENTINELLAN_SIGNING_KEY must be a unique secret of at least 32 characters outside Development.");
             if (IsUnsafeProductionSecret(accessTokenSigningKey))
                 throw new InvalidOperationException("SENTINELLAN_ACCESS_TOKEN_SIGNING_KEY must be set outside Development.");
@@ -55,7 +61,14 @@ public static class ServiceCollectionExtensions
                 throw new InvalidOperationException("Command signing, access-token signing, and server vault keys must be distinct outside Development.");
         }
         if (accessTokenSigningKey.Length < 32) throw new InvalidOperationException("The access-token signing key must contain at least 32 characters.");
-        services.AddSingleton<ICommandSigner>(new HmacCommandSigner(signingKey));
+        if (useRsaCommands)
+        {
+            // Validate before startup succeeds; the container owns and disposes its singleton.
+            var keyId = configuration["SENTINELLAN_COMMAND_KEY_ID"] ?? "";
+            using (var validation = new RsaCommandSigner(privateCommandKey!, keyId)) { }
+            services.AddSingleton<ICommandSigner>(_ => new RsaCommandSigner(privateCommandKey!, keyId));
+        }
+        else services.AddSingleton<ICommandSigner>(new HmacCommandSigner(signingKey));
         services.AddSingleton<IAccessTokenService>(new AccessTokenService(accessTokenSigningKey));
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
         services.AddSingleton<IRefreshTokenProtector, RefreshTokenProtector>();
@@ -64,8 +77,11 @@ public static class ServiceCollectionExtensions
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentTenantProvider, HttpCurrentTenantProvider>();
         services.AddScoped<IAuthenticationStore, AuthenticationStore>();
-        services.AddScoped<IPlatformStore, PlatformStore>();
-        services.AddScoped<PlatformService>();
+        if (deployment.PlatformEnabled)
+        {
+            services.AddScoped<IPlatformStore, PlatformStore>();
+            services.AddScoped<PlatformService>();
+        }
         services.AddScoped<SentinelLAN.Application.AuthenticationService>();
         services.AddScoped<IManagementStore, ManagementStore>();
         services.AddSingleton<IEnrollmentSecretGenerator, EnrollmentSecretGenerator>();
@@ -78,10 +94,15 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAlertStore, AlertStore>();
         services.AddScoped<IAlertDeviceLookup, AlertDeviceLookup>();
         services.AddScoped<AlertService>();
-        services.AddSingleton<IVpsVaultService>(new VpsVaultService(serverVaultKey));
-        services.AddSingleton<IVpsSshService, SshNetVpsSshService>();
-        services.AddScoped<IVpsNodeStore, VpsNodeStore>();
-        services.AddScoped<VpsNodeService>();
+        if (deployment.PlatformEnabled)
+        {
+            services.AddSingleton<IVpsVaultService>(new VpsVaultService(serverVaultKey));
+            services.AddSingleton<IVpsSshService, SshNetVpsSshService>();
+            services.AddScoped<IVpsNodeStore, VpsNodeStore>();
+            services.AddScoped<VpsNodeService>();
+            services.AddSingleton<IVpsHostSnapshotReader>(new FileVpsHostSnapshotReader(configuration["SENTINELLAN_HOST_MONITOR_PATH"]));
+            services.AddScoped<VpsHostMonitorService>();
+        }
         services.AddScoped<IAssetStore, AssetStore>();
         services.AddScoped<IAssetManagementService, AssetManagementService>();
         services.AddSingleton<IActivationTokenGenerator, ActivationTokenGenerator>();

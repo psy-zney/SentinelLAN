@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useCurrentSession } from "@/components/app-shell";
 import { ApiClient, ApiError } from "@/lib/api-client";
-import { categoryNames, executionLabel, kindNames, statusNames, validateSupportImage } from "@/lib/self-service";
+import { categoryNames, executionLabel, itStatusOptions, kindNames, statusNames, validateSupportImage } from "@/lib/self-service";
 import { useSelfServiceQuery } from "@/hooks/use-self-service-query";
 import type { CatalogApp, CreateSupportRequest, RequestKind, SaveAnnouncement, SaveCatalogApp, SupportCategory, SupportDecision, SupportRequest, SupportStatus } from "@/types/self-service";
 
@@ -51,13 +51,13 @@ export function SupportCenterView({ initialRequestId = "" }: { initialRequestId?
     </section>}
     {error && <div role="alert" className="privacy"><p>{error}</p><button type="button" className="action" onClick={() => void refresh()}>Thử kết nối lại</button></div>}
     {notice && <p role="alert" className="privacy">{notice}</p>}
-    {!data && !error && <p role="status">Đang kết nối với IT…</p>}
+    {!data && !error && <p role="status">Đang tải yêu cầu…</p>}
     {data?.announcements.filter(item => item.isOutage).map(item => <section key={item.id} className="panel support-outage" aria-label="Sự cố chung">
       <h2>{item.title}</h2><p>{item.body}</p><p className="subtitle">{when(item.startsAt)} — {when(item.endsAt)}</p>
       {employee && <button type="button" className="action-outline" disabled={busy || item.affected} onClick={() => void mutate(() => api.markAnnouncementAffected(item.id))}>{item.affected ? "IT đã ghi nhận bạn bị ảnh hưởng" : "Tôi cũng bị ảnh hưởng"}</button>}
     </section>)}
     <nav className="support-tabs" aria-label="Nội dung hỗ trợ">
-      {([ ["requests", employee ? "Yêu cầu của tôi" : "Hàng đợi hỗ trợ"], ["catalog", "Phần mềm"], ["help", "Hướng dẫn nhanh"], ["notifications", `Thông báo (${data?.notifications.filter(item => !item.readAt).length ?? 0})`], ["announcements", "Thông báo công ty"] ] as const).map(([value, label]) => <button key={value} type="button" className={tab === value ? "action" : "action-outline"} aria-pressed={tab === value} onClick={() => setTab(value)}>{label}</button>)}
+      {([ ["requests", employee ? "Yêu cầu của tôi" : "Yêu cầu hỗ trợ"], ["catalog", "Phần mềm"], ["help", "Hướng dẫn nhanh"], ["notifications", `Thông báo (${data?.notifications.filter(item => !item.readAt).length ?? 0})`], ["announcements", "Thông báo công ty"] ] as const).map(([value, label]) => <button key={value} type="button" className={tab === value ? "action" : "action-outline"} aria-pressed={tab === value} onClick={() => setTab(value)}>{label}</button>)}
     </nav>
     {employee && <div className="support-inline-actions">
       <button type="button" className="action-danger" onClick={() => { setCategory("Suspicious"); setCreateKind("Panic"); setTab("requests"); }}>Tôi nghi máy bị nhiễm virus</button>
@@ -69,13 +69,13 @@ export function SupportCenterView({ initialRequestId = "" }: { initialRequestId?
       <div className="support-columns">
         <section className="panel" aria-label="Danh sách yêu cầu">
           <div className="panel-head"><h2>{employee ? "Yêu cầu của tôi" : "Yêu cầu từ nhân viên"}</h2><label>Hiển thị <select value={filter} onChange={event => setFilter(event.target.value)}><option value="active">Đang xử lý</option><option value="all">Tất cả</option></select></label></div>
-          {visibleRequests?.length === 0 && <p>Chưa có yêu cầu. Khi gặp vấn đề, chọn “Tôi gặp sự cố”.</p>}
+          {visibleRequests?.length === 0 && <p>Chưa có yêu cầu trong danh sách này.</p>}
           <ul className="support-request-list">{visibleRequests?.map(request => <li key={request.id}><button type="button" className="support-request" aria-pressed={selected === request.id} onClick={() => setSelected(request.id)}>
             <strong>{request.title}</strong><span>{statusNames[request.status]} · {kindNames[request.kind]}</span><small>{employee ? request.deviceName : `${request.userName} · ${request.deviceName}`} · {when(request.createdAt)}</small>
             {!request.canWork && <span className="badge badge-danger">Chưa thể tiếp tục làm việc</span>}
           </button></li>)}</ul>
         </section>
-        {selected ? <RequestDetail key={selected} id={selected} employee={employee} admin={admin} onChanged={() => void refresh()} /> : <section className="panel"><h2>Trao đổi với IT</h2><p>Chọn một yêu cầu để xem người phụ trách, gửi ảnh và nhận phản hồi.</p></section>}
+        {selected ? <RequestDetail key={selected} id={selected} employee={employee} admin={admin} onChanged={() => void refresh()} /> : <section className="panel"><h2>{employee ? "Trao đổi với IT" : "Chi tiết yêu cầu"}</h2><p>Chọn một yêu cầu để xem người phụ trách, gửi ảnh và nhận phản hồi.</p></section>}
       </div>
     </>}
     {tab === "catalog" && <section className="panel"><h2>Phần mềm công ty cho phép</h2><div className="support-catalog">{data?.catalog.map(app => <article key={app.id} className="support-card"><h3>{app.name}</h3><p>{app.description}</p><p className="subtitle">Phiên bản {app.version} · {app.isActive ? "Có thể yêu cầu" : "Đang tạm ngưng"}</p>{employee ? <div className="support-inline-actions"><button type="button" className="action" disabled={!app.isActive} onClick={() => { setRequestedAppId(app.id); setCreateKind("InstallApp"); setTab("requests"); }}>Yêu cầu cài đặt</button><button type="button" className="action-outline" disabled={!app.isActive} onClick={() => { setRequestedAppId(app.id); setCreateKind("Privilege"); setTab("requests"); }}>Cài đặt cần quyền IT</button></div> : admin && <CatalogEditor app={app} onSaved={() => void refresh()} />}</article>)}</div>{data?.catalog.length === 0 && <p>IT chưa công bố phần mềm. Bạn có thể báo nhu cầu qua yêu cầu hỗ trợ.</p>}{admin && <CatalogEditor onSaved={() => void refresh()} />}</section>}
@@ -139,6 +139,8 @@ function RequestDetail({ id, employee, admin, onChanged }: { id: string; employe
   }
   const request = data?.request;
   const execution = request ? executionLabel(request) : null;
+  const availableStatuses = request ? itStatusOptions(request) : [];
+  const selectedStatus = availableStatuses.includes(status) ? status : availableStatuses[0] ?? "Open";
   return <section className="panel" aria-label="Chi tiết yêu cầu">
     {error && <p role="alert">{error}</p>}{notice && <p role="alert">{notice}</p>}
     {!request ? <p role="status">Đang tải yêu cầu…</p> : <>
@@ -149,7 +151,7 @@ function RequestDetail({ id, employee, admin, onChanged }: { id: string; employe
       {request.commandMessage && <details><summary>Chi tiết kết quả IT cần kiểm tra</summary><p>{request.commandMessage}</p></details>}
       {employee && ["AwaitingEmployee", "Resolved", "Closed"].includes(request.status) && <div className="support-inline-actions">
         <button type="button" className="action" disabled={busy || request.status === "Closed"} onClick={() => void mutate(() => api.updateSupportRequest(id, { status: "Closed", reason: "Nhân viên xác nhận đã dùng được", confirmed: true }))}>Đã dùng được</button>
-        <button type="button" className="action-outline" disabled={busy} onClick={() => void mutate(() => api.updateSupportRequest(id, { status: "Open", reason: "Nhân viên báo vẫn còn lỗi", confirmed: true }))}>Vẫn còn lỗi — nhờ IT kiểm tra lại</button>
+        {["Incident", "Appointment", "Panic"].includes(request.kind) && <button type="button" className="action-outline" disabled={busy} onClick={() => void mutate(() => api.updateSupportRequest(id, { status: "Open", reason: "Nhân viên báo vẫn còn lỗi", confirmed: true }))}>Vẫn còn lỗi — nhờ IT kiểm tra lại</button>}
       </div>}
       {employee && request.status === "Approved" && !request.commandId && ["PauseAgent", "UninstallAgent"].includes(request.kind) && <form onSubmit={event => { event.preventDefault(); void mutate(async () => { await api.redeemMaintenanceCode(id, code, confirmed); setCode(""); setConfirmed(false); }); }} className="support-card">
         <label className="field">Mã xác nhận IT cấp<input inputMode="numeric" autoComplete="off" type="password" pattern="[0-9]{8}" maxLength={8} required value={code} onChange={event => setCode(event.target.value)} /></label>
@@ -158,10 +160,10 @@ function RequestDetail({ id, employee, admin, onChanged }: { id: string; employe
       </form>}
       {!employee && <div className="support-card"><h3>Xử lý yêu cầu</h3>
         <label className="field">Người phụ trách<select className="form-select" value={assignee} onChange={event => setAssignee(event.target.value)}><option value="">Giữ người phụ trách hiện tại</option>{data?.team.map(person => <option key={person.id} value={person.id}>{person.displayName}</option>)}</select></label>
-        <label className="field">Trạng thái<select className="form-select" value={status} onChange={event => setStatus(event.target.value as SupportStatus)}>{(["Open", "InProgress", "AwaitingEmployee", "Resolved"] as const).map(value => <option key={value} value={value}>{statusNames[value]}</option>)}</select></label>
+        <label className="field">Trạng thái<select className="form-select" value={selectedStatus} onChange={event => setStatus(event.target.value as SupportStatus)}>{availableStatuses.map(value => <option key={value} value={value}>{statusNames[value]}</option>)}</select></label>
         <label className="field">Lý do / nội dung xử lý<textarea required className="form-input" rows={2} maxLength={1000} value={reason} onChange={event => setReason(event.target.value)} /></label>
         <label><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} /> Tôi xác nhận thao tác cho yêu cầu và máy này.</label>
-        <div className="support-inline-actions"><button type="button" className="action" disabled={busy || !confirmed || reason.trim().length < 3} onClick={() => void mutate(() => api.updateSupportRequest(id, { status, assignedTechnicianId: assignee || undefined, reason, confirmed }))}>Cập nhật xử lý</button>
+        <div className="support-inline-actions"><button type="button" className="action" disabled={busy || !confirmed || reason.trim().length < 3} onClick={() => void mutate(() => api.updateSupportRequest(id, { status: selectedStatus, assignedTechnicianId: assignee || undefined, reason, confirmed }))}>Cập nhật xử lý</button>
           {admin && request.status === "Open" && ["InstallApp", "Privilege", "PauseAgent", "UninstallAgent"].includes(request.kind) && <>
             <button type="button" className="action" disabled={busy || !confirmed || reason.trim().length < 3} onClick={() => void mutate(async () => { setDecision(await api.decideSupportRequest(id, { approved: true, reason, confirmed })); })}>Duyệt yêu cầu</button>
             <button type="button" className="action-danger" disabled={busy || !confirmed || reason.trim().length < 3} onClick={() => void mutate(() => api.decideSupportRequest(id, { approved: false, reason, confirmed }))}>Từ chối</button>

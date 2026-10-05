@@ -86,6 +86,9 @@ public sealed class DeviceLifecycleIntegrationTests(SentinelApiFactory factory) 
         var response = await client.PostAsJsonAsync("/api/v1/agent/enroll", request);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
+        using var problem = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("TokenExpired", problem.RootElement.GetProperty("code").GetString());
+
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<SentinelDbContext>();
 

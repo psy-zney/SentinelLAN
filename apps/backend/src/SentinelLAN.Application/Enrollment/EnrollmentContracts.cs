@@ -2,7 +2,7 @@ using SentinelLAN.Domain;
 
 namespace SentinelLAN.Application;
 
-public record EnrollRequest(string Token, string DeviceName, string OsVersion, string AgentVersion);
+public record EnrollRequest(string Token, string DeviceName, string OsVersion, string AgentVersion, string? DeviceSecret = null);
 
 public record EnrollResponse(Guid DeviceId, string DeviceSecret);
 
@@ -10,4 +10,4 @@ public record HeartbeatRequest(string IdempotencyKey, double CpuPercent, double 
 
 public record EnrollmentTokenRequest(int ValidForMinutes, string Reason, bool Confirmed);
 
-public record EnrollmentTokenResponse(string Token, DateTimeOffset ExpiresAt);
+public record EnrollmentTokenResponse(string Token, DateTimeOffset ExpiresAt, string? ConnectionCode = null);

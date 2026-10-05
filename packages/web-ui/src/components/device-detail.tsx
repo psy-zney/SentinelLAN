@@ -326,7 +326,7 @@ export function DeviceDetail({ id }: { id: string }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
         <div>
           <p className="subtitle" style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "var(--ink)" }}>
-            💻 {asset.name} &nbsp;·&nbsp;
+            {asset.name} &nbsp;·&nbsp;
             <span style={{ color: "var(--muted)", fontWeight: 400 }}>{asset.model ?? asset.osVersion}</span>
           </p>
           <p className="subtitle" style={{ margin: "4px 0 0" }}>
@@ -341,7 +341,7 @@ export function DeviceDetail({ id }: { id: string }) {
               className="action-outline"
               onClick={() => openEditModal(asset)}
             >
-              ✏️ {t("editAssetProfile")}
+              ✏{t("editAssetProfile")}
             </button>
           )}
           <button
@@ -350,7 +350,7 @@ export function DeviceDetail({ id }: { id: string }) {
             style={{ color: "var(--warn)" }}
             onClick={() => { incidentIdempotencyKey.current = null; setReportIncOpen(true); }}
           >
-            🚨 {t("reportIncident")}
+            {t("reportIncident")}
           </button>
           {isTechnician && (
             <button
@@ -358,7 +358,7 @@ export function DeviceDetail({ id }: { id: string }) {
               className="action"
               onClick={() => setCreateWoOpen(true)}
             >
-              🔧 {t("createWorkOrder")}
+              {t("createWorkOrder")}
             </button>
           )}
         </div>
@@ -373,7 +373,7 @@ export function DeviceDetail({ id }: { id: string }) {
           className={`tab-btn ${activeTab === "overview" ? "active" : ""}`}
           onClick={() => setActiveTab("overview")}
         >
-          📊 {t("tabOverview")}
+          {t("tabOverview")}
         </button>
         <button
           type="button"
@@ -387,14 +387,14 @@ export function DeviceDetail({ id }: { id: string }) {
           className={`tab-btn ${activeTab === "cmms" ? "active" : ""}`}
           onClick={() => setActiveTab("cmms")}
         >
-          🛠️ {t("tabCmms")} ({workOrders.length} WO / {incidents.length} {lang === "vi" ? "Sự cố" : "Incidents"})
+          {t("tabCmms")} ({workOrders.length} WO / {incidents.length} {lang === "vi" ? "Sự cố" : "Incidents"})
         </button>
         <button
           type="button"
           className={`tab-btn ${activeTab === "tco" ? "active" : ""}`}
           onClick={() => setActiveTab("tco")}
         >
-          💰 {t("tabTco")}
+          {t("tabTco")}
         </button>
       </div>
 
@@ -442,7 +442,7 @@ export function DeviceDetail({ id }: { id: string }) {
           {/* Health Recommendations Alert if score < 85 */}
           {health.recommendations.length > 0 && health.score < 85 && (
             <div className="privacy" style={{ marginBottom: 20, borderColor: health.score < 60 ? "var(--danger)" : "var(--warn)" }}>
-              <strong>⚠️ {lang === "vi" ? "Khuyến nghị cải thiện sức khỏe thiết bị:" : "Health Improvement Insights:"}</strong>
+              <strong>{lang === "vi" ? "Khuyến nghị cải thiện sức khỏe thiết bị:" : "Health Improvement Insights:"}</strong>
               <ul style={{ margin: "6px 0 0 18px", padding: 0, fontSize: ".88rem" }}>
                 {health.recommendations.map((rec, idx) => (
                   <li key={idx}>{rec}</li>
@@ -455,7 +455,7 @@ export function DeviceDetail({ id }: { id: string }) {
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20, marginBottom: 24 }}>
             <div className="panel">
               <div className="panel-head">
-                <h2>📋 {t("assetInfo")}</h2>
+                <h2>{t("assetInfo")}</h2>
               </div>
               <section className="device-facts" style={{ margin: 0 }}>
                 <div>
@@ -522,7 +522,7 @@ export function DeviceDetail({ id }: { id: string }) {
             {/* QR Code Tag Card */}
             <div className="panel" style={{ textAlign: "center" }}>
               <div className="panel-head" style={{ justifyContent: "space-between", alignItems: "center" }}>
-                <h2 style={{ margin: 0 }}>📷 {t("qrCode")}</h2>
+                <h2 style={{ margin: 0 }}>{t("qrCode")}</h2>
                 {hasActiveQr ? (
                   <span className="badge badge-success">{t("statusActive")}</span>
                 ) : (
@@ -568,7 +568,7 @@ export function DeviceDetail({ id }: { id: string }) {
                       onClick={() => window.print()}
                       disabled={!qrSvg}
                     >
-                      🖨️ {t("printQr")}
+                      {t("printQr")}
                     </button>
 
                     {isTechnician && (
@@ -579,7 +579,7 @@ export function DeviceDetail({ id }: { id: string }) {
                           style={{ flex: 1, fontSize: ".78rem" }}
                           onClick={() => { setRotateModalOpen(true); setRotateReason(""); }}
                         >
-                          🔄 {t("rotateQr")}
+                          {t("rotateQr")}
                         </button>
                         <button
                           type="button"
@@ -605,7 +605,7 @@ export function DeviceDetail({ id }: { id: string }) {
                       style={{ width: "100%", fontSize: ".82rem" }}
                       onClick={() => { setRotateModalOpen(true); setRotateReason(""); }}
                     >
-                      ➕ {t("generateQr")}
+                      {t("generateQr")}
                     </button>
                   )}
                 </div>
@@ -650,7 +650,7 @@ export function DeviceDetail({ id }: { id: string }) {
                   checked={assignmentConfirmed}
                   disabled={asset.isRevoked || sending}
                   onChange={(e) => setAssignmentConfirmed(e.target.checked)}
-                /> {lang === "vi" ? "Tôi xác nhận thay đổi phân công và chịu trách nhiệm kiểm toán." : "I confirm this assignment change."}
+                /> {lang === "vi" ? "Tôi xác nhận giao thiết bị cho người đã chọn." : "I confirm this assignment change."}
               </label>
               <div className="btn-row">
                 <button
@@ -673,7 +673,7 @@ export function DeviceDetail({ id }: { id: string }) {
           {isTechnician && !asset.isRevoked && (
             <div className="panel" style={{ marginBottom: 24 }}>
               <div className="panel-head"><h2>{lang === "vi" ? "Thao tác an toàn trên thiết bị" : "Safe operations"}</h2></div>
-              <p className="subtitle">{lang === "vi" ? "Lệnh được ký số mật mã với lý do bắt buộc và kiểm toán bất biến." : "Commands require cryptographic signatures and audit accountability."}</p>
+              <p className="subtitle">{lang === "vi" ? "Chọn thao tác và ghi lý do. Hệ thống sẽ lưu người thực hiện và kết quả." : "Commands require cryptographic signatures and audit accountability."}</p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 14 }}>
                 <div className="form-group">
                   <label>{lang === "vi" ? "Loại lệnh" : "Command"}</label>
@@ -685,7 +685,7 @@ export function DeviceDetail({ id }: { id: string }) {
                     <option value="SimulateLock">{lang === "vi" ? "Mô phỏng khóa màn hình (SimulateLock)" : "Simulate Lock"}</option>
                     <option value="SimulateNetworkIsolation">{lang === "vi" ? "Mô phỏng cách ly mạng (SimulateNetworkIsolation)" : "Simulate Network Isolation"}</option>
                     <option value="LockWorkstation">{lang === "vi" ? "Khóa Windows thật (máy lab được phép)" : "Lock Windows (authorized lab)"}</option>
-                    <option value="CollectTelemetryNow">{lang === "vi" ? "Đo và gửi telemetry ngay" : "Measure and Send Telemetry Now"}</option>
+                    <option value="CollectTelemetryNow">{lang === "vi" ? "Cập nhật thông số máy" : "Measure and Send Telemetry Now"}</option>
                     <option value="RefreshPolicy">{lang === "vi" ? "Tải và áp chính sách Windows" : "Fetch and Apply Windows Policy"}</option>
                   </select>
                 </div>
@@ -717,7 +717,7 @@ export function DeviceDetail({ id }: { id: string }) {
                     () => { setCommandReason(""); setCommandConfirmed(false); }
                   )}
                 >
-                  {sending ? t("loading") : (lang === "vi" ? "Ký số & Gửi lệnh" : "Sign & Dispatch")}
+                  {sending ? t("loading") : (lang === "vi" ? "Gửi thao tác" : "Sign & Dispatch")}
                 </button>
               </div>
             </div>
@@ -784,12 +784,12 @@ export function DeviceDetail({ id }: { id: string }) {
               <div style={{ position: "absolute", left: 11, top: 8, bottom: 8, width: 2, background: "#dce6e2" }} />
 
               {timeline.map((item) => {
-                const icon = item.eventType === "Enrolled" ? "🚀" :
-                  item.eventType === "Purchased" ? "🛒" :
-                  item.eventType.includes("Incident") ? "🚨" :
-                  item.eventType.includes("WorkOrder") ? "🔧" :
-                  item.eventType === "Command" ? "⚡" :
-                  item.eventType.includes("Loan") ? "🤝" : "📌";
+                const icon = item.eventType === "Enrolled" ? "" :
+                  item.eventType === "Purchased" ? "" :
+                  item.eventType.includes("Incident") ? "" :
+                  item.eventType.includes("WorkOrder") ? "" :
+                  item.eventType === "Command" ? "" :
+                  item.eventType.includes("Loan") ? "" : "";
 
                 const badgeBg = item.severity === "critical" ? "#fee2e2" :
                   item.severity === "warning" ? "#fef3c7" :
@@ -827,7 +827,7 @@ export function DeviceDetail({ id }: { id: string }) {
                       </p>
                       {item.actor && (
                         <div style={{ marginTop: 6, fontSize: ".75rem", color: "var(--accent)" }}>
-                          👤 {lang === "vi" ? "Thực hiện bởi:" : "By:"} {item.actor}
+                          {lang === "vi" ? "Thực hiện bởi:" : "By:"} {item.actor}
                         </div>
                       )}
                     </div>
@@ -847,7 +847,7 @@ export function DeviceDetail({ id }: { id: string }) {
           {/* Work Orders List */}
           <div className="panel">
             <div className="panel-head">
-              <h2>🛠️ {lang === "vi" ? "Phiếu Bảo trì & Sửa chữa (Work Orders)" : "Maintenance Work Orders"}</h2>
+              <h2>{lang === "vi" ? "Phiếu Bảo trì & Sửa chữa (Work Orders)" : "Maintenance Work Orders"}</h2>
               {isTechnician && (
                 <button
                   type="button"
@@ -922,7 +922,7 @@ export function DeviceDetail({ id }: { id: string }) {
           {/* Incidents List */}
           <div className="panel">
             <div className="panel-head">
-              <h2>🚨 {lang === "vi" ? "Danh sách Báo hỏng & Sự cố (Incidents)" : "Reported Incidents"}</h2>
+              <h2>{lang === "vi" ? "Danh sách Báo hỏng & Sự cố (Incidents)" : "Reported Incidents"}</h2>
               <button
                 type="button"
                 className="action-outline"
@@ -998,7 +998,7 @@ export function DeviceDetail({ id }: { id: string }) {
         <div style={{ display: "grid", gap: 20 }}>
           <div className="panel">
             <div className="panel-head">
-              <h2>💰 {t("tcoAnalysis")}</h2>
+              <h2>{t("tcoAnalysis")}</h2>
               <span className={`badge ${tco.recommendation === "Keep & Maintain" ? "badge-success" : tco.recommendation === "Evaluate Replacement" ? "badge-warn" : "badge-danger"}`} style={{ fontSize: ".88rem", padding: "6px 14px" }}>
                 {tco.recommendation}
               </span>
@@ -1072,7 +1072,7 @@ export function DeviceDetail({ id }: { id: string }) {
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal" style={{ maxWidth: 640 }}>
             <div className="modal-header">
-              <h3>✏️ {t("editAssetProfile")}: {asset.name}</h3>
+              <h3>✏{t("editAssetProfile")}: {asset.name}</h3>
               <button className="modal-close" onClick={() => setEditProfileOpen(false)}>×</button>
             </div>
             <form onSubmit={handleSaveProfile}>
@@ -1147,7 +1147,7 @@ export function DeviceDetail({ id }: { id: string }) {
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal">
             <div className="modal-header">
-              <h3>🚨 {t("reportIncident")}: {asset.name}</h3>
+              <h3>{t("reportIncident")}: {asset.name}</h3>
               <button className="modal-close" onClick={() => setReportIncOpen(false)}>×</button>
             </div>
             <form onSubmit={handleCreateIncident}>
@@ -1184,7 +1184,7 @@ export function DeviceDetail({ id }: { id: string }) {
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal">
             <div className="modal-header">
-              <h3>🔧 {t("createWorkOrder")}: {asset.name}</h3>
+              <h3>{t("createWorkOrder")}: {asset.name}</h3>
               <button className="modal-close" onClick={() => setCreateWoOpen(false)}>×</button>
             </div>
             <form onSubmit={handleCreateWorkOrder}>
@@ -1269,7 +1269,7 @@ export function DeviceDetail({ id }: { id: string }) {
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal">
             <div className="modal-header">
-              <h3>🔄 {hasActiveQr ? t("rotateQr") : t("generateQr")}</h3>
+              <h3>{hasActiveQr ? t("rotateQr") : t("generateQr")}</h3>
               <button className="modal-close" onClick={() => setRotateModalOpen(false)}>×</button>
             </div>
             <form onSubmit={handleRotateQr}>

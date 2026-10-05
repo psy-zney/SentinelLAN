@@ -64,6 +64,7 @@ var maintenanceStore = builder.Environment.IsProduction()
     : new InMemoryAgentMaintenanceStateStore();
 builder.Services.AddSingleton(maintenanceStore);
 builder.Services.AddSingleton<IDeviceIdentityStore>(identityStore);
+builder.Services.AddSingleton<IAgentEnrollmentProgress>(new FileAgentEnrollmentProgress(Path.Combine(dataDir, "enrollment-status.json")));
 builder.Services.AddSingleton<ICommandNonceStore>(builder.Environment.IsProduction()
     ? new ProtectedCommandNonceStore(Path.Combine(dataDir, "command-nonces.dat"), builder.Configuration["SENTINELLAN_AGENT_STORE_KEY"])
     : new InMemoryCommandNonceStore());
@@ -83,8 +84,16 @@ builder.Services.AddSingleton<ICommandExecutor>(new WindowsCommandExecutor(execu
     new AgentMaintenanceExecutor(executionOptions, maintenanceStore, msiPlatform)));
 builder.Services.AddSingleton<IAgentPolicyApplier>(new WindowsPolicyApplier(executionOptions));
 builder.Services.AddSingleton<CommandVerifier>();
-builder.Services.AddSingleton<ICommandSignatureVerifier>(new HmacCommandVerifier(builder.Configuration["SENTINELLAN_SIGNING_KEY"]));
-builder.Services.AddSingleton<IAgentApi>(new AgentApi(new HttpClient { BaseAddress = apiUrl, Timeout = TimeSpan.FromSeconds(20) }, Environment.MachineName));
+var commandPublicKey = builder.Configuration["SENTINELLAN_COMMAND_PUBLIC_KEY"];
+builder.Services.AddSingleton<ICommandSignatureVerifier>(string.IsNullOrWhiteSpace(commandPublicKey)
+    ? new HmacCommandVerifier(builder.Configuration["SENTINELLAN_SIGNING_KEY"])
+    : new RsaCommandVerifier(commandPublicKey, builder.Configuration["SENTINELLAN_COMMAND_KEY_ID"] ?? ""));
+var enrollmentAttemptPath = Path.Combine(dataDir, "enrollment-attempt.dat");
+var enrollmentAttempts = new FileEnrollmentAttemptStore(enrollmentAttemptPath,
+    builder.Environment.IsProduction()
+        ? new ProtectedDeviceIdentityStore(enrollmentAttemptPath, builder.Configuration["SENTINELLAN_AGENT_STORE_KEY"])
+        : new DevelopmentIdentityStore(enrollmentAttemptPath));
+builder.Services.AddSingleton<IAgentApi>(new AgentApi(new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { BaseAddress = apiUrl, Timeout = TimeSpan.FromSeconds(20) }, Environment.MachineName, enrollmentAttempts));
 builder.Services.AddHostedService<Worker>();
 if (OperatingSystem.IsWindows()) builder.Services.AddHostedService<MaintenanceBridgeWorker>();
 await builder.Build().RunAsync();

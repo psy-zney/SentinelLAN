@@ -1,0 +1,7 @@
+# Compose >= 2.24.4. Add after docker-compose.prod.yaml on a VPS with existing Nginx.
+services:
+  nginx:
+    ports: !override
+      - "127.0.0.1:${HOST_PROXY_PORT:-3180}:80"
+    volumes: !override
+      - ./nginx.internal.conf:/etc/nginx/nginx.conf:ro

@@ -1,6 +1,6 @@
 # Tải và cài SentinelLAN Agent
 
-Chỉ cài trên thiết bị được tổ chức cho phép. Chuẩn bị địa chỉ HTTPS của hệ thống và mã đăng ký một lần do Admin công ty cấp. Không chia sẻ mã trong ảnh, ticket hoặc lịch sử dòng lệnh.
+Chỉ cài trên thiết bị được tổ chức cho phép. Nhận **mã kết nối** từ IT/Admin công ty; mã chứa sẵn địa chỉ máy chủ, chỉ đăng ký được một máy và có thời hạn. Đã dùng thì không thể dùng lại dù còn thời gian. Không chia sẻ mã trong ảnh, ticket hoặc lịch sử dòng lệnh.
 
 ## Lấy gói cài
 
@@ -8,10 +8,10 @@ Mở [GitHub Releases](https://github.com/psy-zney/SentinelLAN/releases) và ch�
 
 | Hệ điều hành | Tệp từ cùng bản phát hành |
 |---|---|
-| Windows x64 | `SentinelLAN.Agent.msi`, `configure-windows-agent.ps1`, `SHA256SUMS.txt` |
+| Windows x64 | `SentinelLAN.Setup.exe` hoặc `SentinelLAN.Agent.msi`, `SHA256SUMS.txt` |
 | Linux x64 với systemd | `SentinelLAN.Agent`, `install-linux-agent.sh`, `sentinellan-agent.service`, `SHA256SUMS.txt` |
 
-`SentinelLAN.Agent.exe` là binary Windows cho IT triển khai thủ công, không phải trình cài đặt MSI. Điện thoại không cài các gói Agent này.
+`SentinelLAN.Setup.exe` là bộ cài có giao diện, chứa MSI và thành phần cấu hình. MSI cũng chứa cửa sổ kết nối và lối tắt trong Start menu. `SentinelLAN.Agent.exe` vẫn là binary dịch vụ cho IT triển khai thủ công. Bản phát hành cũ chưa có Setup.exe vẫn dùng script cấu hình của chính bản đó. Điện thoại không cài các gói Agent này.
 
 ## Kiểm tra tệp
 
@@ -21,7 +21,7 @@ Windows PowerShell:
 
 ```powershell
 Get-FileHash .\SentinelLAN.Agent.msi -Algorithm SHA256
-Get-FileHash .\configure-windows-agent.ps1 -Algorithm SHA256
+Get-FileHash .\SentinelLAN.Setup.exe -Algorithm SHA256
 ```
 
 Linux, trong thư mục vừa tải:
@@ -32,16 +32,13 @@ sha256sum -c SHA256SUMS.txt --ignore-missing
 
 ## Windows
 
-1. Mở MSI và hoàn tất cài đặt với quyền quản trị.
-2. Mở PowerShell bằng **Run as administrator**, chuyển tới thư mục chứa script.
-3. Thay địa chỉ ví dụ bằng địa chỉ IT cấp rồi chạy:
+1. Mở `SentinelLAN.Setup.exe`, cho phép cài đặt bằng tài khoản quản trị Windows của IT.
+2. Dán **mã kết nối** vào ô duy nhất, bấm **Cài đặt và kết nối**. Không cần nhập địa chỉ máy chủ hoặc nhớ lệnh.
+3. Chờ kiểm tra mạng, cài dịch vụ, đăng ký thiết bị và gửi trạng thái đầu tiên. Chỉ khi hoàn tất mới hiện **Kết nối thành công**.
 
-```powershell
-.\configure-windows-agent.ps1 -ServerUrl 'https://sentinel.example.com'
-Get-Service SentinelLANAgent
-```
+Nếu dùng MSI, hoàn tất bộ cài rồi nhập mã trong cửa sổ kết nối tự mở. Có thể mở lại **SentinelLAN - Ket noi thiet bi** từ Start menu. Không đưa mã vào thuộc tính MSI hay tham số dòng lệnh. Thành phần cấu hình đã nằm trong bộ cài; script riêng chỉ dành cho IT khi cần cấu hình nâng cao.
 
-Script hỏi mã đăng ký qua prompt ẩn và cấu hình dịch vụ tự khởi động. Không tắt chính sách bảo vệ máy để chạy script; nếu bị chặn, nhờ IT hỗ trợ.
+Máy đã đăng ký không cần mã mới khi bật lại. Bộ cài không tự ghi đè định danh đã có. Khi báo mã đã dùng/hết hạn, nhờ IT cấp mã mới. Nếu mất kết nối sau bước đăng ký, nhờ IT kiểm tra máy đã xuất hiện chưa trước khi thử lại: mã có thể đã được dùng thành công ở máy chủ.
 
 ## Linux
 
@@ -56,7 +53,7 @@ Installer hỏi mã qua prompt ẩn, tạo tài khoản dịch vụ và cấu h�
 
 ## Xác nhận và xử lý lỗi
 
-Nhờ IT kiểm tra máy xuất hiện và có heartbeat mới, sau đó Admin gán máy cho đúng nhân viên. Dịch vụ đang chạy chưa đủ chứng minh đã kết nối. Thao tác cần phiên desktop/quyền bổ sung phải được IT cấu hình riêng.
+Nhờ IT kiểm tra máy xuất hiện và có heartbeat mới, sau đó Admin gán máy cho đúng nhân viên. Thao tác cần phiên desktop/quyền bổ sung phải được IT cấu hình riêng.
 
 Nếu đăng ký thất bại, kiểm tra mạng, HTTPS, thời gian máy và hạn mã. Mã đã dùng/hết hạn cần Admin cấp lại; không gửi mã hoặc cấu hình bí mật khi báo lỗi. Dữ liệu hiển thị có thể cũ khi mất mạng; kết nối lỗi không có nghĩa máy đã hỏng.
 

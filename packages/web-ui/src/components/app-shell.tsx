@@ -2,16 +2,18 @@
 
 import Link from "next/link";
 import type { Route } from "next";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
 import { LogoutButton } from "@/components/logout-button";
+import { UiIcon, type IconName } from "@/components/ui-icon";
 import { ApiClient } from "@/lib/api-client";
 import { homePathForRole } from "@/lib/auth-routing";
 import { useTranslation, type TranslationKey } from "@/lib/i18n";
 import type { CurrentSession, Role } from "@/types/api";
-import { portalAllows, portalHomeUrl, portalTitle } from "@/lib/portal";
+import { portalAllows, portalHomeUrl } from "@/lib/portal";
 
 const operatorRoles: readonly Role[] = ["Admin", "Technician"];
+const navIcons: Record<string, IconName> = { "/dashboard": "overview", "/support": "support", "/devices": "device", "/my-device": "device", "/scan": "qr", "/policies": "settings", "/commands": "command", "/alerts": "alert", "/audit-logs": "history", "/users": "users" };
 
 const SessionContext = createContext<CurrentSession | null>(null);
 
@@ -62,7 +64,6 @@ const sectionMetaMap: Record<string, { titleKey: TranslationKey; eyebrowKey: Tra
 
 export function AppShell({
   title,
-  eyebrow = "Operations",
   subtitleKey,
   allowedRoles = operatorRoles,
   children
@@ -74,6 +75,7 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { lang, setLang, t } = useTranslation();
   const [session, setSession] = useState<CurrentSession | null>(null);
   const allowedRolesKey = allowedRoles.join("|");
@@ -110,36 +112,37 @@ export function AppShell({
   }
 
   const links = linkDefs[session.role];
+  const currentPath = pathname.replace(/^\/(company|employee)(?=\/|$)/, "");
+  const roleLabel = session.role === "Admin" ? (lang === "vi" ? "Quản trị viên" : "Administrator") : session.role === "Technician" ? (lang === "vi" ? "Nhân viên IT" : "IT staff") : (lang === "vi" ? "Nhân viên" : "Employee");
+  const areaLabel = session.role === "Employee" ? (lang === "vi" ? "Dành cho nhân viên" : "Employee workspace") : (lang === "vi" ? "Quản trị công ty" : "Company management");
 
   return (
     <div className="shell">
       <aside className="sidebar">
         <Link className="brand" href={homePathForRole(session.role)}>
           <span className="brand-mark">S</span>
-          <span>{portalTitle}</span>
+          <span>SentinelLAN</span>
         </Link>
-        <nav className="nav" aria-label="Primary">
+        <p className="brand-caption">{areaLabel}</p>
+        <nav className="nav" aria-label={lang === "vi" ? "Menu chính" : "Main navigation"}>
           {links.map(([key, href]) => (
-            <Link key={href} href={href as Route}>
+            <Link key={href} href={href as Route} aria-current={currentPath === href || currentPath.startsWith(`${href}/`) ? "page" : undefined}>
+              <UiIcon name={navIcons[href]} />
               {t(key)}
             </Link>
           ))}
         </nav>
-        <div className="sidebar-note">
-          {lang === "vi"
-            ? "Hệ thống quản trị thiết bị đầu cuối an toàn. Chỉ thu thập dữ liệu kỹ thuật tối thiểu, không giám sát xâm phạm quyền riêng tư."
-            : "Authorized endpoint management only. Technical telemetry is minimal and privacy-first by design."}
+        <div className="sidebar-account">
+          <span className="avatar" aria-hidden="true">{session.displayName.slice(0, 1).toUpperCase()}</span>
+          <div><strong>{session.displayName}</strong><small>{roleLabel}</small></div>
         </div>
       </aside>
       <SessionContext.Provider value={session}>
       <main className="content">
         <header className="topbar">
           <div>
-            <p className="eyebrow">{sectionMetaMap[title] ? t(sectionMetaMap[title].eyebrowKey) : eyebrow}</p>
+            <p className="eyebrow">{areaLabel}</p>
             <h1>{sectionMetaMap[title] ? t(sectionMetaMap[title].titleKey) : title}</h1>
-            <p className="session-name">
-              {session.displayName} · {session.role}
-            </p>
           </div>
           <div className="topbar-actions">
             <button
@@ -147,15 +150,14 @@ export function AppShell({
               className="lang-btn"
               onClick={() => setLang(lang === "vi" ? "en" : "vi")}
               title={lang === "vi" ? "Chuyển sang tiếng Anh" : "Switch to Vietnamese"}
-              aria-label="Toggle language"
+              aria-label={lang === "vi" ? "Chuyển sang tiếng Anh" : "Switch to Vietnamese"}
             >
-              🌐 <span>{lang === "vi" ? "Tiếng Việt" : "English"}</span>
-              <span className="active-tag">{lang.toUpperCase()}</span>
+              {lang === "vi" ? "EN" : "VI"}
             </button>
             <LogoutButton />
           </div>
         </header>
-        {subtitleKey ? <p className="subtitle" style={{ marginBottom: 24 }}>{t(subtitleKey)}</p> : null}
+        {subtitleKey ? <p className="subtitle page-description">{t(subtitleKey)}</p> : null}
         {children}
       </main>
       </SessionContext.Provider>

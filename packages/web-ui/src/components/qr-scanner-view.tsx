@@ -242,7 +242,7 @@ export function QrScannerView() {
       <div className="panel" style={{ padding: 24, boxShadow: "0 15px 35px rgba(20, 55, 50, .08)" }}>
         <div className="panel-head" style={{ marginBottom: 12 }}>
           <div>
-            <h1 style={{ fontSize: "1.35rem", margin: 0 }}>📷 {t("scanTitle")}</h1>
+            <h1 style={{ fontSize: "1.35rem", margin: 0 }}>{t("scanTitle")}</h1>
             <p className="subtitle" style={{ fontSize: ".82rem", margin: "4px 0 0" }}>{t("scanSubtitle")}</p>
           </div>
         </div>
@@ -303,7 +303,7 @@ export function QrScannerView() {
           {/* Idle / Permission States */}
           {scannerState === "ready" && (
             <div style={{ textAlign: "center", color: "#e0edea", padding: 20 }}>
-              <div style={{ fontSize: "3rem", marginBottom: 10 }}>📷</div>
+              <div style={{ fontSize: "3rem", marginBottom: 10 }}></div>
               <strong style={{ fontSize: "1.05rem" }}>{t("cameraReady")}</strong>
               <p style={{ fontSize: ".82rem", color: "#a0b8b2", maxWidth: 280, margin: "6px auto 16px" }}>
                 {lang === "vi" ? "Nhấn nút dưới để bật camera quét tem mã QR dán trên thân máy." : "Click below to start scanning computer asset QR tags."}
@@ -313,7 +313,7 @@ export function QrScannerView() {
                 className="action"
                 onClick={() => startCamera(facingMode)}
               >
-                ▶ {t("startCamera")}
+                {t("startCamera")}
               </button>
             </div>
           )}
@@ -340,7 +340,7 @@ export function QrScannerView() {
 
           {scannerState === "error" && (
             <div style={{ textAlign: "center", color: "#ffffff", padding: 20, maxWidth: 360 }}>
-              <div style={{ fontSize: "2.5rem", marginBottom: 8 }}>⚠️</div>
+              <div style={{ fontSize: "2.5rem", marginBottom: 8 }}></div>
               <strong style={{ fontSize: ".95rem", color: "#ff8c82" }}>{lang === "vi" ? "Camera chưa khả dụng" : "Camera unavailable"}</strong>
               <p style={{ fontSize: ".78rem", color: "#cad9d4", marginTop: 8 }}>{errorMessage}</p>
               <button
@@ -349,7 +349,7 @@ export function QrScannerView() {
                 style={{ color: "#ffffff", borderColor: "#cad9d4", marginTop: 12 }}
                 onClick={() => startCamera(facingMode)}
               >
-                🔄 {t("retry")}
+                {t("retry")}
               </button>
             </div>
           )}
@@ -364,7 +364,7 @@ export function QrScannerView() {
               onClick={toggleFacingMode}
               style={{ fontSize: ".82rem" }}
             >
-              🔄 {t("switchCamera")}
+              {t("switchCamera")}
             </button>
             <button
               type="button"
@@ -380,7 +380,7 @@ export function QrScannerView() {
         {/* Fallback 1: File Upload */}
         <div style={{ borderTop: "1px solid #e7eeeb", paddingTop: 16, marginTop: 12 }}>
           <label style={{ fontSize: ".82rem", fontWeight: 700, color: "var(--ink)", display: "block", marginBottom: 6 }}>
-            📁 {t("uploadImage")}
+            {t("uploadImage")}
           </label>
           <input
             type="file"
@@ -394,7 +394,7 @@ export function QrScannerView() {
         {/* Fallback 2: Manual Code Input */}
         <form onSubmit={handleManualSubmit} style={{ borderTop: "1px solid #e7eeeb", paddingTop: 16, marginTop: 16 }}>
           <label htmlFor="manual-code" style={{ fontSize: ".82rem", fontWeight: 700, color: "var(--ink)", display: "block", marginBottom: 6 }}>
-            ⌨️ {t("manualCodeInput")}
+            ⌨{t("manualCodeInput")}
           </label>
           <div style={{ display: "flex", gap: 8 }}>
             <input
@@ -418,7 +418,7 @@ export function QrScannerView() {
 
         {!hasBarcodeDetector && (
           <p className="subtitle" style={{ fontSize: ".76rem", margin: "14px 0 0", color: "var(--muted)" }}>
-            ℹ️ {t("unsupportedBarcodeDetector")}
+            ℹ{t("unsupportedBarcodeDetector")}
           </p>
         )}
       </div>

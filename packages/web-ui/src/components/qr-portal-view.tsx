@@ -89,7 +89,7 @@ export function QrPortalView({ id }: { id: string }) {
           </p>
           <div style={{ display: "grid", gap: 8 }}>
             <Link href="/scan" className="action" style={{ display: "inline-block", padding: "11px", textAlign: "center" }}>
-              📷 {lang === "vi" ? "Quét lại mã khác" : "Scan Another Code"}
+              {lang === "vi" ? "Quét lại mã khác" : "Scan Another Code"}
             </Link>
             <Link href="/login" className="action-outline" style={{ display: "inline-block", padding: "10px", textAlign: "center" }}>
               {lang === "vi" ? "Về trang đăng nhập" : "Go to Sign In"}
@@ -120,7 +120,7 @@ export function QrPortalView({ id }: { id: string }) {
             style={{ padding: "4px 10px", fontSize: ".75rem" }}
             onClick={() => setLang(lang === "vi" ? "en" : "vi")}
           >
-            🌐 {lang === "vi" ? "EN" : "VI"}
+            {lang === "vi" ? "EN" : "VI"}
           </button>
         </div>
 
@@ -131,7 +131,7 @@ export function QrPortalView({ id }: { id: string }) {
             <span className="badge badge-neutral">{device.assetStatus}</span>
           </div>
 
-          <h1 style={{ fontSize: "1.5rem", margin: "0 0 4px" }}>💻 {device.deviceName}</h1>
+          <h1 style={{ fontSize: "1.5rem", margin: "0 0 4px" }}>{device.deviceName}</h1>
           <p style={{ color: "var(--muted)", margin: "0 0 16px", fontSize: ".88rem" }}>
             {device.isOnline ? (lang === "vi" ? "Đang trực tuyến" : "Online") : (lang === "vi" ? "Đang ngoại tuyến" : "Offline")}
           </p>
@@ -147,10 +147,10 @@ export function QrPortalView({ id }: { id: string }) {
 
           {/* Privacy explanation */}
           <div className="privacy" style={{ margin: "16px 0", fontSize: ".82rem" }}>
-            <strong>🛡️ {lang === "vi" ? "Bảo vệ thông tin công cộng" : "Public Privacy Protection"}</strong>
+            <strong>{lang === "vi" ? "Bảo vệ thông tin công cộng" : "Public Privacy Protection"}</strong>
             <p style={{ margin: "4px 0 0" }}>
               {lang === "vi"
-                ? "Dữ liệu người dùng, cấu hình phần cứng chi tiết và telemetry sức khỏe được bảo vệ nghiêm ngặt và chỉ hiển thị sau khi xác thực danh tính."
+                ? "Đăng nhập để xem người sử dụng và thông tin chi tiết của thiết bị."
                 : "Assigned user identity, full hardware specifications, and telemetry are strictly restricted and accessible only after authentication."}
             </p>
           </div>
@@ -162,7 +162,7 @@ export function QrPortalView({ id }: { id: string }) {
               className="action"
               style={{ width: "100%", padding: "12px", textAlign: "center", fontSize: ".92rem", boxSizing: "border-box" }}
             >
-              🔐 {lang === "vi" ? "Đăng nhập để xem chi tiết / quản lý" : "Sign In to Access Device"}
+              {lang === "vi" ? "Đăng nhập để xem chi tiết / quản lý" : "Sign In to Access Device"}
             </Link>
 
             <Link
@@ -170,7 +170,7 @@ export function QrPortalView({ id }: { id: string }) {
               className="action-outline"
               style={{ width: "100%", padding: "11px", textAlign: "center", fontSize: ".88rem", boxSizing: "border-box" }}
             >
-              📷 {lang === "vi" ? "Quét tem QR khác" : "Scan Another QR"}
+              {lang === "vi" ? "Quét tem QR khác" : "Scan Another QR"}
             </Link>
           </div>
         </div>

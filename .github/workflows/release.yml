@@ -46,6 +46,7 @@ jobs:
           New-Item -ItemType Directory -Force dist/release-windows | Out-Null
           Copy-Item dist/windows-x64/SentinelLAN.Agent.msi dist/release-windows/
           Copy-Item dist/windows-x64/SentinelLAN.Agent.exe dist/release-windows/
+          Copy-Item dist/windows-x64/SentinelLAN.Setup.exe dist/release-windows/
           Copy-Item deploy/agent/configure-windows-agent.ps1 dist/release-windows/
       - uses: actions/upload-artifact@v4
         with:
@@ -100,6 +101,7 @@ jobs:
           expected=(
             SentinelLAN.Agent.msi
             SentinelLAN.Agent.exe
+            SentinelLAN.Setup.exe
             configure-windows-agent.ps1
             SentinelLAN.Agent
             install-linux-agent.sh
@@ -117,6 +119,7 @@ jobs:
           files: |
             release-assets/SentinelLAN.Agent.msi
             release-assets/SentinelLAN.Agent.exe
+            release-assets/SentinelLAN.Setup.exe
             release-assets/configure-windows-agent.ps1
             release-assets/SentinelLAN.Agent
             release-assets/install-linux-agent.sh
@@ -125,7 +128,7 @@ jobs:
           fail_on_unmatched_files: true
           body: |
             Agent only: no VPS credentials, database, certificate or deployment environment is bundled.
-            Windows: install SentinelLAN.Agent.msi, then run configure-windows-agent.ps1 with your organization's HTTPS API URL. The script asks for a one-time enrollment token.
+            Windows: open SentinelLAN.Setup.exe and paste the single-use connection code issued by your company's IT. No URL or command is required. The MSI also includes the connection window and a Start menu shortcut.
             SentinelLAN.Agent.exe is the secondary Windows option for IT.
             Linux: download SentinelLAN.Agent, install-linux-agent.sh and sentinellan-agent.service into one directory, then follow the download and installation guide.
             Guide: https://github.com/psy-zney/SentinelLAN/blob/main/docs/downloads.md
