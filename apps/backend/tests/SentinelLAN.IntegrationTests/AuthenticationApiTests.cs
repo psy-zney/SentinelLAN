@@ -4,8 +4,10 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Npgsql;
 using SentinelLAN.Application;
 using SentinelLAN.Domain;
 using SentinelLAN.Infrastructure;
@@ -211,19 +213,61 @@ public sealed class AuthenticationApiTests(SentinelApiFactory factory) : IClassF
 public sealed class SentinelApiFactory : WebApplicationFactory<Program>
 {
     private readonly string databaseName = $"sentinellan-auth-tests-{Guid.NewGuid():N}";
-    public bool UsesPostgreSql { get; } = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ConnectionStrings__SentinelLAN"));
+    private readonly string postgresSchema = $"sentinellan_tests_{Guid.NewGuid():N}";
+    private readonly string? postgresConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__SentinelLAN");
+    private int schemaCreated;
+    public bool UsesPostgreSql => !string.IsNullOrWhiteSpace(postgresConnectionString);
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+        string? isolatedConnectionString = null;
+        if (UsesPostgreSql)
+        {
+            // WebApplicationFactory configuration is synchronous. Create the fixture's
+            // schema before startup migrations and demo seeding can touch another fixture.
+            using var connection = new NpgsqlConnection(postgresConnectionString);
+            connection.Open();
+            using var create = new NpgsqlCommand($"CREATE SCHEMA IF NOT EXISTS \"{postgresSchema}\"", connection);
+            create.ExecuteNonQuery();
+            schemaCreated = 1;
+            isolatedConnectionString = new NpgsqlConnectionStringBuilder(postgresConnectionString) { SearchPath = postgresSchema }.ConnectionString;
+        }
         builder.ConfigureServices(services =>
         {
-            if (!UsesPostgreSql)
+            services.RemoveAll<SentinelDbContext>();
+            services.RemoveAll<DbContextOptions<SentinelDbContext>>();
+            services.RemoveAll<IDbContextOptionsConfiguration<SentinelDbContext>>();
+            services.AddDbContext<SentinelDbContext>(options =>
             {
-                services.RemoveAll<SentinelDbContext>();
-                services.RemoveAll<DbContextOptions<SentinelDbContext>>();
-                services.AddDbContext<SentinelDbContext>(options => options.UseInMemoryDatabase(databaseName));
-            }
+                if (isolatedConnectionString is null) options.UseInMemoryDatabase(databaseName);
+                else options.UseNpgsql(isolatedConnectionString);
+            });
         });
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        // WebApplicationFactory also bridges this virtual method from synchronous Dispose.
+        await base.DisposeAsync().ConfigureAwait(false);
+        await DropTestSchemaAsync().ConfigureAwait(false);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (disposing) DropTestSchemaAsync().GetAwaiter().GetResult();
+    }
+
+    private async Task DropTestSchemaAsync()
+    {
+        if (Interlocked.Exchange(ref schemaCreated, 0) == 0) return;
+        using (var fixtureConnection = new NpgsqlConnection(new NpgsqlConnectionStringBuilder(postgresConnectionString) { SearchPath = postgresSchema }.ConnectionString))
+            NpgsqlConnection.ClearPool(fixtureConnection);
+        await using var connection = new NpgsqlConnection(postgresConnectionString);
+        await connection.OpenAsync().ConfigureAwait(false);
+        // This identifier is generated above, never read from configuration or test input.
+        await using var drop = new NpgsqlCommand($"DROP SCHEMA IF EXISTS \"{postgresSchema}\" CASCADE", connection);
+        await drop.ExecuteNonQueryAsync().ConfigureAwait(false);
     }
 }

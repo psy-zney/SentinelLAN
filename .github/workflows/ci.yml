@@ -1,6 +1,8 @@
 name: CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -80,6 +82,9 @@ jobs:
         with:
           node-version: "24.x"
           cache: npm
+
+      - name: Test Host Status Collector
+        run: python3 -B -m unittest discover -s deploy/vps/tests -v
 
       - name: Restore Backend Dependencies
         run: dotnet restore SentinelLAN.slnx

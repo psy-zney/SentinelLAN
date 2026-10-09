@@ -5,9 +5,11 @@ Root runs this locally through a timer; the API receives only a read-only JSON f
 No arguments from API users, Docker socket mount in the API, or SSH key are required.
 """
 import datetime
+from decimal import Decimal
 import json
 import os
 import platform
+import posixpath
 import re
 import shutil
 import subprocess
@@ -74,23 +76,89 @@ def cpu_times():
 def parse_size_str(val):
     if not val:
         return 0
-    match = re.match(r"^([0-9.]+)\s*([A-Za-z]+)?", str(val).strip())
+    match = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?)\s*([A-Za-z]+)?", str(val).strip())
     if not match:
         return 0
-    num = float(match.group(1))
+    num = Decimal(match.group(1))
     unit = (match.group(2) or "B").upper()
     factors = {
-        "B": 1, "KB": 1024, "K": 1024, "KIB": 1024,
-        "MB": 1024**2, "M": 1024**2, "MIB": 1024**2,
-        "GB": 1024**3, "G": 1024**3, "GIB": 1024**3,
-        "TB": 1024**4, "T": 1024**4, "TIB": 1024**4
+        "B": 1, "KB": 1000, "K": 1000, "KIB": 1024,
+        "MB": 1000**2, "M": 1000**2, "MIB": 1024**2,
+        "GB": 1000**3, "G": 1000**3, "GIB": 1024**3,
+        "TB": 1000**4, "T": 1000**4, "TIB": 1024**4
     }
-    return int(num * factors.get(unit, 1))
+    return int(num * factors[unit]) if unit in factors else 0
 
 
-def collect_storage():
+def storage_targets(inspected, warnings):
+    targets = {
+        "BeatSync": (["/opt/beatsync", "/home/ubuntu/beatsync"], "repo"),
+        "Unified Monitor Agent": (["/opt/unified-monitoring-agent"], "service"),
+        "SentinelLAN": (["/opt/sentinellan"], "repo"),
+        "Kitchen Explore": (["/home/ubuntu/exxplore-kittens", "/var/www/exxplore-kittens"], "repo"),
+        "Monopoly (mpoly)": (["/opt/monopoly", "/var/www/monopoly"], "repo"),
+        "LiveKit": (["/home/ubuntu/livekit"], "service"),
+        "Go SDK / Build Cache": (["/home/ubuntu/go"], "system"),
+    }
+    project_names = {"sentinellan-prod": "SentinelLAN", "sentinellan": "SentinelLAN",
+                     "exxplore-kittens": "Kitchen Explore", "monopoly": "Monopoly (mpoly)",
+                     "mot-me-banh": "Mọt Mê Bánh", "livekit": "LiveKit", "beatsync": "BeatSync"}
+    allowed_roots = ("/opt", "/srv", "/var/www", "/home/ubuntu")
+    seen = set()
+    for container in inspected:
+        labels = container.get("Labels") or {}
+        project = labels.get("com.docker.compose.project")
+        directory = labels.get("com.docker.compose.project.working_dir")
+        if not isinstance(project, str) or not isinstance(directory, str):
+            continue
+        if (project, directory) in seen:
+            continue
+        seen.add((project, directory))
+        name = project_names.get(project, project)
+        if not directory.startswith("/") or "\n" in directory or "\x00" in directory:
+            warnings.append("Đường dẫn thư mục dự án không hợp lệ: " + name + ".")
+            continue
+        directory = os.path.realpath(directory)
+        root = next((root for root in allowed_roots if directory.startswith(root + "/")), None)
+        if root is None:
+            warnings.append("Thư mục dự án nằm ngoài phạm vi được phép đo: " + name + ".")
+            continue
+        if not os.path.isdir(directory):
+            warnings.append("Chưa đọc được thư mục đang triển khai của " + name + ".")
+            continue
+        # Compose may run from a deploy subdirectory of a Git checkout.
+        candidate = directory
+        while candidate != root:
+            if os.path.exists(posixpath.join(candidate, ".git")):
+                directory = candidate
+                break
+            candidate = posixpath.dirname(candidate)
+        if name not in targets:
+            targets[name] = ([], "repo")
+        targets[name][0].append(directory)
+
+    resolved = []
+    for name, (paths, category) in targets.items():
+        existing = sorted({os.path.realpath(path) for path in paths if os.path.isdir(path)}, key=len)
+        unique = []
+        for path in existing:
+            if not any(path == parent or path.startswith(parent + "/") for parent in unique):
+                unique.append(path)
+        if unique:
+            resolved.append((name, unique, category))
+    return resolved
+
+
+def collect_storage(inspected=(), warnings=None):
+    warnings = warnings if warnings is not None else []
     items = []
-    code, output = run(DOCKER + ["system", "df", "--format", "{{json .}}"], 6)
+    deadline = time.monotonic() + 20
+    try:
+        code, output = run(DOCKER + ["system", "df", "--format", "{{json .}}"], 6)
+    except (OSError, subprocess.TimeoutExpired):
+        code, output = 1, ""
+    if code:
+        warnings.append("Chưa đo được dung lượng Docker; các số liệu VPS khác vẫn được cập nhật.")
     if code == 0:
         for line in output.splitlines():
             try:
@@ -105,29 +173,26 @@ def collect_storage():
                     "category": "docker",
                     "reclaimable": reclaim if reclaim and reclaim not in ("0B (0%)", "0B") else None
                 })
-            except (ValueError, KeyError):
-                pass
+            except (ValueError, KeyError, TypeError, AttributeError):
+                warnings.append("Một mục dung lượng Docker chưa đọc được.")
 
-    repo_targets = [
-        ("BeatSync", ["/opt/beatsync", "/home/ubuntu/beatsync"], "repo"),
-        ("Unified Monitor Agent", ["/opt/unified-monitoring-agent"], "service"),
-        ("SentinelLAN", ["/opt/sentinellan"], "repo"),
-        ("Kitchen Explore", ["/home/ubuntu/exxplore-kittens", "/var/www/exxplore-kittens"], "repo"),
-        ("Monopoly (mpoly)", ["/opt/monopoly", "/var/www/monopoly"], "repo"),
-        ("LiveKit", ["/home/ubuntu/livekit"], "service"),
-        ("Go SDK / Build Cache", ["/home/ubuntu/go"], "system"),
-    ]
-    for name, paths, cat in repo_targets:
-        existing = [p for p in paths if os.path.exists(p)]
-        if not existing:
-            continue
-        code, out = run(["du", "-s", "-B1"] + existing, 4)
+    for name, paths, cat in storage_targets(inspected, warnings):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            warnings.append("Chưa đo hết các thư mục dự án trong thời gian cho phép.")
+            break
+        try:
+            code, out = run(["/usr/bin/du", "-s", "-B1", "--"] + paths, min(4, remaining))
+        except (OSError, subprocess.TimeoutExpired):
+            code, out = 1, ""
+        if code:
+            warnings.append("Chưa đo được dung lượng thư mục của " + name + ".")
         if code == 0:
             total_bytes = sum(int(l.split()[0]) for l in out.splitlines() if l.split() and l.split()[0].isdigit())
             if total_bytes > 0:
                 items.append({
                     "name": name,
-                    "path": ", ".join(existing),
+                    "path": ", ".join(paths),
                     "sizeBytes": total_bytes,
                     "category": cat,
                     "reclaimable": None
@@ -160,6 +225,7 @@ def collect(name, host):
     containers = []
     docker_error = None
     available = False
+    details = {}
     try:
         code, output = run(DOCKER + ["ps", "-a", "--no-trunc", "--size", "--format", "{{json .}}"], 12)
         if code:
@@ -167,7 +233,6 @@ def collect(name, host):
         available = True
         rows = [json.loads(line) for line in output.splitlines()]
         ids = [row["ID"] for row in rows if re.fullmatch(r"[a-f0-9]{64}", row["ID"])]
-        details = {}
         stats = {}
         if ids:
             code, output = run(DOCKER + ["inspect", "--format", INSPECT] + ids, 12)
@@ -230,7 +295,7 @@ def collect(name, host):
                 "project": proj})
     except (OSError, subprocess.TimeoutExpired, RuntimeError, ValueError, KeyError):
         docker_error = "Không đọc được đầy đủ trạng thái Docker."
-    storage_breakdown = collect_storage()
+    storage_breakdown = collect_storage(details.values(), warnings)
     return {"name": name, "host": host, "capturedAtUtc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "osInfo": platform.platform(), "uptimeSeconds": uptime, "cpuPercent": cpu,
         "ramPercent": round(memory_used / memory_total * 100, 1), "diskPercent": round(disk.used / disk.total * 100, 1),

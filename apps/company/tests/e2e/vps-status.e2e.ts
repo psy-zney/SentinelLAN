@@ -27,8 +27,9 @@ test("Admin can inspect VPS ports, recognize old data, and cannot retain it afte
   await expect(page).toHaveURL(/\/vps$/);
   await expect(page.getByRole("heading", { name: "vps-test · 192.0.2.1" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "9003", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /sentinellan-prod-api-1/ }).click();
   await expect(page.getByText("0.0.0.0:8443/tcp", { exact: true })).toBeVisible();
-  await expect(page.getByText("Không công bố", { exact: true })).toBeVisible();
+  await expect(page.getByText("Cổng công bố", { exact: true })).toHaveCount(0);
   stale = true;
   snapshot.capturedAtUtc = new Date(Date.now() - 600_000).toISOString();
   await page.getByRole("button", { name: "Làm mới", exact: true }).click();

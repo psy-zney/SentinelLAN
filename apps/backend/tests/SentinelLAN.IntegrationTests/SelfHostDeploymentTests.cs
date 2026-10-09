@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -97,6 +98,7 @@ public sealed class SelfHostDeploymentTests
             {
                 services.RemoveAll<SentinelDbContext>();
                 services.RemoveAll<DbContextOptions<SentinelDbContext>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<SentinelDbContext>>();
                 services.AddDbContext<SentinelDbContext>(options => options.UseInMemoryDatabase(databaseName));
             });
         });

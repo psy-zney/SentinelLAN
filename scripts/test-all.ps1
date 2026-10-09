@@ -13,6 +13,7 @@ $npxProgram = if ($IsWindows -or $PSVersionTable.PSEdition -eq 'Desktop') { 'npx
 Invoke-Check dotnet @('restore', 'SentinelLAN.slnx')
 Invoke-Check dotnet @('build', 'SentinelLAN.slnx', '--configuration', 'Release', '--no-restore')
 Invoke-Check dotnet @('test', 'SentinelLAN.slnx', '--configuration', 'Release', '--no-build', '--no-restore')
+Invoke-Check python @('-B', '-m', 'unittest', 'discover', '-s', 'deploy/vps/tests', '-v')
 Invoke-Check $npmProgram @('run', 'lint')
 Invoke-Check $npmProgram @('run', 'typecheck')
 Invoke-Check $npmProgram @('test')
