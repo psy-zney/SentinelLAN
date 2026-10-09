@@ -153,7 +153,7 @@ def collect(name, host):
         uptime = float(file.read().split()[0])
     system_state = run(["/usr/bin/systemctl", "is-system-running"])[1].strip() or "unknown"
     services = []
-    for service in ("nginx", "docker", "ssh", "cron", "systemd-resolved", "sentinellan-host-monitor.timer"):
+    for service in ("nginx", "docker", "ssh", "beatsync", "cron", "systemd-resolved", "sentinellan-host-monitor.timer"):
         services.append({"name": service, "activeState": run(["/usr/bin/systemctl", "is-active", service])[1].strip() or "unknown",
                          "startupState": run(["/usr/bin/systemctl", "is-enabled", service])[1].strip() or "unknown"})
     host_sockets = socket_rows(run(["/usr/bin/ss", "-H", "-lntup"])[1])
