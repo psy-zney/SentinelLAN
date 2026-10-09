@@ -3,6 +3,7 @@
 import { useId, useRef, useState } from "react";
 import type { VpsHostSnapshot } from "@/types/host-status";
 import { containersForPort, endpoint, getProjectMeta, portsForService, portScope } from "@/lib/vps-host";
+import { VpsGatewayDiagram } from "./vps-gateway-diagram";
 
 type Selection = { kind: "service" | "container"; key: string } | null;
 
@@ -13,6 +14,8 @@ export function VpsServiceDiagram({ snapshot, vi }: { snapshot: VpsHostSnapshot;
   const details = useRef<HTMLDivElement>(null);
   const tree = useRef<HTMLDivElement>(null);
   const projectNodes = useRef(new Map<string, HTMLDetailsElement>());
+  const inventory = useRef<HTMLDetailsElement>(null);
+  const selectionTrigger = useRef<HTMLButtonElement>(null);
   const label = (vietnamese: string, english: string) => vi ? vietnamese : english;
   const services = snapshot.runtime.services;
   const containers = snapshot.runtime.containers;
@@ -28,9 +31,12 @@ export function VpsServiceDiagram({ snapshot, vi }: { snapshot: VpsHostSnapshot;
     const members = containers.filter(container => projectKey(container) === id);
     return { ...getProjectMeta(members[0].project, members[0].name), id, members };
   });
-  const select = (kind: "service" | "container", key: string) => {
+  const select = (kind: "service" | "container", key: string, trigger: HTMLButtonElement | null = null) => {
     const closing = selection?.kind === kind && selection.key === key;
     setSelection(closing ? null : { kind, key });
+    selectionTrigger.current = closing ? null : trigger;
+    if (closing && trigger && inventory.current) inventory.current.open = false;
+    if (!closing && inventory.current) inventory.current.open = true;
     if (!closing && kind === "container") {
       const container = containers.find(item => item.id === key);
       const project = container && projectNodes.current.get(projectKey(container));
@@ -42,8 +48,11 @@ export function VpsServiceDiagram({ snapshot, vi }: { snapshot: VpsHostSnapshot;
   };
 
   return <div className="vps-service-diagram" aria-label={label("Sơ đồ dịch vụ VPS", "VPS service diagram")}>
+    <VpsGatewayDiagram snapshot={snapshot} vi={vi} selectContainer={(id, trigger) => select("container", id, trigger)}/>
     <p className="vps-section-description">{label("Bấm một dịch vụ hoặc container để xem chi tiết; bấm lại để thu gọn. Bấm tên dự án để mở nhánh container.", "Click a service or container for details; click again to collapse. Click a project to expand its containers.")}</p>
-    <div className="vps-diagram-layout">
+    <details className="vps-diagram-inventory" ref={inventory}>
+      <summary>{label("Chi tiết tất cả dịch vụ và container", "All service and container details")}</summary>
+      <div className="vps-diagram-layout">
       <div className="vps-diagram-tree" ref={tree}>
         <div className="vps-diagram-root"><span aria-hidden="true">▣</span><strong>{snapshot.name}</strong><code>{snapshot.host}</code><span className="badge badge-info">{snapshot.runtime.systemState}</span></div>
         <div className="vps-diagram-branches">
@@ -86,7 +95,7 @@ export function VpsServiceDiagram({ snapshot, vi }: { snapshot: VpsHostSnapshot;
         </div>
       </div>
       <div className="vps-diagram-detail" ref={details} id={detailsId} role="region" aria-labelledby={detailTitleId}>
-        <div className="vps-diagram-detail-heading"><h3 id={detailTitleId}>{selectedName ?? label("Chi tiết từng nút", "Node details")}</h3>{selectedName && <button type="button" className="vps-port-btn-sm" onClick={() => { tree.current?.querySelector<HTMLButtonElement>('.vps-diagram-node[aria-expanded="true"]')?.focus(); setSelection(null); }}>{label("Thu gọn", "Collapse")}</button>}</div>
+        <div className="vps-diagram-detail-heading"><h3 id={detailTitleId}>{selectedName ?? label("Chi tiết từng nút", "Node details")}</h3>{selectedName && <button type="button" className="vps-port-btn-sm" onClick={() => { const trigger = selectionTrigger.current; (trigger ?? tree.current?.querySelector<HTMLButtonElement>('.vps-diagram-node[aria-expanded="true"]'))?.focus(); if (trigger && inventory.current) inventory.current.open = false; selectionTrigger.current = null; setSelection(null); }}>{label("Thu gọn", "Collapse")}</button>}</div>
         {!selectedName && <p className="vps-section-description">{label("Chọn một nút trong sơ đồ để xem trạng thái, cổng và phạm vi localhost của nút đó.", "Select a diagram node for its state, ports and localhost scope.")}</p>}
         {selectedService && <>
           <dl className="vps-diagram-facts"><div><dt>{label("Trạng thái", "State")}</dt><dd>{selectedService.activeState}</dd></div><div><dt>{label("Khởi động cùng VPS", "Startup")}</dt><dd>{selectedService.startupState}</dd></div></dl>
@@ -121,5 +130,6 @@ export function VpsServiceDiagram({ snapshot, vi }: { snapshot: VpsHostSnapshot;
       </div>
     </div>
     <p className="vps-diagram-legend">{label("Đường nhánh: thành phần trên VPS. Mũi tên cổng: ánh xạ Docker được ghi nhận. Phạm vi nghe trong container thuộc mạng container; quyền truy cập từ Internet còn phụ thuộc firewall và reverse proxy.", "Branches show host components. Port arrows show recorded Docker bindings. Container listening scope belongs to its network; Internet access also depends on the firewall and reverse proxy.")}</p>
+    </details>
   </div>;
 }

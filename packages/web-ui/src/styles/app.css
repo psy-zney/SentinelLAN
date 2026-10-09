@@ -200,6 +200,63 @@ input::placeholder, textarea::placeholder { color: #7d8791; font-weight: 400; }
 
 /* VPS services: live component tree and selected node */
 .vps-diagram-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr); gap: 20px; align-items: start; }
+.vps-gateway-diagram { padding: 18px; margin-bottom: 22px; border: 1px solid var(--border); border-radius: 10px; background: #f8faf9; }
+.vps-gateway-diagram h3 { font-size: 15px; margin: 0 0 10px; }
+.vps-gateway-entry { position: relative; display: grid; justify-items: center; gap: 8px; width: fit-content; max-width: 100%; margin: 18px auto 30px; padding: 14px; border: 1px solid var(--accent); background: var(--accent-soft); border-radius: 8px; overflow-wrap: anywhere; }
+.vps-gateway-entry::after { content: ""; position: absolute; top: 100%; left: 50%; height: 15px; border-left: 2px solid #a8bfb4; }
+.vps-gateway-projects { position: relative; display: grid; gap: 10px; padding-left: 20px; border-left: 2px solid #a8bfb4; }
+.vps-gateway-projects::before { content: ""; position: absolute; top: -15px; left: -2px; right: 50%; height: 15px; border-top: 2px solid #a8bfb4; border-left: 2px solid #a8bfb4; }
+.vps-gateway-project { position: relative; padding: 12px; background: var(--panel); border: 1px solid var(--border); border-radius: 7px; min-width: 0; }
+.vps-gateway-project::before { content: ""; position: absolute; right: 100%; top: 24px; width: 22px; border-top: 2px solid #a8bfb4; }
+.vps-gateway-project summary { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; cursor: pointer; font-size: 13px; }
+.vps-gateway-project summary::before { content: "▸"; color: var(--accent); }
+.vps-gateway-project[open] summary::before { content: "▾"; }
+.vps-gateway-project summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.vps-gateway-project-detail { display: grid; gap: 8px; margin-top: 12px; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.vps-gateway-project-detail p { margin: 0; }
+.vps-gateway-project-title { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; }
+.vps-gateway-project-title h4, .vps-route-other h4 { font-size: 14px; margin: 0; }
+.vps-route-legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+.vps-route-key { padding: 5px 8px; border: 1px solid var(--border); border-radius: 5px; font-size: 11px; background: #edf8f1; }
+.vps-route-key[data-kind="nginx"], .vps-route-nginx { background: #edf3ff; border-color: #8eacd9; }
+.vps-route-key[data-kind="localhost"], .vps-route-localhost { background: #fff6e7; border-color: #dab56b; }
+.vps-route-key[data-kind="direct"] { background: #f1f2f4; border-style: dashed; }
+.vps-route-flow { display: grid; grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1.5fr); gap: 8px; align-items: center; }
+.vps-route-node { display: grid; gap: 6px; min-width: 0; padding: 12px; border: 1px solid #a8cbb5; border-radius: 7px; background: #edf8f1; color: var(--ink); font: inherit; text-align: left; overflow-wrap: anywhere; }
+button.vps-route-node { width: 100%; cursor: pointer; }
+button.vps-route-node:hover { box-shadow: 0 0 0 1px var(--accent); }
+button.vps-route-node:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.vps-route-node strong { font-size: 12px; }
+.vps-route-node code, .vps-route-node small { font-size: 11px; }
+.vps-route-node .badge { justify-self: start; font-size: 10px; }
+.vps-route-node.vps-route-nginx { background: #edf3ff; border-color: #8eacd9; }
+.vps-route-node.vps-route-localhost { background: #fff6e7; border-color: #dab56b; }
+.vps-route-node.vps-route-database { background: #f1f2f4; border-color: #b6becb; }
+.vps-route-arrow, .vps-route-vertical-arrow { font-size: 22px; text-align: center; color: var(--accent); }
+.vps-route-sentinel-branches { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding-top: 24px; margin-top: 18px; border-top: 2px solid #a8bfb4; }
+.vps-route-sentinel-branches::before { content: ""; position: absolute; bottom: 100%; height: 18px; left: 75%; border-left: 2px solid #a8bfb4; }
+.vps-route-lane { position: relative; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.vps-route-lane::before { content: ""; position: absolute; bottom: 100%; height: 24px; left: 50%; border-left: 2px solid #a8bfb4; }
+.vps-route-lane p { display: grid; gap: 6px; margin: 0 0 6px; font-size: 12px; }
+.vps-route-lane .badge { justify-self: start; white-space: normal; }
+.vps-route-lane small { font-size: 11px; line-height: 1.6; color: var(--muted); }
+.vps-route-direct { display: grid; gap: 8px; margin-top: 12px; padding: 10px; border: 1px dashed #b6becb; border-radius: 7px; background: #f5f6f8; font-size: 12px; overflow-wrap: anywhere; }
+.vps-route-direct p { margin: 0; }
+.vps-route-direct .badge { justify-self: start; }
+.vps-gateway-route-details { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px; }
+.vps-route-other { margin-top: 20px; padding: 16px; border: 1px dashed #b6becb; background: #f5f6f8; border-radius: 8px; }
+.vps-route-other > p { font-size: 12px; line-height: 1.6; }
+.vps-route-other-flow { display: grid; grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr) 20px minmax(0, 1fr); gap: 8px; align-items: center; }
+.vps-diagram-inventory > summary { cursor: pointer; font-weight: 600; margin-bottom: 16px; font-size: 14px; }
+.vps-diagram-inventory > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 720px) {
+  .vps-route-flow, .vps-route-other-flow, .vps-route-sentinel-branches { grid-template-columns: 1fr; }
+  .vps-route-arrow { transform: rotate(90deg); }
+  .vps-route-sentinel-branches { padding-top: 0; padding-left: 14px; border-top: 0; border-left: 2px solid #a8bfb4; }
+  .vps-route-sentinel-branches::before { left: -2px; bottom: 100%; height: 18px; }
+  .vps-route-lane::before { top: 15px; right: 100%; bottom: auto; left: auto; width: 16px; height: 0; border-left: 0; border-top: 2px solid #a8bfb4; }
+  .vps-gateway-diagram { padding: 12px; }
+}
 .vps-diagram-tree { min-width: 0; background: #f8faf9; border: 1px solid var(--border); border-radius: 10px; padding: 20px 14px; }
 .vps-diagram-root { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; width: fit-content; max-width: 100%; margin: 0 auto 36px; padding: 12px 24px; background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 8px; overflow-wrap: anywhere; }
 .vps-diagram-root::after { content: ""; position: absolute; top: 100%; left: 50%; height: 36px; border-left: 2px solid #a8bfb4; }

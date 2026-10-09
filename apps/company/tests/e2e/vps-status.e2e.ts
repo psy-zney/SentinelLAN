@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
+import type { VpsContainer, VpsHostSnapshot } from "@/types/host-status";
 
 test("Admin can expand individual VPS resources and port bindings, recognize old data, and loses details when access is denied", async ({ page }) => {
-  const snapshot = {
+  const snapshot: VpsHostSnapshot = {
     name: "vps-test", host: "192.0.2.1", capturedAtUtc: new Date().toISOString(), osInfo: "Linux", uptimeSeconds: 86400,
     cpuPercent: 2, ramPercent: 25, diskPercent: 40, memoryUsedBytes: 1024 ** 3, memoryTotalBytes: 4 * 1024 ** 3,
     diskUsedBytes: 16 * 1024 ** 3, diskTotalBytes: 40 * 1024 ** 3, warnings: [],
@@ -24,6 +25,26 @@ test("Admin can expand individual VPS resources and port bindings, recognize old
       storageBreakdown: [{ name: "SentinelLAN source", path: "/opt/sentinellan/current", sizeBytes: 1024 ** 2, category: "repo", reclaimable: null }] }
   };
   let status = 200;
+  const fixtureContainer = (name: string, port: number, hostPort: number | null = null): VpsContainer => ({
+    ...snapshot.runtime.containers[1], id: name, name, image: name + ":test",
+    ports: [{ containerPort: port, protocol: "tcp", hostIp: hostPort === null ? null : "127.0.0.1", hostPort }],
+    listeningPorts: [{ address: "0.0.0.0", port, protocol: "tcp", process: null }],
+  });
+  snapshot.runtime.containers.push(
+    fixtureContainer("sentinellan-prod-company-1", 3000), fixtureContainer("sentinellan-prod-company-tls-1", 3443),
+    fixtureContainer("sentinellan-prod-employee-1", 3000), fixtureContainer("sentinellan-prod-employee-tls-1", 3443),
+    fixtureContainer("sentinellan-prod-postgres-1", 5432), fixtureContainer("monopoly-game-server-1", 3001, 9004),
+    fixtureContainer("exxplore-kittens-game-server-1", 3001, 9005), fixtureContainer("livekit-livekit-1", 7880, 9002),
+    fixtureContainer("mot-me-banh-api-1", 3000, 3080), fixtureContainer("mot-me-banh-postgres-1", 5432),
+    { ...fixtureContainer("mot-me-banh-migrate-1", 5432), state: "exited", status: "Exited (0)", ports: [], listeningPorts: [] },
+  );
+  snapshot.runtime.services.push({ name: "beatsync", activeState: "active", startupState: "enabled" });
+  snapshot.listeningPorts.push(
+    { address: "127.0.0.1", port: 9000, protocol: "tcp", process: "nginx" },
+    { address: "127.0.0.2", port: 9000, protocol: "tcp", process: "nginx" },
+    { address: "127.0.0.1", port: 9001, protocol: "tcp", process: "beatsync-server" },
+    ...[9002, 9004, 9005, 3080].map(port => ({ address: "127.0.0.1", port, protocol: "tcp", process: "docker-proxy" })),
+  );
   let stale = false;
   await page.route("**/api/v1/host/status", route => route.fulfill({ status, contentType: "application/json",
     body: JSON.stringify({ configured: true, available: true, stale, message: "fixture", snapshot }) }));
@@ -58,13 +79,35 @@ test("Admin can expand individual VPS resources and port bindings, recognize old
   await docker.click();
   await page.locator("#vps-docker-details").getByRole("button", { name: /sentinellan-prod-api-1/ }).click();
   await expect(page.locator("#vps-docker-details .vps-container-card").filter({ hasText: "sentinellan-prod-api-1" }).getByText("0.0.0.0:8443/tcp", { exact: true })).toBeVisible();
-  await expect(page.getByText("Cổng EXPOSE — không có ánh xạ ra VPS", { exact: true })).toBeVisible();
-  await expect(page.locator("#vps-docker-details").getByText("Cổng công bố", { exact: true })).toBeHidden();
+  const apiCard = page.locator("#vps-docker-details .vps-container-card").filter({ hasText: "sentinellan-prod-api-1" });
+  await expect(apiCard.getByText("Cổng EXPOSE — không có ánh xạ ra VPS", { exact: true })).toBeVisible();
+  await expect(apiCard.getByText("Cổng công bố", { exact: true })).toBeHidden();
   await page.locator("#vps-docker-details").getByRole("button", { name: /sentinellan-prod-nginx-1/ }).click();
   await expect(page.locator("#vps-docker-details").getByText("127.0.0.1:9003 → 8443/tcp", { exact: true })).toBeVisible();
   const services = page.locator(".vps-disclosure").filter({ has: page.getByRole("button", { name: /Dịch vụ trên VPS/ }) });
   await services.getByRole("button", { name: /Dịch vụ trên VPS/ }).click();
   const diagram = services.locator(".vps-service-diagram");
+  const gateway = diagram.locator(".vps-gateway-diagram");
+  await expect(gateway.getByRole("heading", { name: "Các dự án của tôi → Nginx 9000 → localhost > 9000", exact: true })).toBeVisible();
+  const sentinelRoute = gateway.locator("details").filter({ has: page.locator("summary", { hasText: "SentinelLAN" }) });
+  await sentinelRoute.locator("summary").press("Enter");
+  await expect(sentinelRoute).toContainText("HTTPS :443 → TLS 127.0.0.2:9000 → https://127.0.0.1:9003");
+  await expect(gateway.locator(".vps-gateway-sentinel")).toContainText("Cổng khớp");
+  await sentinelRoute.locator("summary").press("Enter");
+  await expect(sentinelRoute).not.toHaveAttribute("open", "");
+  await expect(gateway).toContainText("Mọt Mẻ Bánh là dự án khác trên VPS");
+  for (const container of snapshot.runtime.containers) await expect(gateway.getByRole("button", { name: "Xem container " + container.name, exact: true })).toBeVisible();
+  await expect(gateway.getByText("SQL không qua Nginx", { exact: true })).toHaveCount(2);
+  await expect(gateway).toContainText("UDP 50000–50100");
+  await expect(gateway).toContainText("127.0.0.1:3080");
+  await gateway.getByRole("button", { name: "Xem container sentinellan-prod-company-tls-1", exact: true }).click();
+  await expect(diagram.locator(".vps-diagram-detail")).toContainText("sentinellan-prod-company-tls-1:test");
+  await diagram.locator(".vps-diagram-detail").getByRole("button", { name: "Thu gọn", exact: true }).click();
+  await expect(gateway.getByRole("button", { name: "Xem container sentinellan-prod-company-tls-1", exact: true })).toBeFocused();
+  await expect(page.locator("html")).toHaveJSProperty("scrollWidth", await page.evaluate(() => document.documentElement.clientWidth));
+  await gateway.screenshot({ path: test.info().outputPath("vps-gateway-routes.png") });
+  await gateway.locator(".vps-gateway-sentinel").screenshot({ path: test.info().outputPath("vps-sentinellan-routes.png") });
+  await diagram.locator(".vps-diagram-inventory > summary").click();
   const nginxNode = diagram.getByRole("button", { name: "Dịch vụ nginx", exact: true });
   const nodeDetails = diagram.locator(".vps-diagram-detail");
   await nginxNode.focus();
@@ -77,7 +120,7 @@ test("Admin can expand individual VPS resources and port bindings, recognize old
   await expect(nodeDetails.getByText("0.0.0.0:443/tcp", { exact: true })).toHaveCount(0);
   await diagram.getByRole("button", { name: "Dịch vụ docker", exact: true }).click();
   await expect(nodeDetails.getByText("127.0.0.1:9003/tcp", { exact: true })).toBeVisible();
-  await expect(nodeDetails.getByText("Chỉ localhost", { exact: true })).toBeVisible();
+  await expect(nodeDetails.getByText("Chỉ localhost", { exact: true }).first()).toBeVisible();
   await nodeDetails.getByRole("button", { name: "sentinellan-prod-nginx-1", exact: true }).click();
   const containerNode = diagram.getByRole("button", { name: "Container sentinellan-prod-nginx-1", exact: true });
   await expect(containerNode).toBeVisible();

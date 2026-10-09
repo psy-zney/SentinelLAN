@@ -35,7 +35,7 @@ export function containersForPort(port: VpsListeningPort, containers: VpsContain
 }
 
 export function portsForService(name: string, ports: VpsListeningPort[]) {
-  const aliases: Record<string, string[]> = { ssh: ["ssh", "sshd"], docker: ["dockerd", "docker-proxy"], postgresql: ["postgres", "postgresql"] };
+  const aliases: Record<string, string[]> = { ssh: ["ssh", "sshd"], docker: ["dockerd", "docker-proxy"], postgresql: ["postgres", "postgresql"], beatsync: ["beatsync", "beatsync-server"] };
   const service = name.replace(/\.service$/, "");
   return ports.filter(port => port.process?.split(/,\s*/).some(process => (aliases[service] ?? [service]).includes(process)));
 }
