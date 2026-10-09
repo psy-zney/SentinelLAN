@@ -47,12 +47,12 @@ function IconCpu() { return <svg {...svgProps}><rect x="4" y="4" width="16" heig
 function IconRam() { return <svg {...svgProps}><rect x="2" y="6" width="20" height="12" rx="2" /><path d="M6 6V4M10 6V4M14 6V4M18 6V4M6 18v2M10 18v2M14 18v2M18 18v2" /><path d="M6 10h2v4H6zM10 10h2v4h-2zM14 10h2v4h-2z" fill="currentColor" opacity=".15" /></svg>; }
 function IconDisk() { return <svg {...svgProps}><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" /><path d="M12 2v7" /></svg>; }
 function IconDocker() { return <svg {...svgProps}><path d="M22 12.5c-.5-2-2.5-3-4-2.5 0-2-1.5-3.5-3.5-3.5-.5 0-1 .1-1.5.3C12 5.8 10.5 5 9 5 6 5 3.5 7.5 3.5 10.5c0 .3 0 .7.1 1C2 12.5 1 14.5 2 16.5S5.5 19 7 19h13c2 0 3.5-1.5 3.5-3.5 0-1.5-1-2.5-1.5-3Z" /><path d="M8 11h2v2H8zM11 11h2v2h-2zM14 11h2v2h-2zM11 8h2v2h-2z" fill="currentColor" opacity=".15" /></svg>; }
-function IconContainer() { return <svg {...svgProps}><path d="M21 16V8a2 2 0 0 0-1-1.73L13 2.27a2 2 0 0 0-2 0L4 6.27A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><polyline points="3.27 6.96 12 12.01 20.73 6.96" /><line x1="12" y1="22.08" x2="12" y2="12" /></svg>; }
 function IconService() { return <svg {...svgProps}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83-2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>; }
 function IconPort() { return <svg {...svgProps}><circle cx="12" cy="12" r="2" /><path d="M16.24 7.76a6 6 0 0 1 0 8.49M19.07 4.93a10 10 0 0 1 0 14.14M7.76 16.24a6 6 0 0 1 0-8.49M4.93 19.07a10 10 0 0 1 0-14.14" /></svg>; }
 function IconRefresh() { return <svg {...svgProps}><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>; }
 function IconCheck() { return <svg {...svgProps} width={14} height={14}><polyline points="20 6 9 17 4 12" /></svg>; }
 function IconX() { return <svg {...svgProps} width={14} height={14}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>; }
+function IconSearch() { return <svg {...svgProps} width={14} height={14}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>; }
 function IconChevron({ open }: { open: boolean }) { return <svg {...svgProps} width={16} height={16} style={{ transition: "transform .2s", transform: open ? "rotate(90deg)" : "rotate(0)" }}><polyline points="9 18 15 12 9 6" /></svg>; }
 function IconServer() { return <svg {...svgProps}><rect x="2" y="2" width="20" height="8" rx="2" /><rect x="2" y="14" width="20" height="8" rx="2" /><line x1="6" y1="6" x2="6.01" y2="6" /><line x1="6" y1="18" x2="6.01" y2="18" /></svg>; }
 function IconUptime() { return <svg {...svgProps}><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>; }
@@ -153,6 +153,10 @@ export function VpsStatusView() {
   const [busy, setBusy] = useState(false);
   const [checkedAt, setCheckedAt] = useState(0);
   const [selectedProject, setSelectedProject] = useState<string>("all");
+  const [portSearch, setPortSearch] = useState("");
+  const [portProtoFilter, setPortProtoFilter] = useState<"all" | "tcp" | "udp">("all");
+  const [tcpOpen, setTcpOpen] = useState(true);
+  const [udpOpen, setUdpOpen] = useState(false);
   const pending = useRef<AbortController | null>(null);
 
   const refresh = useCallback(() => {
@@ -201,6 +205,25 @@ export function VpsStatusView() {
   const displayedContainers = selectedProject === "all"
     ? allContainers
     : allContainers.filter(c => getProjectMeta(c.project, c.name).id === selectedProject);
+
+  const allListeningPorts = snapshot?.listeningPorts ?? [];
+  const searchLower = portSearch.trim().toLowerCase();
+
+  const filteredPorts = allListeningPorts.filter(p => {
+    if (searchLower) {
+      const matchAddr = p.address.toLowerCase().includes(searchLower);
+      const matchPort = String(p.port).includes(searchLower);
+      const matchProto = p.protocol.toLowerCase().includes(searchLower);
+      const matchProc = (p.process || "").toLowerCase().includes(searchLower);
+      if (!matchAddr && !matchPort && !matchProto && !matchProc) return false;
+    }
+    return true;
+  });
+
+  const tcpPorts = filteredPorts.filter(p => p.protocol.toLowerCase() === "tcp");
+  const udpPorts = filteredPorts.filter(p => p.protocol.toLowerCase() === "udp");
+  const totalTcpCount = allListeningPorts.filter(p => p.protocol.toLowerCase() === "tcp").length;
+  const totalUdpCount = allListeningPorts.filter(p => p.protocol.toLowerCase() === "udp").length;
 
   return <>
     {/* ── Header ── */}
@@ -439,28 +462,280 @@ export function VpsStatusView() {
         </div>
       </section>
 
-      {/* ── Host Listening Ports ── */}
+      {/* ── Host Listening Ports (TCP / UDP Accordion) ── */}
       <section className="panel">
         <div className="panel-head">
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: 6, background: "#fbf3e5", color: "var(--warn)" }}><IconPort /></span>
-            <h2 style={{ margin: 0 }}>{label("Cổng đang nghe trên VPS", "Host listening ports")}</h2>
+            <div>
+              <h2 style={{ margin: 0 }}>{label("Cổng đang nghe trên VPS", "Host listening ports")}</h2>
+              <p style={{ margin: 0, color: "var(--muted)", fontSize: 12 }}>
+                {label(
+                  `Phân tách ${totalTcpCount} cổng TCP và ${totalUdpCount} cổng UDP (bấm tiêu đề để thu gọn / mở rộng)`,
+                  `Separated into ${totalTcpCount} TCP and ${totalUdpCount} UDP ports (click header to collapse / expand)`
+                )}
+              </p>
+            </div>
           </div>
-          <span className="badge badge-info">{snapshot.listeningPorts.length} {label("cổng", "ports")}</span>
+          <span className="badge badge-info">
+            {allListeningPorts.length} {label("cổng tổng cộng", "total ports")}
+          </span>
         </div>
-        <div className="vps-table"><table><thead><tr>
-          <th>{label("Địa chỉ", "Address")}</th>
-          <th>{label("Cổng", "Port")}</th>
-          <th>{label("Giao thức", "Protocol")}</th>
-          <th>{label("Dịch vụ", "Process")}</th>
-        </tr></thead>
-          <tbody>{snapshot.listeningPorts.map((port, index) => <tr key={index}>
-            <td><code>{port.address}</code></td>
-            <td>{port.port}</td>
-            <td><span className="badge badge-neutral">{port.protocol}</span></td>
-            <td>{port.process ?? "—"}</td>
-          </tr>)}</tbody>
-        </table></div>
+
+        {/* Toolbar: filter pill tabs + live search + expand/collapse all */}
+        <div className="vps-port-toolbar" style={{ marginTop: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className="vps-port-btn-sm"
+              style={{
+                background: portProtoFilter === "all" ? "var(--ink)" : undefined,
+                color: portProtoFilter === "all" ? "#fff" : undefined,
+                borderColor: portProtoFilter === "all" ? "var(--ink)" : undefined,
+              }}
+              onClick={() => setPortProtoFilter("all")}
+            >
+              {label("Tất cả", "All")} ({allListeningPorts.length})
+            </button>
+            <button
+              type="button"
+              className="vps-port-btn-sm"
+              style={{
+                background: portProtoFilter === "tcp" ? "var(--accent)" : undefined,
+                color: portProtoFilter === "tcp" ? "#fff" : undefined,
+                borderColor: portProtoFilter === "tcp" ? "var(--accent)" : undefined,
+              }}
+              onClick={() => { setPortProtoFilter("tcp"); setTcpOpen(true); }}
+            >
+              🟢 TCP ({totalTcpCount})
+            </button>
+            <button
+              type="button"
+              className="vps-port-btn-sm"
+              style={{
+                background: portProtoFilter === "udp" ? "var(--warn)" : undefined,
+                color: portProtoFilter === "udp" ? "#fff" : undefined,
+                borderColor: portProtoFilter === "udp" ? "var(--warn)" : undefined,
+              }}
+              onClick={() => { setPortProtoFilter("udp"); setUdpOpen(true); }}
+            >
+              🟠 UDP ({totalUdpCount})
+            </button>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <div className="vps-port-search-box">
+              <IconSearch />
+              <input
+                type="text"
+                className="vps-port-search-input"
+                placeholder={label("Tìm cổng, dịch vụ, IP...", "Search port, process, IP...")}
+                value={portSearch}
+                onChange={e => setPortSearch(e.target.value)}
+              />
+              {portSearch ? (
+                <button
+                  type="button"
+                  onClick={() => setPortSearch("")}
+                  style={{ background: "none", border: 0, cursor: "pointer", color: "var(--muted)", padding: 0, fontSize: 12 }}
+                >
+                  ✕
+                </button>
+              ) : null}
+            </div>
+
+            <div className="vps-port-actions">
+              <button
+                type="button"
+                className="vps-port-btn-sm"
+                onClick={() => { setTcpOpen(true); setUdpOpen(true); }}
+                title={label("Mở rộng cả 2 danh sách", "Expand both lists")}
+              >
+                ⊞ {label("Mở rộng tất cả", "Expand all")}
+              </button>
+              <button
+                type="button"
+                className="vps-port-btn-sm"
+                onClick={() => { setTcpOpen(false); setUdpOpen(false); }}
+                title={label("Thu gọn cả 2 danh sách", "Collapse both lists")}
+              >
+                ⊟ {label("Thu gọn tất cả", "Collapse all")}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── TCP Ports Group ── */}
+        {(portProtoFilter === "all" || portProtoFilter === "tcp") && (
+          <div className="vps-port-group">
+            <button
+              type="button"
+              className="vps-port-group-header"
+              onClick={() => setTcpOpen(prev => !prev)}
+              aria-expanded={tcpOpen}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <IconChevron open={tcpOpen} />
+                <div>
+                  <strong style={{ fontSize: 14 }}>
+                    🟢 TCP ({tcpPorts.length}{searchLower ? `/${totalTcpCount}` : ""})
+                  </strong>
+                  <span style={{ marginLeft: 8, fontSize: 12, color: "var(--muted)" }}>
+                    {label("Các dịch vụ chính: SSH, Nginx, PostgreSQL, Reverse Proxies...", "Main services: SSH, Nginx, PostgreSQL, Reverse Proxies...")}
+                  </span>
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span className="badge badge-success">
+                  {tcpPorts.length} {label("cổng", "ports")}
+                </span>
+                <span style={{ fontSize: 12, color: "var(--muted)" }}>
+                  {tcpOpen ? label("Thu gọn ▲", "Collapse ▲") : label("Mở rộng ▼", "Expand ▼")}
+                </span>
+              </div>
+            </button>
+
+            {tcpOpen ? (
+              <div className="vps-port-group-body">
+                {tcpPorts.length > 0 ? (
+                  <div className="vps-table">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>{label("Địa chỉ", "Address")}</th>
+                          <th>{label("Cổng", "Port")}</th>
+                          <th>{label("Giao thức", "Protocol")}</th>
+                          <th>{label("Dịch vụ", "Process")}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {tcpPorts.map((port, index) => (
+                          <tr key={`tcp-${port.address}-${port.port}-${index}`}>
+                            <td><code>{port.address}</code></td>
+                            <td><strong style={{ fontVariantNumeric: "tabular-nums" }}>{port.port}</strong></td>
+                            <td><span className="badge badge-success">TCP</span></td>
+                            <td>
+                              {port.process ? (
+                                <span style={{ fontWeight: 550, color: "var(--ink)" }}>{port.process}</span>
+                              ) : (
+                                <span style={{ color: "var(--muted)" }}>—</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p style={{ padding: "16px 20px", color: "var(--muted)", margin: 0, fontSize: 13 }}>
+                    {label("Không tìm thấy cổng TCP nào phù hợp bộ lọc.", "No TCP ports match the filter.")}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div
+                className="vps-port-collapsed-hint"
+                onClick={() => setTcpOpen(true)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setTcpOpen(true); }}
+              >
+                <span>
+                  🟢 <strong>{tcpPorts.length} cổng TCP</strong> {label("đang lắng nghe kết nối", "actively listening")}
+                </span>
+                <span style={{ fontWeight: 550, color: "var(--accent)" }}>
+                  {label("Bấm để xem danh sách chi tiết →", "Click to view details →")}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── UDP Ports Group ── */}
+        {(portProtoFilter === "all" || portProtoFilter === "udp") && (
+          <div className="vps-port-group">
+            <button
+              type="button"
+              className="vps-port-group-header"
+              onClick={() => setUdpOpen(prev => !prev)}
+              aria-expanded={udpOpen}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <IconChevron open={udpOpen} />
+                <div>
+                  <strong style={{ fontSize: 14 }}>
+                    🟠 UDP ({udpPorts.length}{searchLower ? `/${totalUdpCount}` : ""})
+                  </strong>
+                  <span style={{ marginLeft: 8, fontSize: 12, color: "var(--muted)" }}>
+                    {label("Chủ yếu là LiveKit WebRTC (dải cổng 50000–50100) & dịch vụ DNS", "Mostly LiveKit WebRTC (range 50000–50100) & DNS services")}
+                  </span>
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span className="badge badge-warn">
+                  {udpPorts.length} {label("cổng", "ports")}
+                </span>
+                <span style={{ fontSize: 12, color: "var(--muted)" }}>
+                  {udpOpen ? label("Thu gọn ▲", "Collapse ▲") : label("Mở rộng ▼", "Expand ▼")}
+                </span>
+              </div>
+            </button>
+
+            {udpOpen ? (
+              <div className="vps-port-group-body">
+                {udpPorts.length > 0 ? (
+                  <div className="vps-table">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>{label("Địa chỉ", "Address")}</th>
+                          <th>{label("Cổng", "Port")}</th>
+                          <th>{label("Giao thức", "Protocol")}</th>
+                          <th>{label("Dịch vụ", "Process")}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {udpPorts.map((port, index) => (
+                          <tr key={`udp-${port.address}-${port.port}-${index}`}>
+                            <td><code>{port.address}</code></td>
+                            <td><strong style={{ fontVariantNumeric: "tabular-nums" }}>{port.port}</strong></td>
+                            <td><span className="badge badge-warn">UDP</span></td>
+                            <td>
+                              {port.process ? (
+                                <span style={{ fontWeight: 550, color: "var(--ink)" }}>{port.process}</span>
+                              ) : (
+                                <span style={{ color: "var(--muted)" }}>—</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p style={{ padding: "16px 20px", color: "var(--muted)", margin: 0, fontSize: 13 }}>
+                    {label("Không tìm thấy cổng UDP nào phù hợp bộ lọc.", "No UDP ports match the filter.")}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div
+                className="vps-port-collapsed-hint"
+                onClick={() => setUdpOpen(true)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setUdpOpen(true); }}
+              >
+                <span>
+                  🟠 <strong>{udpPorts.length} cổng UDP</strong> {label("đang mở (chủ yếu thuộc LiveKit WebRTC / docker-proxy: dải 50000–50100)", "open (mostly LiveKit WebRTC / docker-proxy: range 50000–50100)")}
+                </span>
+                <span style={{ fontWeight: 550, color: "var(--accent)" }}>
+                  {label("Bấm để mở rộng danh sách →", "Click to expand list →")}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </section>
     </> : null}
   </>;

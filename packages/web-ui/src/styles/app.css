@@ -218,6 +218,21 @@ input::placeholder, textarea::placeholder { color: #7d8791; font-weight: 400; }
 .vps-storage-bar-mini { width: 80px; height: 6px; border-radius: 3px; background: #eef1f4; overflow: hidden; display: inline-block; vertical-align: middle; margin-right: 8px; }
 .vps-storage-bar-mini-fill { height: 100%; background: var(--accent); border-radius: 3px; }
 
+/* ── VPS Dashboard: Port Accordion & Search ── */
+.vps-port-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.vps-port-search-box { display: flex; align-items: center; gap: 6px; background: #fafbfc; border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; }
+.vps-port-search-input { border: 0; background: none; font: inherit; font-size: 13px; color: var(--ink); outline: none; width: 200px; }
+.vps-port-actions { display: flex; align-items: center; gap: 6px; }
+.vps-port-btn-sm { padding: 4px 10px; font-size: 12px; font-weight: 500; border-radius: 5px; border: 1px solid var(--border); background: var(--panel); color: var(--ink); cursor: pointer; transition: background .15s; }
+.vps-port-btn-sm:hover { background: #f0f3f6; }
+
+.vps-port-group { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 14px; overflow: hidden; background: var(--panel); }
+.vps-port-group-header { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 12px 16px; background: #f8fafc; border: 0; cursor: pointer; font: inherit; color: var(--ink); text-align: left; }
+.vps-port-group-header:hover { background: #f1f5f9; }
+.vps-port-group-body { border-top: 1px solid var(--border); }
+.vps-port-collapsed-hint { padding: 12px 16px; font-size: 13px; color: var(--muted); cursor: pointer; background: #fff; display: flex; align-items: center; justify-content: space-between; }
+.vps-port-collapsed-hint:hover { background: #fafbfc; color: var(--accent); }
+
 @media (max-width: 1000px) { .vps-gauges { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 540px) {
   .vps-gauges { grid-template-columns: 1fr 1fr; gap: 8px; }
