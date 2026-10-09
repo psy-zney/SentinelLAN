@@ -180,7 +180,21 @@ input::placeholder, textarea::placeholder { color: #7d8791; font-weight: 400; }
 }
 /* ── VPS Dashboard: Gauge cards ── */
 .vps-gauges { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0 0 20px; }
-.vps-gauge-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.vps-gauge-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--ink); font: inherit; cursor: pointer; text-align: center; }
+.vps-gauge-card:hover, .vps-gauge-card[aria-expanded="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.vps-gauge-action { display: flex; align-items: center; gap: 5px; margin-top: auto; font-size: 12px; color: var(--accent); }
+.vps-resource-details, .vps-disclosure { margin-bottom: 20px; }
+.vps-resource-details [hidden], .vps-resource-details[hidden], .vps-disclosure [hidden] { display: none; }
+.vps-section-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.vps-section-description { font-size: 13px; color: var(--muted); margin: 10px 0 16px; }
+.vps-disclosure-title { margin: 0; flex: 1; }
+.vps-disclosure-toggle { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; background: none; color: var(--ink); font: inherit; border: 0; padding: 4px 0; width: 100%; text-align: left; cursor: pointer; }
+.vps-disclosure-toggle small { font-size: 12px; font-weight: 500; color: var(--accent); }
+.vps-port-detail-toggle { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; padding: 5px; font: inherit; color: var(--accent); cursor: pointer; }
+.vps-port-owner { display: block; margin-top: 4px; overflow-wrap: anywhere; }
+.vps-storage-item summary { cursor: pointer; color: var(--accent); }
+.vps-storage-item-detail { display: grid; gap: 8px; margin-top: 12px; font-size: 12px; overflow-wrap: anywhere; }
+.vps-gauge-card:focus-visible, .vps-disclosure-toggle:focus-visible, .vps-port-detail-toggle:focus-visible, .vps-port-group-header:focus-visible, .vps-storage-item summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .vps-gauge-header { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 13px; font-weight: 600; }
 .vps-gauge-detail { color: var(--muted); font-size: 12px; text-align: center; }
 

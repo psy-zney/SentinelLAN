@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ApiClient, ApiError } from "@/lib/api-client";
 import { useTranslation } from "@/lib/i18n";
-import type { VpsHostStatus, VpsContainer } from "@/types/host-status";
+import type { VpsHostStatus, VpsContainer, VpsListeningPort } from "@/types/host-status";
 
 function bytes(value: number) {
   return `${(value / 1024 ** 3).toFixed(1)} GiB`;
@@ -87,17 +87,99 @@ function gaugeColor(pct: number) {
   return "#18634e";
 }
 
-/* ─────────────────────── Container Card ──────────────────────────── */
-function ContainerCard({ container, vi }: { container: VpsContainer; vi: boolean }) {
+function portScope(address: string | null, vi: boolean) {
+  const ip = address?.replace(/^\[|\]$/g, "");
+  if (!ip) return vi ? "Chưa rõ địa chỉ" : "Unknown address";
+  if (/^127\./.test(ip) || ip === "::1" || ip === "localhost") return vi ? "Chỉ localhost" : "Localhost only";
+  if (["0.0.0.0", "::", "*"].includes(ip)) return vi ? "Mọi địa chỉ mạng" : "All network addresses";
+  return vi ? "Địa chỉ mạng cụ thể" : "Specific network address";
+}
+
+function endpoint(address: string | null, port: number) {
+  const ip = address?.replace(/^\[|\]$/g, "") ?? "?";
+  return `${ip.includes(":") ? `[${ip}]` : ip}:${port}`;
+}
+
+function containersForPort(port: VpsListeningPort, containers: VpsContainer[]) {
+  const address = port.address.replace(/^\[|\]$/g, "");
+  return containers.filter(container => container.ports?.some(binding => {
+    const bound = binding.hostIp?.replace(/^\[|\]$/g, "");
+    return binding.hostPort === port.port && binding.protocol.toLowerCase() === port.protocol.toLowerCase()
+      && (bound === address || address === "*" && ["0.0.0.0", "::"].includes(bound ?? ""));
+  }));
+}
+
+function DisclosurePanel({ title, icon, badge, description, children, vi }: {
+  title: string; icon: ReactNode; badge: ReactNode; description?: string; children: ReactNode; vi: boolean;
+}) {
   const [open, setOpen] = useState(false);
+  const id = useId();
+  return <section className="panel vps-disclosure">
+    <div className="panel-head">
+      <h2 className="vps-disclosure-title"><button type="button" className="vps-disclosure-toggle" aria-expanded={open} aria-controls={id} onClick={() => setOpen(value => !value)}>
+        {icon}<span>{title}</span><IconChevron open={open} />
+        <small>{open ? (vi ? "Thu gọn" : "Collapse") : (vi ? "Xem chi tiết" : "View details")}</small>
+      </button></h2>
+      {badge}
+    </div>
+    <div id={id} hidden={!open}>
+      {description ? <p className="vps-section-description">{description}</p> : null}
+      {children}
+    </div>
+  </section>;
+}
+
+function PortTable({ ports, containers, vi }: { ports: VpsListeningPort[]; containers: VpsContainer[]; vi: boolean }) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const id = useId();
+  const label = (vietnamese: string, english: string) => vi ? vietnamese : english;
+  if (!ports.length) return <p className="vps-section-description">{label("Không có cổng phù hợp bộ lọc.", "No ports match the filter.")}</p>;
+  return <div className="vps-table"><table><thead><tr>
+    <th>{label("Địa chỉ nghe", "Listening address")}</th><th>{label("Cổng", "Port")}</th>
+    <th>{label("Giao thức", "Protocol")}</th><th>{label("Phạm vi nghe", "Binding scope")}</th>
+    <th>{label("Tiến trình / Container", "Process / Container")}</th>
+  </tr></thead><tbody>{ports.map((port, index) => {
+    const key = `${port.protocol}-${port.address}-${port.port}-${index}`;
+    const open = selected === key;
+    const owners = containersForPort(port, containers);
+    return <Fragment key={key}>
+      <tr>
+        <td><code>{port.address}</code></td>
+        <td><button type="button" className="vps-port-detail-toggle" aria-label={`${label("Chi tiết cổng", "Port details")} ${endpoint(port.address, port.port)}/${port.protocol}`} aria-expanded={open} aria-controls={`${id}-${index}`} onClick={() => setSelected(open ? null : key)}>
+          <strong>{port.port}</strong><IconChevron open={open} />
+        </button></td>
+        <td><span className="badge badge-info">{port.protocol.toUpperCase()}</span></td>
+        <td><span className={`badge ${portScope(port.address, vi) === (vi ? "Chỉ localhost" : "Localhost only") ? "badge-neutral" : "badge-info"}`}>{portScope(port.address, vi)}</span></td>
+        <td>{port.process || label("Chưa xác định tiến trình", "Unknown process")}{owners.map(container => <small className="vps-port-owner" key={container.id}>{container.name}</small>)}</td>
+      </tr>
+      <tr id={`${id}-${index}`} hidden={!open}><td colSpan={5}>
+        <div className="vps-container-detail-grid">
+          <div><span className="vps-detail-label">{label("Địa chỉ đầy đủ", "Full endpoint")}</span><code>{endpoint(port.address, port.port)}/{port.protocol}</code></div>
+          <div><span className="vps-detail-label">{label("Tiến trình trên VPS", "Host process")}</span><span>{port.process || label("Chưa xác định", "Unknown")}</span></div>
+          <div><span className="vps-detail-label">{label("Phạm vi nghe", "Binding scope")}</span><span>{portScope(port.address, vi)}</span></div>
+          <div><span className="vps-detail-label">{label("Ánh xạ Docker tương ứng", "Matching Docker bindings")}</span>
+            {owners.length ? owners.map(container => <div key={container.id}><strong>{container.name}</strong>{container.ports?.filter(binding => binding.hostPort === port.port && binding.protocol.toLowerCase() === port.protocol.toLowerCase()).map((binding, bindingIndex) => <code className="vps-port-owner" key={bindingIndex}>{endpoint(binding.hostIp, port.port)} → {binding.containerPort}/{binding.protocol}</code>)}</div>) : <span>{label("Không có ánh xạ Docker tương ứng trong bản ghi.", "No matching Docker binding in this snapshot.")}</span>}
+          </div>
+        </div>
+        <p className="vps-section-description">{label("Phạm vi nghe không xác nhận khả năng truy cập từ Internet; quyền truy cập còn phụ thuộc firewall và reverse proxy.", "Binding scope does not confirm Internet access; access also depends on the firewall and reverse proxy.")}</p>
+      </td></tr>
+    </Fragment>;
+  })}</tbody></table></div>;
+}
+
+/* ─────────────────────── Container Card ──────────────────────────── */
+function ContainerCard({ container, vi, metric }: { container: VpsContainer; vi: boolean; metric?: "cpu" | "ram" }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
   const running = container.state === "running" && container.health !== "unhealthy";
   const label = (vietnamese: string, english: string) => vi ? vietnamese : english;
   const publishedPorts = container.ports?.filter(p => p.hostPort !== null) ?? [];
+  const exposedPorts = container.ports?.filter(p => p.hostPort === null) ?? [];
   const meta = getProjectMeta(container.project, container.name);
 
   return (
     <div className="vps-container-card" data-state={running ? "ok" : "warn"}>
-      <button className="vps-container-header" onClick={() => setOpen(o => !o)} aria-expanded={open} type="button">
+      <button className="vps-container-header" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-controls={id} type="button">
         <span className="vps-container-icon" style={{ fontSize: 18 }} title={meta.name}>{meta.icon}</span>
         <div style={{ display: "flex", flexDirection: "column", gap: 1, minWidth: 0, textAlign: "left", flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -112,34 +194,37 @@ function ContainerCard({ container, vi }: { container: VpsContainer; vi: boolean
           {container.state}{container.health ? ` · ${container.health}` : ""}
         </span>
         <span className="vps-container-stats">
-          {container.cpuPercent !== null ? `${container.cpuPercent.toFixed(1)}% CPU` : ""}
-          {container.memoryUsage ? ` · ${container.memoryUsage}` : ""}
+          {metric !== "ram" && container.cpuPercent !== null ? `${container.cpuPercent.toFixed(1)}% CPU` : ""}
+          {metric !== "cpu" && container.memoryUsage ? `${metric ? "" : " · "}${container.memoryUsage}` : ""}
         </span>
         <span className="vps-container-chevron"><IconChevron open={open} /></span>
       </button>
-      {open && (
-        <div className="vps-container-body">
+        <div className="vps-container-body" id={id} hidden={!open}>
           <div className="vps-container-detail-grid">
             <div><span className="vps-detail-label">{label("Dự án", "Project")}</span><span className="vps-detail-value"><strong>{meta.icon} {meta.name}</strong></span></div>
-            <div><span className="vps-detail-label">Image</span><code className="vps-detail-value">{container.image}</code></div>
+            {!metric && <div><span className="vps-detail-label">Image</span><code className="vps-detail-value">{container.image}</code></div>}
             <div><span className="vps-detail-label">Status</span><span className="vps-detail-value">{container.status}</span></div>
-            {container.cpuPercent !== null && <div><span className="vps-detail-label">CPU</span><span className="vps-detail-value">{container.cpuPercent.toFixed(2)}%</span></div>}
-            {container.memoryUsage && <div><span className="vps-detail-label">RAM</span><span className="vps-detail-value">{container.memoryUsage}{container.memoryPercent !== null ? ` (${container.memoryPercent.toFixed(1)}%)` : ""}</span></div>}
+            {metric !== "ram" && <div><span className="vps-detail-label">CPU</span><span className="vps-detail-value">{container.cpuPercent !== null ? `${container.cpuPercent.toFixed(2)}%` : label("Chưa có số liệu", "No metrics available")}</span></div>}
+            {metric !== "cpu" && <div><span className="vps-detail-label">RAM</span><span className="vps-detail-value">{container.memoryUsage ? `${container.memoryUsage}${container.memoryPercent !== null ? ` (${container.memoryPercent.toFixed(1)}%)` : ""}` : label("Chưa có số liệu", "No metrics available")}</span></div>}
           </div>
-          {publishedPorts.length > 0 && (
+          {!metric && publishedPorts.length > 0 && (
             <div className="vps-container-ports">
               <span className="vps-detail-label"><IconPort /> {label("Cổng công bố", "Published ports")}</span>
-              {publishedPorts.map((port, i) => <code key={i}>{port.hostIp}:{port.hostPort} → {port.containerPort}/{port.protocol}</code>)}
+              {publishedPorts.map((port, i) => <div key={i}><code>{endpoint(port.hostIp, port.hostPort!)} → {port.containerPort}/{port.protocol}</code><span className="badge badge-neutral">{portScope(port.hostIp, vi)}</span></div>)}
             </div>
           )}
-          {container.listeningPorts && container.listeningPorts.length > 0 && (
+          {!metric && exposedPorts.length > 0 && <div className="vps-container-ports">
+            <span className="vps-detail-label">{label("Cổng EXPOSE — không có ánh xạ ra VPS", "EXPOSE ports — no host mapping")}</span>
+            {exposedPorts.map((port, i) => <code key={i}>{port.containerPort}/{port.protocol}</code>)}
+          </div>}
+          {!metric && container.listeningPorts && container.listeningPorts.length > 0 && (
             <div className="vps-container-ports">
               <span className="vps-detail-label">{label("Đang nghe trong container", "Listening in container")}</span>
-              {container.listeningPorts.map((port, i) => <code key={i}>{port.address}:{port.port}/{port.protocol}</code>)}
+              {container.listeningPorts.map((port, i) => <div key={i}><code>{endpoint(port.address, port.port)}/{port.protocol}</code><span className="badge badge-neutral">{portScope(port.address, vi)}</span></div>)}
             </div>
           )}
+          {!metric && <p className="vps-section-description">{label("Địa chỉ nghe trong container thuộc mạng của container. Cổng EXPOSE không chứng minh cổng đang nghe hay truy cập được từ VPS.", "Container listening addresses belong to its network. EXPOSE does not prove a port is listening or reachable from the host.")}</p>}
         </div>
-      )}
     </div>
   );
 }
@@ -152,6 +237,7 @@ export function VpsStatusView() {
   const [error, setError] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [checkedAt, setCheckedAt] = useState(0);
+  const [activeResource, setActiveResource] = useState<"cpu" | "ram" | "disk" | "docker" | null>(null);
   const [selectedProject, setSelectedProject] = useState<string>("all");
   const [portSearch, setPortSearch] = useState("");
   const [portProtoFilter, setPortProtoFilter] = useState<"all" | "tcp" | "udp">("all");
@@ -185,6 +271,8 @@ export function VpsStatusView() {
   const elapsed = snapshot ? (checkedAt - Date.parse(snapshot.capturedAtUtc)) / 1000 : 0;
   const stale = data?.stale || (snapshot && (elapsed > 180 || elapsed < -60)) || error !== null;
   const label = (vietnamese: string, english: string) => vi ? vietnamese : english;
+  const toggleResource = (resource: "cpu" | "ram" | "disk" | "docker") => setActiveResource(current => current === resource ? null : resource);
+  const resourceAction = (resource: string) => <span className="vps-gauge-action"><IconChevron open={activeResource === resource} />{activeResource === resource ? label("Thu gọn", "Collapse") : label("Xem chi tiết", "View details")}</span>;
 
   const allContainers = snapshot?.runtime.containers ?? [];
   const runningContainers = allContainers.filter(c => c.state === "running").length;
@@ -215,7 +303,8 @@ export function VpsStatusView() {
       const matchPort = String(p.port).includes(searchLower);
       const matchProto = p.protocol.toLowerCase().includes(searchLower);
       const matchProc = (p.process || "").toLowerCase().includes(searchLower);
-      if (!matchAddr && !matchPort && !matchProto && !matchProc) return false;
+      const matchContainer = containersForPort(p, allContainers).some(container => `${container.name} ${container.project ?? ""}`.toLowerCase().includes(searchLower));
+      if (!matchAddr && !matchPort && !matchProto && !matchProc && !matchContainer) return false;
     }
     return true;
   });
@@ -264,21 +353,24 @@ export function VpsStatusView() {
     {snapshot ? <>
       {/* ── Resource Gauges ── */}
       <section className="vps-gauges" aria-label={label("Tài nguyên VPS", "VPS resources")}>
-        <div className="vps-gauge-card">
+        <button type="button" className="vps-gauge-card" aria-label="CPU" aria-expanded={activeResource === "cpu"} aria-controls="vps-cpu-details" onClick={() => toggleResource("cpu")}>
           <div className="vps-gauge-header"><IconCpu /><span>CPU</span></div>
           <DonutGauge percent={snapshot.cpuPercent} color={gaugeColor(snapshot.cpuPercent)} />
-        </div>
-        <div className="vps-gauge-card">
+          {resourceAction("cpu")}
+        </button>
+        <button type="button" className="vps-gauge-card" aria-label="RAM" aria-expanded={activeResource === "ram"} aria-controls="vps-ram-details" onClick={() => toggleResource("ram")}>
           <div className="vps-gauge-header"><IconRam /><span>RAM</span></div>
           <DonutGauge percent={snapshot.ramPercent} color={gaugeColor(snapshot.ramPercent)} />
           <small className="vps-gauge-detail">{bytes(snapshot.memoryUsedBytes)} / {bytes(snapshot.memoryTotalBytes)}</small>
-        </div>
-        <div className="vps-gauge-card">
+          {resourceAction("ram")}
+        </button>
+        <button type="button" className="vps-gauge-card" aria-label={label("Ổ đĩa", "Disk")} aria-expanded={activeResource === "disk"} aria-controls="vps-disk-details" onClick={() => toggleResource("disk")}>
           <div className="vps-gauge-header"><IconDisk /><span>{label("Ổ đĩa", "Disk")}</span></div>
           <DonutGauge percent={snapshot.diskPercent} color={gaugeColor(snapshot.diskPercent)} />
           <small className="vps-gauge-detail">{bytes(snapshot.diskUsedBytes)} / {bytes(snapshot.diskTotalBytes)}</small>
-        </div>
-        <div className="vps-gauge-card">
+          {resourceAction("disk")}
+        </button>
+        <button type="button" className="vps-gauge-card" aria-label="Docker" aria-expanded={activeResource === "docker"} aria-controls="vps-docker-details" onClick={() => toggleResource("docker")}>
           <div className="vps-gauge-header"><IconDocker /><span>Docker</span></div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flex: 1, justifyContent: "center" }}>
             <strong style={{ fontSize: 28, fontWeight: 650, letterSpacing: "-.025em", fontVariantNumeric: "tabular-nums", color: snapshot.runtime.dockerAvailable ? "var(--accent)" : "var(--danger)" }}>
@@ -288,14 +380,22 @@ export function VpsStatusView() {
               {runningContainers} / {totalContainers} container {label("đang chạy", "running")}
             </span>
           </div>
-        </div>
+          {resourceAction("docker")}
+        </button>
       </section>
 
       {snapshot.runtime.dockerError ? <p role="alert" style={{ color: "var(--danger)", margin: "0 0 16px", fontSize: 13 }}>{snapshot.runtime.dockerError}</p> : null}
       {snapshot.warnings.length ? <div className="panel" role="alert"><ul>{snapshot.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul></div> : null}
 
+      {(["cpu", "ram"] as const).map(resource => <section key={resource} className="panel vps-resource-details" id={`vps-${resource}-details`} hidden={activeResource !== resource}>
+        <div className="panel-head"><h2>{resource === "cpu" ? label("Chi tiết CPU", "CPU details") : label("Chi tiết RAM", "RAM details")}</h2><button type="button" className="action-outline" onClick={() => setActiveResource(null)}>{label("Thu gọn", "Collapse")}</button></div>
+        <p>{resource === "cpu" ? `${label("CPU toàn VPS", "Host CPU")}: ${snapshot.cpuPercent.toFixed(1)}%` : `${label("RAM toàn VPS", "Host RAM")}: ${bytes(snapshot.memoryUsedBytes)} / ${bytes(snapshot.memoryTotalBytes)} (${snapshot.ramPercent.toFixed(1)}%) · ${label("Còn khả dụng", "Available")}: ${bytes(snapshot.memoryTotalBytes - snapshot.memoryUsedBytes)}`}</p>
+        <p className="vps-section-description">{label("Số liệu bên dưới là từng container Docker, không bao gồm mọi tiến trình trên VPS. Bấm từng container để xem chi tiết.", "The following metrics cover individual Docker containers, not every host process. Click a container for details.")}</p>
+        <div className="vps-containers-grid">{allContainers.length ? allContainers.map(container => <ContainerCard key={container.id} container={container} vi={vi} metric={resource} />) : <p>{label("Chưa có số liệu container.", "No container metrics available.")}</p>}</div>
+      </section>)}
+
       {/* ── Storage Breakdown by Repo & Service ── */}
-      <section className="panel" style={{ marginBottom: 20 }}>
+      <section className="panel vps-resource-details" id="vps-disk-details" hidden={activeResource !== "disk"}>
         <div className="panel-head">
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: 6, background: "#fbf3e5", color: "var(--warn)" }}>
@@ -308,9 +408,9 @@ export function VpsStatusView() {
               </p>
             </div>
           </div>
-          <span className="badge badge-info">
+          <div className="vps-section-actions"><span className="badge badge-info">
             {bytes(snapshot.diskUsedBytes)} / {bytes(snapshot.diskTotalBytes)} ({snapshot.diskPercent}%)
-          </span>
+          </span><button type="button" className="action-outline" onClick={() => setActiveResource(null)}>{label("Thu gọn", "Collapse")}</button></div>
         </div>
 
         {/* Visual Disk Usage Bar */}
@@ -344,10 +444,12 @@ export function VpsStatusView() {
                     <tr key={item.name + idx}>
                       <td><span className="vps-storage-rank">#{idx + 1}</span></td>
                       <td>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                          <strong style={{ fontSize: 13 }}>{item.name}</strong>
-                          <code style={{ fontSize: 11, color: "var(--muted)", background: "none", padding: 0 }}>{item.path}</code>
-                        </div>
+                        <details className="vps-storage-item"><summary><strong>{item.name}</strong></summary>
+                          <div className="vps-storage-item-detail"><span className="vps-detail-label">{label("Đường dẫn được đo", "Measured path")}</span><code>{item.path}</code>
+                            <span>{item.sizeBytes.toLocaleString(vi ? "vi-VN" : "en-GB")} {label("byte", "bytes")} · {pctOfUsed.toFixed(1)}% {label("dung lượng đã dùng", "of used disk")}</span>
+                            <small>{item.category === "docker" ? label("Dung lượng Docker dùng chung trên VPS; không quy về một dự án.", "Shared Docker storage on this host, not attributed to one project.") : label("Dung lượng các thư mục được đo; không bao gồm toàn bộ image và volume của dự án.", "Measured directories; does not include all project images and volumes.")}</small>
+                          </div>
+                        </details>
                       </td>
                       <td>
                         <span className={`badge ${item.category === "docker" ? "badge-info" : item.category === "repo" ? "badge-success" : "badge-neutral"}`} style={{ fontSize: 11 }}>
@@ -387,40 +489,8 @@ export function VpsStatusView() {
         )}
       </section>
 
-      {/* ── Services ── */}
-      <section className="panel" style={{ marginBottom: 20 }}>
-        <div className="panel-head">
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: 6, background: "#edf3fa", color: "#335c8a" }}><IconService /></span>
-            <h2 style={{ margin: 0 }}>{label("Dịch vụ trên VPS", "Host services")}</h2>
-          </div>
-          <span className="badge badge-info">{snapshot.runtime.services.length} {label("dịch vụ", "services")}</span>
-        </div>
-        <div className="vps-table"><table><thead><tr>
-          <th>{label("Dịch vụ", "Service")}</th>
-          <th>{t("status")}</th>
-          <th>{label("Khởi động cùng VPS", "Startup")}</th>
-        </tr></thead>
-          <tbody>{snapshot.runtime.services.map(service => <tr key={service.name}>
-            <td style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <IconService />
-              {service.name}
-            </td>
-            <td><span className={`badge ${service.activeState === "active" ? "badge-success" : "badge-neutral"}`}>
-              {service.activeState === "active" ? <IconCheck /> : <IconX />}
-              {service.activeState}
-            </span></td>
-            <td>
-              <span className={`badge ${service.startupState === "enabled" ? "badge-info" : "badge-neutral"}`}>
-                {service.startupState}
-              </span>
-            </td>
-          </tr>)}</tbody>
-        </table></div>
-      </section>
-
       {/* ── Docker Containers with Project Filters ── */}
-      <section className="panel" style={{ marginBottom: 20 }}>
+      <section className="panel vps-resource-details" id="vps-docker-details" hidden={activeResource !== "docker"}>
         <div className="panel-head">
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: 6, background: "#edf5f1", color: "var(--accent)" }}><IconDocker /></span>
@@ -429,19 +499,20 @@ export function VpsStatusView() {
               <p style={{ margin: 0, color: "var(--muted)", fontSize: 12 }}>{label("Cổng công bố là cổng trên VPS; cổng EXPOSE chỉ là khai báo của image.", "Published ports belong to the host; EXPOSE ports are image metadata.")}</p>
             </div>
           </div>
-          <span className={`badge ${runningContainers === totalContainers ? "badge-success" : "badge-warn"}`}>
+          <div className="vps-section-actions"><span className={`badge ${runningContainers === totalContainers ? "badge-success" : "badge-warn"}`}>
             {runningContainers}/{totalContainers} {label("đang chạy", "running")}
-          </span>
+          </span><button type="button" className="action-outline" onClick={() => setActiveResource(null)}>{label("Thu gọn", "Collapse")}</button></div>
         </div>
 
         {/* Project Filter Pills */}
-        <div className="vps-filter-pills" role="tablist" aria-label={label("Lọc theo dự án", "Filter by project")}>
+        <div className="vps-filter-pills" role="group" aria-label={label("Lọc theo dự án", "Filter by project")}>
           {projectGroups.map(g => (
             <button
               key={g.id}
               type="button"
               className="vps-filter-pill"
               data-active={selectedProject === g.id}
+              aria-pressed={selectedProject === g.id}
               onClick={() => setSelectedProject(g.id)}
             >
               <span>{g.icon}</span>
@@ -462,281 +533,72 @@ export function VpsStatusView() {
         </div>
       </section>
 
-      {/* ── Host Listening Ports (TCP / UDP Accordion) ── */}
-      <section className="panel">
-        <div className="panel-head">
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: 6, background: "#fbf3e5", color: "var(--warn)" }}><IconPort /></span>
-            <div>
-              <h2 style={{ margin: 0 }}>{label("Cổng đang nghe trên VPS", "Host listening ports")}</h2>
-              <p style={{ margin: 0, color: "var(--muted)", fontSize: 12 }}>
-                {label(
-                  `Phân tách ${totalTcpCount} cổng TCP và ${totalUdpCount} cổng UDP (bấm tiêu đề để thu gọn / mở rộng)`,
-                  `Separated into ${totalTcpCount} TCP and ${totalUdpCount} UDP ports (click header to collapse / expand)`
-                )}
-              </p>
-            </div>
+      {/* ── Services ── */}
+      <DisclosurePanel vi={vi} title={label("Dịch vụ trên VPS", "Host services")} icon={<IconService />} badge={<span className="badge badge-info">{snapshot.runtime.services.length} {label("dịch vụ", "services")}</span>}>
+        <div className="vps-table"><table><thead><tr>
+          <th>{label("Dịch vụ", "Service")}</th>
+          <th>{t("status")}</th>
+          <th>{label("Khởi động cùng VPS", "Startup")}</th>
+        </tr></thead>
+          <tbody>{snapshot.runtime.services.map(service => <tr key={service.name}>
+            <td style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <IconService />
+              <details><summary>{service.name}</summary><div className="vps-storage-item-detail">
+                <span>{label("Trạng thái", "State")}: {service.activeState}</span><span>{label("Khởi động cùng VPS", "Startup")}: {service.startupState}</span>
+                <span>{label("Cổng do tiến trình này nghe", "Ports listened to by this process")}</span>
+                {(() => {
+                  const name = service.name.replace(/\.service$/, "");
+                  const aliases: Record<string, string[]> = { ssh: ["ssh", "sshd"], docker: ["dockerd", "docker-proxy"], postgresql: ["postgres", "postgresql"] };
+                  const ports = allListeningPorts.filter(port => port.process?.split(/,\s*/).some(process => (aliases[name] ?? [name]).includes(process)));
+                  return ports.length ? ports.map((port, index) => <div key={index}><code>{endpoint(port.address, port.port)}/{port.protocol}</code> · {portScope(port.address, vi)}</div>) : <small>{label("Không có cổng tương ứng được ghi nhận. Ánh xạ cổng của container xem trong mục Docker.", "No matching port recorded. See Docker for container port bindings.")}</small>;
+                })()}
+              </div></details>
+            </td>
+            <td><span className={`badge ${service.activeState === "active" ? "badge-success" : "badge-neutral"}`}>
+              {service.activeState === "active" ? <IconCheck /> : <IconX />}
+              {service.activeState}
+            </span></td>
+            <td>
+              <span className={`badge ${service.startupState === "enabled" ? "badge-info" : "badge-neutral"}`}>
+                {service.startupState}
+              </span>
+            </td>
+          </tr>)}</tbody>
+        </table></div>
+      </DisclosurePanel>
+
+      {/* ── Host Listening Ports ── */}
+      <DisclosurePanel vi={vi} title={label("Cổng đang nghe trên VPS", "Host listening ports")} icon={<IconPort />}
+        badge={<span className="badge badge-info">{allListeningPorts.length} {label("cổng", "ports")}</span>}
+        description={label("Bấm từng cổng để xem địa chỉ nghe, tiến trình, phạm vi localhost và ánh xạ Docker. Địa chỉ 0.0.0.0 / :: là mọi địa chỉ mạng, không tự động có nghĩa là truy cập được từ Internet.", "Click a port for its address, process, localhost scope and Docker binding. 0.0.0.0 / :: binds all network addresses; this does not by itself mean Internet access.")}>
+        <div className="vps-port-toolbar">
+          <div className="vps-section-actions">
+            {(["all", "tcp", "udp"] as const).map(protocol => <button key={protocol} type="button" className="vps-filter-pill" data-active={portProtoFilter === protocol} aria-pressed={portProtoFilter === protocol}
+              onClick={() => { setPortProtoFilter(protocol); if (protocol === "tcp") setTcpOpen(true); if (protocol === "udp") setUdpOpen(true); }}>
+              {protocol === "all" ? label("Tất cả", "All") : protocol.toUpperCase()} ({protocol === "all" ? allListeningPorts.length : protocol === "tcp" ? totalTcpCount : totalUdpCount})
+            </button>)}
           </div>
-          <span className="badge badge-info">
-            {allListeningPorts.length} {label("cổng tổng cộng", "total ports")}
-          </span>
-        </div>
-
-        {/* Toolbar: filter pill tabs + live search + expand/collapse all */}
-        <div className="vps-port-toolbar" style={{ marginTop: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            <button
-              type="button"
-              className="vps-port-btn-sm"
-              style={{
-                background: portProtoFilter === "all" ? "var(--ink)" : undefined,
-                color: portProtoFilter === "all" ? "#fff" : undefined,
-                borderColor: portProtoFilter === "all" ? "var(--ink)" : undefined,
-              }}
-              onClick={() => setPortProtoFilter("all")}
-            >
-              {label("Tất cả", "All")} ({allListeningPorts.length})
-            </button>
-            <button
-              type="button"
-              className="vps-port-btn-sm"
-              style={{
-                background: portProtoFilter === "tcp" ? "var(--accent)" : undefined,
-                color: portProtoFilter === "tcp" ? "#fff" : undefined,
-                borderColor: portProtoFilter === "tcp" ? "var(--accent)" : undefined,
-              }}
-              onClick={() => { setPortProtoFilter("tcp"); setTcpOpen(true); }}
-            >
-              🟢 TCP ({totalTcpCount})
-            </button>
-            <button
-              type="button"
-              className="vps-port-btn-sm"
-              style={{
-                background: portProtoFilter === "udp" ? "var(--warn)" : undefined,
-                color: portProtoFilter === "udp" ? "#fff" : undefined,
-                borderColor: portProtoFilter === "udp" ? "var(--warn)" : undefined,
-              }}
-              onClick={() => { setPortProtoFilter("udp"); setUdpOpen(true); }}
-            >
-              🟠 UDP ({totalUdpCount})
-            </button>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <div className="vps-port-search-box">
-              <IconSearch />
-              <input
-                type="text"
-                className="vps-port-search-input"
-                placeholder={label("Tìm cổng, dịch vụ, IP...", "Search port, process, IP...")}
-                value={portSearch}
-                onChange={e => setPortSearch(e.target.value)}
-              />
-              {portSearch ? (
-                <button
-                  type="button"
-                  onClick={() => setPortSearch("")}
-                  style={{ background: "none", border: 0, cursor: "pointer", color: "var(--muted)", padding: 0, fontSize: 12 }}
-                >
-                  ✕
-                </button>
-              ) : null}
-            </div>
-
-            <div className="vps-port-actions">
-              <button
-                type="button"
-                className="vps-port-btn-sm"
-                onClick={() => { setTcpOpen(true); setUdpOpen(true); }}
-                title={label("Mở rộng cả 2 danh sách", "Expand both lists")}
-              >
-                ⊞ {label("Mở rộng tất cả", "Expand all")}
-              </button>
-              <button
-                type="button"
-                className="vps-port-btn-sm"
-                onClick={() => { setTcpOpen(false); setUdpOpen(false); }}
-                title={label("Thu gọn cả 2 danh sách", "Collapse both lists")}
-              >
-                ⊟ {label("Thu gọn tất cả", "Collapse all")}
-              </button>
-            </div>
+          <label className="vps-port-search-box"><IconSearch /><input className="vps-port-search-input" value={portSearch} onChange={event => setPortSearch(event.target.value)}
+            placeholder={label("Tìm địa chỉ, cổng, tiến trình, container...", "Search address, port, process, container...")} aria-label={label("Tìm cổng", "Search ports")} /></label>
+          <div className="vps-port-actions">
+            <button type="button" className="vps-port-btn-sm" onClick={() => { setTcpOpen(true); setUdpOpen(true); }}>{label("Mở rộng tất cả", "Expand all")}</button>
+            <button type="button" className="vps-port-btn-sm" onClick={() => { setTcpOpen(false); setUdpOpen(false); }}>{label("Thu gọn tất cả", "Collapse all")}</button>
           </div>
         </div>
-
-        {/* ── TCP Ports Group ── */}
-        {(portProtoFilter === "all" || portProtoFilter === "tcp") && (
-          <div className="vps-port-group">
-            <button
-              type="button"
-              className="vps-port-group-header"
-              onClick={() => setTcpOpen(prev => !prev)}
-              aria-expanded={tcpOpen}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <IconChevron open={tcpOpen} />
-                <div>
-                  <strong style={{ fontSize: 14 }}>
-                    🟢 TCP ({tcpPorts.length}{searchLower ? `/${totalTcpCount}` : ""})
-                  </strong>
-                  <span style={{ marginLeft: 8, fontSize: 12, color: "var(--muted)" }}>
-                    {label("Các dịch vụ chính: SSH, Nginx, PostgreSQL, Reverse Proxies...", "Main services: SSH, Nginx, PostgreSQL, Reverse Proxies...")}
-                  </span>
-                </div>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span className="badge badge-success">
-                  {tcpPorts.length} {label("cổng", "ports")}
-                </span>
-                <span style={{ fontSize: 12, color: "var(--muted)" }}>
-                  {tcpOpen ? label("Thu gọn ▲", "Collapse ▲") : label("Mở rộng ▼", "Expand ▼")}
-                </span>
-              </div>
+        {(["tcp", "udp"] as const).filter(protocol => portProtoFilter === "all" || protocol === portProtoFilter).map(protocol => {
+          const open = protocol === "tcp" ? tcpOpen : udpOpen;
+          const ports = protocol === "tcp" ? tcpPorts : udpPorts;
+          const total = protocol === "tcp" ? totalTcpCount : totalUdpCount;
+          const toggle = () => protocol === "tcp" ? setTcpOpen(value => !value) : setUdpOpen(value => !value);
+          return <div className="vps-port-group" key={protocol}>
+            <button type="button" className="vps-port-group-header" aria-expanded={open} aria-controls={"vps-" + protocol + "-ports"} onClick={toggle}>
+              <span className="vps-section-actions"><IconChevron open={open} /><strong>{protocol.toUpperCase()} ({ports.length}{searchLower ? "/" + total : ""})</strong></span>
+              <span>{open ? label("Thu gọn", "Collapse") : label("Xem chi tiết", "View details")}</span>
             </button>
-
-            {tcpOpen ? (
-              <div className="vps-port-group-body">
-                {tcpPorts.length > 0 ? (
-                  <div className="vps-table">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>{label("Địa chỉ", "Address")}</th>
-                          <th>{label("Cổng", "Port")}</th>
-                          <th>{label("Giao thức", "Protocol")}</th>
-                          <th>{label("Dịch vụ", "Process")}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {tcpPorts.map((port, index) => (
-                          <tr key={`tcp-${port.address}-${port.port}-${index}`}>
-                            <td><code>{port.address}</code></td>
-                            <td><strong style={{ fontVariantNumeric: "tabular-nums" }}>{port.port}</strong></td>
-                            <td><span className="badge badge-success">TCP</span></td>
-                            <td>
-                              {port.process ? (
-                                <span style={{ fontWeight: 550, color: "var(--ink)" }}>{port.process}</span>
-                              ) : (
-                                <span style={{ color: "var(--muted)" }}>—</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <p style={{ padding: "16px 20px", color: "var(--muted)", margin: 0, fontSize: 13 }}>
-                    {label("Không tìm thấy cổng TCP nào phù hợp bộ lọc.", "No TCP ports match the filter.")}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div
-                className="vps-port-collapsed-hint"
-                onClick={() => setTcpOpen(true)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setTcpOpen(true); }}
-              >
-                <span>
-                  🟢 <strong>{tcpPorts.length} cổng TCP</strong> {label("đang lắng nghe kết nối", "actively listening")}
-                </span>
-                <span style={{ fontWeight: 550, color: "var(--accent)" }}>
-                  {label("Bấm để xem danh sách chi tiết →", "Click to view details →")}
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── UDP Ports Group ── */}
-        {(portProtoFilter === "all" || portProtoFilter === "udp") && (
-          <div className="vps-port-group">
-            <button
-              type="button"
-              className="vps-port-group-header"
-              onClick={() => setUdpOpen(prev => !prev)}
-              aria-expanded={udpOpen}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <IconChevron open={udpOpen} />
-                <div>
-                  <strong style={{ fontSize: 14 }}>
-                    🟠 UDP ({udpPorts.length}{searchLower ? `/${totalUdpCount}` : ""})
-                  </strong>
-                  <span style={{ marginLeft: 8, fontSize: 12, color: "var(--muted)" }}>
-                    {label("Chủ yếu là LiveKit WebRTC (dải cổng 50000–50100) & dịch vụ DNS", "Mostly LiveKit WebRTC (range 50000–50100) & DNS services")}
-                  </span>
-                </div>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span className="badge badge-warn">
-                  {udpPorts.length} {label("cổng", "ports")}
-                </span>
-                <span style={{ fontSize: 12, color: "var(--muted)" }}>
-                  {udpOpen ? label("Thu gọn ▲", "Collapse ▲") : label("Mở rộng ▼", "Expand ▼")}
-                </span>
-              </div>
-            </button>
-
-            {udpOpen ? (
-              <div className="vps-port-group-body">
-                {udpPorts.length > 0 ? (
-                  <div className="vps-table">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>{label("Địa chỉ", "Address")}</th>
-                          <th>{label("Cổng", "Port")}</th>
-                          <th>{label("Giao thức", "Protocol")}</th>
-                          <th>{label("Dịch vụ", "Process")}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {udpPorts.map((port, index) => (
-                          <tr key={`udp-${port.address}-${port.port}-${index}`}>
-                            <td><code>{port.address}</code></td>
-                            <td><strong style={{ fontVariantNumeric: "tabular-nums" }}>{port.port}</strong></td>
-                            <td><span className="badge badge-warn">UDP</span></td>
-                            <td>
-                              {port.process ? (
-                                <span style={{ fontWeight: 550, color: "var(--ink)" }}>{port.process}</span>
-                              ) : (
-                                <span style={{ color: "var(--muted)" }}>—</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <p style={{ padding: "16px 20px", color: "var(--muted)", margin: 0, fontSize: 13 }}>
-                    {label("Không tìm thấy cổng UDP nào phù hợp bộ lọc.", "No UDP ports match the filter.")}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div
-                className="vps-port-collapsed-hint"
-                onClick={() => setUdpOpen(true)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setUdpOpen(true); }}
-              >
-                <span>
-                  🟠 <strong>{udpPorts.length} cổng UDP</strong> {label("đang mở (chủ yếu thuộc LiveKit WebRTC / docker-proxy: dải 50000–50100)", "open (mostly LiveKit WebRTC / docker-proxy: range 50000–50100)")}
-                </span>
-                <span style={{ fontWeight: 550, color: "var(--accent)" }}>
-                  {label("Bấm để mở rộng danh sách →", "Click to expand list →")}
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-      </section>
+            <div className="vps-port-group-body" id={"vps-" + protocol + "-ports"} hidden={!open}><PortTable ports={ports} containers={allContainers} vi={vi} /></div>
+          </div>;
+        })}
+      </DisclosurePanel>
     </> : null}
   </>;
 }
