@@ -25,6 +25,13 @@ class HostStatusTests(unittest.TestCase):
         self.assertEqual(3180, result[1]["hostPort"])
         self.assertEqual("::1", result[2]["hostIp"])
 
+    def test_parse_size_str(self):
+        self.assertEqual(collector.parse_size_str("16.81GB"), int(16.81 * 1024**3))
+        self.assertEqual(collector.parse_size_str("128MB"), 128 * 1024**2)
+        self.assertEqual(collector.parse_size_str("512B"), 512)
+        self.assertEqual(collector.parse_size_str(""), 0)
+
+
 
 if __name__ == "__main__":
     unittest.main()

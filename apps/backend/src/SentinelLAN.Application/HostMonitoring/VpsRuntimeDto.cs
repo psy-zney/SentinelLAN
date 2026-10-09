@@ -5,4 +5,6 @@ public sealed record VpsRuntimeDto(
     bool DockerAvailable,
     string? DockerError,
     IReadOnlyList<VpsServiceStateDto> Services,
-    IReadOnlyList<VpsContainerDto> Containers);
+    IReadOnlyList<VpsContainerDto> Containers,
+    IReadOnlyList<VpsStorageBreakdownDto>? StorageBreakdown = null);
+

@@ -6,4 +6,6 @@ public sealed record VpsContainerDto(
     string? StorageUsage, string? NetworkIo, string? BlockIo,
     IReadOnlyList<VpsPortBindingDto>? Ports = null,
     IReadOnlyList<VpsListeningPortDto>? ListeningPorts = null,
-    string? NetworkMode = null);
+    string? NetworkMode = null,
+    string? Project = null);
+

@@ -9,6 +9,37 @@ function bytes(value: number) {
   return `${(value / 1024 ** 3).toFixed(1)} GiB`;
 }
 
+function formatBytes(val: number): string {
+  if (val >= 1024 ** 3) return `${(val / 1024 ** 3).toFixed(2)} GiB`;
+  if (val >= 1024 ** 2) return `${(val / 1024 ** 2).toFixed(1)} MiB`;
+  if (val >= 1024) return `${(val / 1024).toFixed(1)} KiB`;
+  return `${val} B`;
+}
+
+function getProjectMeta(project?: string | null, name?: string) {
+  const p = (project || "").toLowerCase();
+  const n = (name || "").toLowerCase();
+  if (p === "sentinellan-prod" || p === "sentinellan" || n.includes("sentinellan")) {
+    return { id: "sentinellan", name: "SentinelLAN", badgeClass: "badge-success", icon: "🛡️", color: "#18634e" };
+  }
+  if (p === "monopoly" || n.includes("monopoly") || n.includes("mpoly")) {
+    return { id: "monopoly", name: "Monopoly (mpoly)", badgeClass: "badge-warn", icon: "🎲", color: "#c27b1a" };
+  }
+  if (p === "exxplore-kittens" || n.includes("kitten") || n.includes("exxplore")) {
+    return { id: "kitchen-explore", name: "Kitchen Explore", badgeClass: "badge-info", icon: "🐱", color: "#6b46c1" };
+  }
+  if (p === "mot-me-banh" || n.includes("banh")) {
+    return { id: "mot-me-banh", name: "Mọt Mê Bánh", badgeClass: "badge-warn", icon: "🥖", color: "#d97706" };
+  }
+  if (p === "livekit" || n.includes("livekit")) {
+    return { id: "livekit", name: "LiveKit", badgeClass: "badge-info", icon: "📹", color: "#2563eb" };
+  }
+  if (p === "beatsync" || n.includes("beat") || n.includes("sync")) {
+    return { id: "beatsync", name: "BeatSync", badgeClass: "badge-info", icon: "🎵", color: "#0891b2" };
+  }
+  return { id: "other", name: project || "Dự án khác", badgeClass: "badge-neutral", icon: "📦", color: "#475569" };
+}
+
 /* ──────────────────────────── SVG Icons ──────────────────────────── */
 const svgProps = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true as const };
 
@@ -17,7 +48,7 @@ function IconRam() { return <svg {...svgProps}><rect x="2" y="6" width="20" heig
 function IconDisk() { return <svg {...svgProps}><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" /><path d="M12 2v7" /></svg>; }
 function IconDocker() { return <svg {...svgProps}><path d="M22 12.5c-.5-2-2.5-3-4-2.5 0-2-1.5-3.5-3.5-3.5-.5 0-1 .1-1.5.3C12 5.8 10.5 5 9 5 6 5 3.5 7.5 3.5 10.5c0 .3 0 .7.1 1C2 12.5 1 14.5 2 16.5S5.5 19 7 19h13c2 0 3.5-1.5 3.5-3.5 0-1.5-1-2.5-1.5-3Z" /><path d="M8 11h2v2H8zM11 11h2v2h-2zM14 11h2v2h-2zM11 8h2v2h-2z" fill="currentColor" opacity=".15" /></svg>; }
 function IconContainer() { return <svg {...svgProps}><path d="M21 16V8a2 2 0 0 0-1-1.73L13 2.27a2 2 0 0 0-2 0L4 6.27A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><polyline points="3.27 6.96 12 12.01 20.73 6.96" /><line x1="12" y1="22.08" x2="12" y2="12" /></svg>; }
-function IconService() { return <svg {...svgProps}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>; }
+function IconService() { return <svg {...svgProps}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83-2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>; }
 function IconPort() { return <svg {...svgProps}><circle cx="12" cy="12" r="2" /><path d="M16.24 7.76a6 6 0 0 1 0 8.49M19.07 4.93a10 10 0 0 1 0 14.14M7.76 16.24a6 6 0 0 1 0-8.49M4.93 19.07a10 10 0 0 1 0-14.14" /></svg>; }
 function IconRefresh() { return <svg {...svgProps}><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>; }
 function IconCheck() { return <svg {...svgProps} width={14} height={14}><polyline points="20 6 9 17 4 12" /></svg>; }
@@ -62,13 +93,21 @@ function ContainerCard({ container, vi }: { container: VpsContainer; vi: boolean
   const running = container.state === "running" && container.health !== "unhealthy";
   const label = (vietnamese: string, english: string) => vi ? vietnamese : english;
   const publishedPorts = container.ports?.filter(p => p.hostPort !== null) ?? [];
+  const meta = getProjectMeta(container.project, container.name);
 
   return (
     <div className="vps-container-card" data-state={running ? "ok" : "warn"}>
       <button className="vps-container-header" onClick={() => setOpen(o => !o)} aria-expanded={open} type="button">
-        <span className="vps-container-icon"><IconContainer /></span>
-        <span className="vps-container-name">{container.name}</span>
-        <span className={`badge ${running ? "badge-success" : "badge-warn"}`}>
+        <span className="vps-container-icon" style={{ fontSize: 18 }} title={meta.name}>{meta.icon}</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 1, minWidth: 0, textAlign: "left", flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span className="vps-container-name">{container.name}</span>
+            <span className={`badge ${meta.badgeClass}`} style={{ fontSize: 11, padding: "1px 6px" }}>
+              {meta.name}
+            </span>
+          </div>
+        </div>
+        <span className={`badge ${running ? "badge-success" : "badge-warn"}`} style={{ marginLeft: 8 }}>
           {running ? <IconCheck /> : <IconX />}
           {container.state}{container.health ? ` · ${container.health}` : ""}
         </span>
@@ -81,6 +120,7 @@ function ContainerCard({ container, vi }: { container: VpsContainer; vi: boolean
       {open && (
         <div className="vps-container-body">
           <div className="vps-container-detail-grid">
+            <div><span className="vps-detail-label">{label("Dự án", "Project")}</span><span className="vps-detail-value"><strong>{meta.icon} {meta.name}</strong></span></div>
             <div><span className="vps-detail-label">Image</span><code className="vps-detail-value">{container.image}</code></div>
             <div><span className="vps-detail-label">Status</span><span className="vps-detail-value">{container.status}</span></div>
             {container.cpuPercent !== null && <div><span className="vps-detail-label">CPU</span><span className="vps-detail-value">{container.cpuPercent.toFixed(2)}%</span></div>}
@@ -112,7 +152,9 @@ export function VpsStatusView() {
   const [error, setError] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [checkedAt, setCheckedAt] = useState(0);
+  const [selectedProject, setSelectedProject] = useState<string>("all");
   const pending = useRef<AbortController | null>(null);
+
   const refresh = useCallback(() => {
     pending.current?.abort();
     const controller = new AbortController();
@@ -140,8 +182,25 @@ export function VpsStatusView() {
   const stale = data?.stale || (snapshot && (elapsed > 180 || elapsed < -60)) || error !== null;
   const label = (vietnamese: string, english: string) => vi ? vietnamese : english;
 
-  const runningContainers = snapshot?.runtime.containers.filter(c => c.state === "running").length ?? 0;
-  const totalContainers = snapshot?.runtime.containers.length ?? 0;
+  const allContainers = snapshot?.runtime.containers ?? [];
+  const runningContainers = allContainers.filter(c => c.state === "running").length;
+  const totalContainers = allContainers.length;
+
+  // Project groups for filtering
+  const projectGroups = [
+    { id: "all", name: label("Tất cả dự án", "All projects"), icon: "⚡", count: allContainers.length },
+    { id: "sentinellan", name: "SentinelLAN", icon: "🛡️", count: allContainers.filter(c => getProjectMeta(c.project, c.name).id === "sentinellan").length },
+    { id: "monopoly", name: "Monopoly (mpoly)", icon: "🎲", count: allContainers.filter(c => getProjectMeta(c.project, c.name).id === "monopoly").length },
+    { id: "kitchen-explore", name: "Kitchen Explore", icon: "🐱", count: allContainers.filter(c => getProjectMeta(c.project, c.name).id === "kitchen-explore").length },
+    { id: "mot-me-banh", name: "Mọt Mê Bánh", icon: "🥖", count: allContainers.filter(c => getProjectMeta(c.project, c.name).id === "mot-me-banh").length },
+    { id: "livekit", name: "LiveKit", icon: "📹", count: allContainers.filter(c => getProjectMeta(c.project, c.name).id === "livekit").length },
+    { id: "beatsync", name: "BeatSync", icon: "🎵", count: allContainers.filter(c => getProjectMeta(c.project, c.name).id === "beatsync").length },
+    { id: "other", name: label("Khác", "Other"), icon: "📦", count: allContainers.filter(c => getProjectMeta(c.project, c.name).id === "other").length },
+  ].filter(g => g.id === "all" || g.count > 0);
+
+  const displayedContainers = selectedProject === "all"
+    ? allContainers
+    : allContainers.filter(c => getProjectMeta(c.project, c.name).id === selectedProject);
 
   return <>
     {/* ── Header ── */}
@@ -212,6 +271,99 @@ export function VpsStatusView() {
       {snapshot.runtime.dockerError ? <p role="alert" style={{ color: "var(--danger)", margin: "0 0 16px", fontSize: 13 }}>{snapshot.runtime.dockerError}</p> : null}
       {snapshot.warnings.length ? <div className="panel" role="alert"><ul>{snapshot.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul></div> : null}
 
+      {/* ── Storage Breakdown by Repo & Service ── */}
+      <section className="panel" style={{ marginBottom: 20 }}>
+        <div className="panel-head">
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: 6, background: "#fbf3e5", color: "var(--warn)" }}>
+              <IconDisk />
+            </span>
+            <div>
+              <h2 style={{ margin: 0 }}>{label("Dung lượng ổ đĩa theo Repo & Dịch vụ", "Disk Usage by Repository & Service")}</h2>
+              <p style={{ margin: 0, color: "var(--muted)", fontSize: 12 }}>
+                {label("Xếp hạng các thư mục dự án và thành phần Docker chiếm nhiều dung lượng nhất trên VPS.", "Ranking of project directories and Docker components using the most disk space.")}
+              </p>
+            </div>
+          </div>
+          <span className="badge badge-info">
+            {bytes(snapshot.diskUsedBytes)} / {bytes(snapshot.diskTotalBytes)} ({snapshot.diskPercent}%)
+          </span>
+        </div>
+
+        {/* Visual Disk Usage Bar */}
+        <div className="vps-storage-meter">
+          <div className="vps-storage-legend">
+            <span><strong>{label("Đã dùng", "Used")}: {bytes(snapshot.diskUsedBytes)}</strong></span>
+            <span><strong>{label("Còn trống", "Free")}: {bytes(snapshot.diskTotalBytes - snapshot.diskUsedBytes)}</strong></span>
+          </div>
+          <div className="vps-storage-bar-bg">
+            <div className="vps-storage-bar-fill" style={{ width: `${snapshot.diskPercent}%`, background: gaugeColor(snapshot.diskPercent) }} />
+          </div>
+        </div>
+
+        {snapshot.runtime.storageBreakdown && snapshot.runtime.storageBreakdown.length > 0 ? (
+          <div className="vps-table vps-storage-table">
+            <table>
+              <thead>
+                <tr>
+                  <th style={{ width: 44 }}>#</th>
+                  <th>{label("Repo / Thành phần", "Repository / Component")}</th>
+                  <th>{label("Phân loại", "Category")}</th>
+                  <th>{label("Tỷ lệ sử dụng", "Usage ratio")}</th>
+                  <th>{label("Dung lượng", "Size")}</th>
+                  <th>{label("Ghi chú / Thu hồi", "Notes / Reclaimable")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {snapshot.runtime.storageBreakdown.map((item, idx) => {
+                  const pctOfUsed = snapshot.diskUsedBytes > 0 ? (item.sizeBytes / snapshot.diskUsedBytes) * 100 : 0;
+                  return (
+                    <tr key={item.name + idx}>
+                      <td><span className="vps-storage-rank">#{idx + 1}</span></td>
+                      <td>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                          <strong style={{ fontSize: 13 }}>{item.name}</strong>
+                          <code style={{ fontSize: 11, color: "var(--muted)", background: "none", padding: 0 }}>{item.path}</code>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`badge ${item.category === "docker" ? "badge-info" : item.category === "repo" ? "badge-success" : "badge-neutral"}`} style={{ fontSize: 11 }}>
+                          {item.category === "docker" ? "Docker" : item.category === "repo" ? "Git Repo" : item.category ?? "System"}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center" }}>
+                          <span className="vps-storage-bar-mini">
+                            <span className="vps-storage-bar-mini-fill" style={{ width: `${Math.min(pctOfUsed, 100)}%` }} />
+                          </span>
+                          <span style={{ fontSize: 12, color: "var(--muted)", fontVariantNumeric: "tabular-nums" }}>{pctOfUsed.toFixed(1)}%</span>
+                        </div>
+                      </td>
+                      <td>
+                        <strong style={{ fontSize: 13, fontVariantNumeric: "tabular-nums" }}>
+                          {formatBytes(item.sizeBytes)}
+                        </strong>
+                      </td>
+                      <td>
+                        {item.reclaimable ? (
+                          <span className="badge badge-warn" title="Có thể dọn dẹp để lấy lại dung lượng" style={{ fontSize: 11 }}>
+                            ♻️ {label("Có thể thu hồi", "Reclaimable")}: {item.reclaimable}
+                          </span>
+                        ) : (
+                          <span style={{ color: "var(--muted)", fontSize: 12 }}>—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p style={{ color: "var(--muted)", margin: "8px 0" }}>{label("Chưa có thông tin phân bổ chi tiết.", "No storage breakdown details available.")}</p>
+        )}
+      </section>
+
       {/* ── Services ── */}
       <section className="panel" style={{ marginBottom: 20 }}>
         <div className="panel-head">
@@ -244,13 +396,13 @@ export function VpsStatusView() {
         </table></div>
       </section>
 
-      {/* ── Docker Containers ── */}
+      {/* ── Docker Containers with Project Filters ── */}
       <section className="panel" style={{ marginBottom: 20 }}>
         <div className="panel-head">
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: 6, background: "#edf5f1", color: "var(--accent)" }}><IconDocker /></span>
             <div>
-              <h2 style={{ margin: 0 }}>Docker · SentinelLAN</h2>
+              <h2 style={{ margin: 0 }}>{label("Docker · Các dự án trên VPS", "Docker · Host Projects & Containers")}</h2>
               <p style={{ margin: 0, color: "var(--muted)", fontSize: 12 }}>{label("Cổng công bố là cổng trên VPS; cổng EXPOSE chỉ là khai báo của image.", "Published ports belong to the host; EXPOSE ports are image metadata.")}</p>
             </div>
           </div>
@@ -258,10 +410,32 @@ export function VpsStatusView() {
             {runningContainers}/{totalContainers} {label("đang chạy", "running")}
           </span>
         </div>
-        <div className="vps-containers-grid">
-          {snapshot.runtime.containers.map(container => (
-            <ContainerCard key={container.id} container={container} vi={vi} />
+
+        {/* Project Filter Pills */}
+        <div className="vps-filter-pills" role="tablist" aria-label={label("Lọc theo dự án", "Filter by project")}>
+          {projectGroups.map(g => (
+            <button
+              key={g.id}
+              type="button"
+              className="vps-filter-pill"
+              data-active={selectedProject === g.id}
+              onClick={() => setSelectedProject(g.id)}
+            >
+              <span>{g.icon}</span>
+              <span>{g.name}</span>
+              <span className="badge badge-neutral" style={{ fontSize: 10, padding: "1px 5px" }}>{g.count}</span>
+            </button>
           ))}
+        </div>
+
+        <div className="vps-containers-grid">
+          {displayedContainers.length > 0 ? (
+            displayedContainers.map(container => (
+              <ContainerCard key={container.id} container={container} vi={vi} />
+            ))
+          ) : (
+            <p style={{ color: "var(--muted)", padding: 12 }}>{label("Không có container nào trong dự án này.", "No containers found in this project.")}</p>
+          )}
         </div>
       </section>
 

@@ -19,7 +19,8 @@ DOCKER = ["/usr/bin/docker", "--host", "unix:///var/run/docker.sock"]
 INSPECT = ('{"Id":{{json .Id}},"Pid":{{.State.Pid}},'
            '"RestartPolicy":{{json .HostConfig.RestartPolicy.Name}},'
            '"Health":{{with (index .State "Health")}}{{json .Status}}{{else}}null{{end}},'
-           '"Ports":{{json .NetworkSettings.Ports}},"NetworkMode":{{json .HostConfig.NetworkMode}}}')
+           '"Ports":{{json .NetworkSettings.Ports}},"NetworkMode":{{json .HostConfig.NetworkMode}},'
+           '"Labels":{{json .Config.Labels}}}')
 
 
 def run(args, timeout=8):
@@ -70,6 +71,72 @@ def cpu_times():
     return sum(values), values[3] + values[4]
 
 
+def parse_size_str(val):
+    if not val:
+        return 0
+    match = re.match(r"^([0-9.]+)\s*([A-Za-z]+)?", str(val).strip())
+    if not match:
+        return 0
+    num = float(match.group(1))
+    unit = (match.group(2) or "B").upper()
+    factors = {
+        "B": 1, "KB": 1024, "K": 1024, "KIB": 1024,
+        "MB": 1024**2, "M": 1024**2, "MIB": 1024**2,
+        "GB": 1024**3, "G": 1024**3, "GIB": 1024**3,
+        "TB": 1024**4, "T": 1024**4, "TIB": 1024**4
+    }
+    return int(num * factors.get(unit, 1))
+
+
+def collect_storage():
+    items = []
+    code, output = run(DOCKER + ["system", "df", "--format", "{{json .}}"], 6)
+    if code == 0:
+        for line in output.splitlines():
+            try:
+                row = json.loads(line)
+                t = row.get("Type", "")
+                size_str = row.get("Size", "0B")
+                reclaim = row.get("Reclaimable")
+                items.append({
+                    "name": "Docker " + t,
+                    "path": "/var/lib/docker (" + t.lower() + ")",
+                    "sizeBytes": parse_size_str(size_str),
+                    "category": "docker",
+                    "reclaimable": reclaim if reclaim and reclaim not in ("0B (0%)", "0B") else None
+                })
+            except (ValueError, KeyError):
+                pass
+
+    repo_targets = [
+        ("BeatSync", ["/opt/beatsync", "/home/ubuntu/beatsync"], "repo"),
+        ("Unified Monitor Agent", ["/opt/unified-monitoring-agent"], "service"),
+        ("SentinelLAN", ["/opt/sentinellan"], "repo"),
+        ("Kitchen Explore", ["/home/ubuntu/exxplore-kittens", "/var/www/exxplore-kittens"], "repo"),
+        ("Monopoly (mpoly)", ["/opt/monopoly", "/var/www/monopoly"], "repo"),
+        ("LiveKit", ["/home/ubuntu/livekit"], "service"),
+        ("Go SDK / Build Cache", ["/home/ubuntu/go"], "system"),
+    ]
+    for name, paths, cat in repo_targets:
+        existing = [p for p in paths if os.path.exists(p)]
+        if not existing:
+            continue
+        code, out = run(["du", "-s", "-B1"] + existing, 4)
+        if code == 0:
+            total_bytes = sum(int(l.split()[0]) for l in out.splitlines() if l.split() and l.split()[0].isdigit())
+            if total_bytes > 0:
+                items.append({
+                    "name": name,
+                    "path": ", ".join(existing),
+                    "sizeBytes": total_bytes,
+                    "category": cat,
+                    "reclaimable": None
+                })
+
+    items.sort(key=lambda x: x["sizeBytes"], reverse=True)
+    return items
+
+
 def collect(name, host):
     warnings = []
     before = cpu_times()
@@ -94,11 +161,7 @@ def collect(name, host):
     docker_error = None
     available = False
     try:
-        project = os.environ.get("SENTINELLAN_COMPOSE_PROJECT", "sentinellan-prod")
-        if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,63}", project):
-            raise ValueError("Invalid Compose project")
-        code, output = run(DOCKER + ["ps", "-a", "--no-trunc", "--size", "--filter",
-                                   "label=com.docker.compose.project=" + project, "--format", "{{json .}}"], 12)
+        code, output = run(DOCKER + ["ps", "-a", "--no-trunc", "--size", "--format", "{{json .}}"], 12)
         if code:
             raise RuntimeError("docker unavailable")
         available = True
@@ -120,6 +183,25 @@ def collect(name, host):
         namespaces = {}
         for row in rows:
             info = details.get(row["ID"], {})
+            labels = info.get("Labels") or {}
+            c_name = row.get("Names", "")
+            compose_proj = labels.get("com.docker.compose.project")
+            if compose_proj:
+                proj = compose_proj
+            elif "sentinellan" in c_name:
+                proj = "sentinellan-prod"
+            elif "monopoly" in c_name or "mpoly" in c_name:
+                proj = "monopoly"
+            elif "kitten" in c_name or "exxplore" in c_name:
+                proj = "exxplore-kittens"
+            elif "banh" in c_name:
+                proj = "mot-me-banh"
+            elif "livekit" in c_name:
+                proj = "livekit"
+            elif "beat" in c_name or "sync" in c_name:
+                proj = "beatsync"
+            else:
+                proj = "other"
             usage = stats.get(row["ID"], {})
             running = row.get("State") == "running"
             listeners = None
@@ -144,15 +226,18 @@ def collect(name, host):
                 "storageUsage": row.get("Size"), "networkIo": usage.get("NetIO") if running else None,
                 "blockIo": usage.get("BlockIO") if running else None,
                 "ports": port_bindings(info.get("Ports")), "listeningPorts": listeners,
-                "networkMode": info.get("NetworkMode")})
+                "networkMode": info.get("NetworkMode"),
+                "project": proj})
     except (OSError, subprocess.TimeoutExpired, RuntimeError, ValueError, KeyError):
         docker_error = "Không đọc được đầy đủ trạng thái Docker."
+    storage_breakdown = collect_storage()
     return {"name": name, "host": host, "capturedAtUtc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "osInfo": platform.platform(), "uptimeSeconds": uptime, "cpuPercent": cpu,
         "ramPercent": round(memory_used / memory_total * 100, 1), "diskPercent": round(disk.used / disk.total * 100, 1),
         "memoryTotalBytes": memory_total, "memoryUsedBytes": memory_used, "diskTotalBytes": disk.total, "diskUsedBytes": disk.used,
         "runtime": {"systemState": system_state, "dockerAvailable": available, "dockerError": docker_error,
-                    "services": services, "containers": containers}, "listeningPorts": host_sockets, "warnings": warnings}
+                    "services": services, "containers": containers, "storageBreakdown": storage_breakdown},
+        "listeningPorts": host_sockets, "warnings": warnings}
 
 
 def main():
