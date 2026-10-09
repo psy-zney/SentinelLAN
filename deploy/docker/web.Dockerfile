@@ -1,6 +1,7 @@
 FROM node:24.18.0-alpine AS build
 WORKDIR /src
 COPY package.json package-lock.json ./
+COPY scripts/dependency-security scripts/dependency-security
 COPY apps/company/package.json apps/company/package.json
 COPY apps/employee/package.json apps/employee/package.json
 COPY apps/mobile/package.json apps/mobile/package.json

@@ -1,0 +1,79 @@
+[
+  {
+    "name": "braces",
+    "version": "3.0.3",
+    "advisory": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+    "reference": "https://github.com/micromatch/braces/issues/70",
+    "files": [
+      {
+        "path": "lib/parse.js",
+        "beforeSha256": "e572166565f15fa6ad9865ae49d678218e32aabfd1b3720f6d0d43d39800d310",
+        "afterSha256": "8a28833b6f0a608ccbc185c7e70b897166e733114abc487b3be65702cf5fc247",
+        "replacements": [
+          {
+            "from": "  while (index < length) {\n    block = stack[stack.length - 1];",
+            "to": "  while (index < length) {\n    if (stack.length > 100) {\n      throw new SyntaxError('Brace expression exceeds the safe nesting limit');\n    }\n    block = stack[stack.length - 1];"
+          }
+        ]
+      },
+      {
+        "path": "lib/compile.js",
+        "beforeSha256": "dc98f22eee3d511785d92a00758d5f0d48efed5f5813bdecc2de430c529b5c9f",
+        "afterSha256": "31d78951bf7169757dd825aef1ca0012e048c898bf3439fc2db4fb164eec66ad",
+        "replacements": [
+          {
+            "from": "const compile = (ast, options = {}) => {",
+            "to": "const compile = (ast, options = {}) => {\n  require('./safe-depth')(ast);"
+          }
+        ]
+      },
+      {
+        "path": "lib/expand.js",
+        "beforeSha256": "41ccc196ebfa7b7781a634e721eb744e4e7bcb54cba427a7e3d6806a1b9e58f7",
+        "afterSha256": "c81e4a1ddf5e9049ba1486dcfde958e74c29d923593efced54b669db001b6db1",
+        "replacements": [
+          {
+            "from": "const expand = (ast, options = {}) => {",
+            "to": "const expand = (ast, options = {}) => {\n  require('./safe-depth')(ast);"
+          }
+        ]
+      },
+      {
+        "path": "lib/stringify.js",
+        "beforeSha256": "379f22d77bfa1478341ccd49c5e4267464aabcbba03558bab332aac23fc6f23a",
+        "afterSha256": "49b59e5754322ef64a071b1e7ab9500b84251d29b205b3874e251382fa02161a",
+        "replacements": [
+          {
+            "from": "module.exports = (ast, options = {}) => {",
+            "to": "module.exports = (ast, options = {}) => {\n  require('./safe-depth')(ast);"
+          }
+        ]
+      },
+      {
+        "path": "lib/safe-depth.js",
+        "beforeSha256": null,
+        "afterSha256": "d03e4907babf5f6bffcc5c596ba7c088a8698c4c2fa632c684d7ee5fcdb7792b",
+        "source": "./braces-depth.cjs"
+      }
+    ]
+  },
+  {
+    "name": "node-forge",
+    "version": "1.4.0",
+    "advisory": "https://github.com/advisories/GHSA-86w9-cpqp-85rv",
+    "reference": "https://github.com/digitalbazaar/forge/pull/1152",
+    "files": [
+      {
+        "path": "lib/rsa.js",
+        "beforeSha256": "fd4740238145ec26470eb3f06a627c72039538ce1307dbdce40521f94dfd0a50",
+        "afterSha256": "1b68c0216cf74fdc120d964b0b58b7c214bfe3ce9e9927b9fd8472d532fd40ee",
+        "replacements": [
+          {
+            "from": "            obj.value.length !== 2) {",
+            "to": "            obj.value.length !== 2 ||\n            obj.value[0].value.length !== (('parameters' in capture) ? 2 : 1) ||\n            ('parameters' in capture && capture.parameters !== '')) {"
+          }
+        ]
+      }
+    ]
+  }
+]

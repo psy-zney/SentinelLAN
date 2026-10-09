@@ -9,6 +9,7 @@ dotnet restore SentinelLAN.slnx
 dotnet build SentinelLAN.slnx --configuration Release --no-restore
 dotnet test SentinelLAN.slnx --configuration Release --no-build --no-restore
 python3 -B -m unittest discover -s deploy/vps/tests -v
+npm run audit:dependencies
 npm run lint
 npm run typecheck
 npm test

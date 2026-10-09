@@ -13,6 +13,9 @@
     "packages/*"
   ],
   "scripts": {
+    "postinstall": "node scripts/dependency-security/install.mjs",
+    "test:dependency-security": "node --test scripts/dependency-security/backports.test.mjs",
+    "audit:dependencies": "node scripts/dependency-security/audit.mjs",
     "dev": "npm run dev --workspace=@sentinellan/company",
     "dev:mobile": "npm run start --workspace=@sentinellan/mobile",
     "lint": "npm run lint --workspace=@sentinellan/company && npm run lint --workspace=@sentinellan/employee && npm run lint --workspace=@sentinellan/web-ui",
@@ -29,6 +32,8 @@
   "overrides": {
     "sharp": "0.35.5",
     "shell-quote": "1.12.0",
-    "source-map-js": "1.2.2"
+    "source-map-js": "1.2.2",
+    "braces": "3.0.3",
+    "node-forge": "1.4.0"
   }
 }

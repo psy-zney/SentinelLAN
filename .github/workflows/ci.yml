@@ -101,8 +101,8 @@ jobs:
       - name: Install Web Dependencies
         run: npm ci
 
-      - name: Audit Production Web Dependencies
-        run: npm audit --omit=dev --audit-level=high
+      - name: Audit Production Dependencies and Security Backports
+        run: npm run audit:dependencies
 
       - name: Lint Web Code
         run: npm run lint
