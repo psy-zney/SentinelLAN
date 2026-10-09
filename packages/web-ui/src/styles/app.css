@@ -198,6 +198,57 @@ input::placeholder, textarea::placeholder { color: #7d8791; font-weight: 400; }
 .vps-gauge-header { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 13px; font-weight: 600; }
 .vps-gauge-detail { color: var(--muted); font-size: 12px; text-align: center; }
 
+/* VPS services: live component tree and selected node */
+.vps-diagram-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr); gap: 20px; align-items: start; }
+.vps-diagram-tree { min-width: 0; background: #f8faf9; border: 1px solid var(--border); border-radius: 10px; padding: 20px 14px; }
+.vps-diagram-root { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; width: fit-content; max-width: 100%; margin: 0 auto 36px; padding: 12px 24px; background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 8px; overflow-wrap: anywhere; }
+.vps-diagram-root::after { content: ""; position: absolute; top: 100%; left: 50%; height: 36px; border-left: 2px solid #a8bfb4; }
+.vps-diagram-branches { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+.vps-diagram-branch { position: relative; min-width: 0; padding-top: 18px; }
+.vps-diagram-branch::before { content: ""; position: absolute; top: 0; left: 50%; height: 18px; border-left: 2px solid #a8bfb4; }
+.vps-diagram-branch:first-child::after { content: ""; position: absolute; top: 0; left: 50%; right: -9px; border-top: 2px solid #a8bfb4; }
+.vps-diagram-branch:last-child::after { content: ""; position: absolute; top: 0; right: 50%; left: -9px; border-top: 2px solid #a8bfb4; }
+.vps-diagram-branch h3 { margin: 0 0 14px; padding: 10px; border: 1px solid var(--border); background: var(--panel); border-radius: 6px; font-size: 13px; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.vps-diagram-nodes { position: relative; display: grid; gap: 10px; padding-left: 16px; margin-left: 4px; border-left: 2px solid #c6d6ce; }
+.vps-diagram-node, .vps-diagram-project { position: relative; min-width: 0; width: 100%; border: 1px solid var(--border); background: var(--panel); border-radius: 7px; padding: 10px; }
+.vps-diagram-node::before, .vps-diagram-project::before { content: ""; position: absolute; top: 22px; right: 100%; width: 18px; border-top: 2px solid #c6d6ce; }
+.vps-diagram-node { display: flex; flex-direction: column; align-items: stretch; gap: 6px; cursor: pointer; text-align: left; color: var(--ink); font: inherit; border-left: 3px solid var(--accent); }
+.vps-diagram-node[data-state="warn"] { border-left-color: var(--warn); }
+.vps-diagram-node:hover, .vps-diagram-node[aria-expanded="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.vps-diagram-node-heading { display: flex; align-items: start; flex-wrap: wrap; gap: 6px; justify-content: space-between; }
+.vps-diagram-node-heading strong { font-size: 12px; overflow-wrap: anywhere; }
+.vps-diagram-node small { color: var(--muted); font-size: 11px; }
+.vps-diagram-node-action { color: var(--accent); font-size: 11px; }
+.vps-diagram-project summary { cursor: pointer; font-size: 12px; overflow-wrap: anywhere; }
+.vps-diagram-project .vps-diagram-nodes { margin-top: 14px; padding-left: 10px; margin-left: 0; }
+.vps-diagram-project .vps-diagram-node::before { width: 12px; }
+.vps-diagram-detail { position: sticky; top: 16px; min-width: 0; padding: 16px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; }
+.vps-diagram-detail-heading { display: flex; align-items: start; justify-content: space-between; gap: 10px; }
+.vps-diagram-detail h3 { margin: 0; font-size: 15px; overflow-wrap: anywhere; }
+.vps-diagram-detail h4 { margin: 18px 0 10px; font-size: 13px; }
+.vps-diagram-facts { display: grid; gap: 10px; margin: 16px 0; }
+.vps-diagram-facts div { display: grid; gap: 4px; }
+.vps-diagram-facts dt { font-size: 12px; color: var(--muted); }
+.vps-diagram-facts dd { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
+.vps-diagram-port-list { display: grid; gap: 10px; max-height: 340px; overflow: auto; }
+.vps-diagram-port { display: grid; gap: 6px; padding: 10px; background: #f8faf9; border: 1px solid var(--border); border-radius: 6px; overflow-wrap: anywhere; }
+.vps-diagram-port .badge { justify-self: start; }
+.vps-diagram-port small { color: var(--muted); }
+.vps-diagram-binding, .vps-diagram-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.vps-diagram-flow button { padding: 0; font-size: 12px; overflow-wrap: anywhere; text-align: left; }
+.vps-diagram-legend { margin: 14px 0 0; font-size: 12px; line-height: 1.6; color: var(--muted); }
+.vps-diagram-node:focus-visible, .vps-diagram-project summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 1000px) { .vps-diagram-layout { grid-template-columns: 1fr; } .vps-diagram-detail { position: static; } }
+@media (max-width: 540px) {
+  .vps-diagram-branches { grid-template-columns: 1fr; gap: 24px; margin-left: 8px; padding-left: 14px; border-left: 2px solid #a8bfb4; }
+  .vps-diagram-root::after { display: none; }
+  .vps-diagram-root { margin-bottom: 20px; }
+  .vps-diagram-branch { padding-top: 0; }
+  .vps-diagram-branch::before, .vps-diagram-branch:first-child::after, .vps-diagram-branch:last-child::after { display: none; }
+  .vps-diagram-branch h3 { position: relative; }
+  .vps-diagram-branch h3::before { content: ""; position: absolute; top: 50%; right: 100%; width: 16px; border-top: 2px solid #a8bfb4; }
+}
+
 /* ── VPS Dashboard: Container cards ── */
 .vps-containers-grid { display: grid; gap: 8px; }
 .vps-container-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: box-shadow .15s; }

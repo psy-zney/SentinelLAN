@@ -2,6 +2,8 @@
 
 import { Fragment, useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ApiClient, ApiError } from "@/lib/api-client";
+import { containersForPort, endpoint, getProjectMeta, portScope } from "@/lib/vps-host";
+import { VpsServiceDiagram } from "@/components/vps-service-diagram";
 import { useTranslation } from "@/lib/i18n";
 import type { VpsHostStatus, VpsContainer, VpsListeningPort } from "@/types/host-status";
 
@@ -14,30 +16,6 @@ function formatBytes(val: number): string {
   if (val >= 1024 ** 2) return `${(val / 1024 ** 2).toFixed(1)} MiB`;
   if (val >= 1024) return `${(val / 1024).toFixed(1)} KiB`;
   return `${val} B`;
-}
-
-function getProjectMeta(project?: string | null, name?: string) {
-  const p = (project || "").toLowerCase();
-  const n = (name || "").toLowerCase();
-  if (p === "sentinellan-prod" || p === "sentinellan" || n.includes("sentinellan")) {
-    return { id: "sentinellan", name: "SentinelLAN", badgeClass: "badge-success", icon: "🛡️", color: "#18634e" };
-  }
-  if (p === "monopoly" || n.includes("monopoly") || n.includes("mpoly")) {
-    return { id: "monopoly", name: "Monopoly (mpoly)", badgeClass: "badge-warn", icon: "🎲", color: "#c27b1a" };
-  }
-  if (p === "exxplore-kittens" || n.includes("kitten") || n.includes("exxplore")) {
-    return { id: "kitchen-explore", name: "Kitchen Explore", badgeClass: "badge-info", icon: "🐱", color: "#6b46c1" };
-  }
-  if (p === "mot-me-banh" || n.includes("banh")) {
-    return { id: "mot-me-banh", name: "Mọt Mê Bánh", badgeClass: "badge-warn", icon: "🥖", color: "#d97706" };
-  }
-  if (p === "livekit" || n.includes("livekit")) {
-    return { id: "livekit", name: "LiveKit", badgeClass: "badge-info", icon: "📹", color: "#2563eb" };
-  }
-  if (p === "beatsync" || n.includes("beat") || n.includes("sync")) {
-    return { id: "beatsync", name: "BeatSync", badgeClass: "badge-info", icon: "🎵", color: "#0891b2" };
-  }
-  return { id: "other", name: project || "Dự án khác", badgeClass: "badge-neutral", icon: "📦", color: "#475569" };
 }
 
 /* ──────────────────────────── SVG Icons ──────────────────────────── */
@@ -85,28 +63,6 @@ function gaugeColor(pct: number) {
   if (pct >= 90) return "#b02c2c";
   if (pct >= 70) return "#c27b1a";
   return "#18634e";
-}
-
-function portScope(address: string | null, vi: boolean) {
-  const ip = address?.replace(/^\[|\]$/g, "");
-  if (!ip) return vi ? "Chưa rõ địa chỉ" : "Unknown address";
-  if (/^127\./.test(ip) || ip === "::1" || ip === "localhost") return vi ? "Chỉ localhost" : "Localhost only";
-  if (["0.0.0.0", "::", "*"].includes(ip)) return vi ? "Mọi địa chỉ mạng" : "All network addresses";
-  return vi ? "Địa chỉ mạng cụ thể" : "Specific network address";
-}
-
-function endpoint(address: string | null, port: number) {
-  const ip = address?.replace(/^\[|\]$/g, "") ?? "?";
-  return `${ip.includes(":") ? `[${ip}]` : ip}:${port}`;
-}
-
-function containersForPort(port: VpsListeningPort, containers: VpsContainer[]) {
-  const address = port.address.replace(/^\[|\]$/g, "");
-  return containers.filter(container => container.ports?.some(binding => {
-    const bound = binding.hostIp?.replace(/^\[|\]$/g, "");
-    return binding.hostPort === port.port && binding.protocol.toLowerCase() === port.protocol.toLowerCase()
-      && (bound === address || address === "*" && ["0.0.0.0", "::"].includes(bound ?? ""));
-  }));
 }
 
 function DisclosurePanel({ title, icon, badge, description, children, vi }: {
@@ -535,36 +491,7 @@ export function VpsStatusView() {
 
       {/* ── Services ── */}
       <DisclosurePanel vi={vi} title={label("Dịch vụ trên VPS", "Host services")} icon={<IconService />} badge={<span className="badge badge-info">{snapshot.runtime.services.length} {label("dịch vụ", "services")}</span>}>
-        <div className="vps-table"><table><thead><tr>
-          <th>{label("Dịch vụ", "Service")}</th>
-          <th>{t("status")}</th>
-          <th>{label("Khởi động cùng VPS", "Startup")}</th>
-        </tr></thead>
-          <tbody>{snapshot.runtime.services.map(service => <tr key={service.name}>
-            <td style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <IconService />
-              <details><summary>{service.name}</summary><div className="vps-storage-item-detail">
-                <span>{label("Trạng thái", "State")}: {service.activeState}</span><span>{label("Khởi động cùng VPS", "Startup")}: {service.startupState}</span>
-                <span>{label("Cổng do tiến trình này nghe", "Ports listened to by this process")}</span>
-                {(() => {
-                  const name = service.name.replace(/\.service$/, "");
-                  const aliases: Record<string, string[]> = { ssh: ["ssh", "sshd"], docker: ["dockerd", "docker-proxy"], postgresql: ["postgres", "postgresql"] };
-                  const ports = allListeningPorts.filter(port => port.process?.split(/,\s*/).some(process => (aliases[name] ?? [name]).includes(process)));
-                  return ports.length ? ports.map((port, index) => <div key={index}><code>{endpoint(port.address, port.port)}/{port.protocol}</code> · {portScope(port.address, vi)}</div>) : <small>{label("Không có cổng tương ứng được ghi nhận. Ánh xạ cổng của container xem trong mục Docker.", "No matching port recorded. See Docker for container port bindings.")}</small>;
-                })()}
-              </div></details>
-            </td>
-            <td><span className={`badge ${service.activeState === "active" ? "badge-success" : "badge-neutral"}`}>
-              {service.activeState === "active" ? <IconCheck /> : <IconX />}
-              {service.activeState}
-            </span></td>
-            <td>
-              <span className={`badge ${service.startupState === "enabled" ? "badge-info" : "badge-neutral"}`}>
-                {service.startupState}
-              </span>
-            </td>
-          </tr>)}</tbody>
-        </table></div>
+        <VpsServiceDiagram snapshot={snapshot} vi={vi} />
       </DisclosurePanel>
 
       {/* ── Host Listening Ports ── */}

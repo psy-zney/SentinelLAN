@@ -12,7 +12,7 @@ test("Admin can expand individual VPS resources and port bindings, recognize old
       { address: "::", port: 5353, protocol: "udp", process: null }
     ],
     runtime: { systemState: "running", dockerAvailable: true, dockerError: null,
-      services: [{ name: "nginx", activeState: "active", startupState: "enabled" }],
+      services: [{ name: "nginx", activeState: "active", startupState: "enabled" }, { name: "docker", activeState: "active", startupState: "enabled" }, { name: "ufw", activeState: "inactive", startupState: "disabled" }],
       containers: [{ id: "api", name: "sentinellan-prod-api-1", image: "api:test", state: "running", status: "Up", health: null,
         cpuPercent: 1, memoryUsage: "100MiB / 4GiB", memoryPercent: 2.5,
         ports: [{ containerPort: 8080, protocol: "tcp", hostIp: null, hostPort: null }],
@@ -64,10 +64,36 @@ test("Admin can expand individual VPS resources and port bindings, recognize old
   await expect(page.locator("#vps-docker-details").getByText("127.0.0.1:9003 → 8443/tcp", { exact: true })).toBeVisible();
   const services = page.locator(".vps-disclosure").filter({ has: page.getByRole("button", { name: /Dịch vụ trên VPS/ }) });
   await services.getByRole("button", { name: /Dịch vụ trên VPS/ }).click();
-  await services.locator("summary").filter({ hasText: /^nginx$/ }).click();
-  await expect(services.getByText("0.0.0.0:443/tcp", { exact: true })).toBeVisible();
+  const diagram = services.locator(".vps-service-diagram");
+  const nginxNode = diagram.getByRole("button", { name: "Dịch vụ nginx", exact: true });
+  const nodeDetails = diagram.locator(".vps-diagram-detail");
+  await nginxNode.focus();
+  await nginxNode.press("Enter");
+  await expect(nginxNode).toHaveAttribute("aria-expanded", "true");
+  await expect(nodeDetails.getByText("0.0.0.0:443/tcp", { exact: true })).toBeVisible();
+  await expect(nodeDetails.getByText("Mọi địa chỉ mạng", { exact: true })).toBeVisible();
+  await nginxNode.click();
+  await expect(nginxNode).toHaveAttribute("aria-expanded", "false");
+  await expect(nodeDetails.getByText("0.0.0.0:443/tcp", { exact: true })).toHaveCount(0);
+  await diagram.getByRole("button", { name: "Dịch vụ docker", exact: true }).click();
+  await expect(nodeDetails.getByText("127.0.0.1:9003/tcp", { exact: true })).toBeVisible();
+  await expect(nodeDetails.getByText("Chỉ localhost", { exact: true })).toBeVisible();
+  await nodeDetails.getByRole("button", { name: "sentinellan-prod-nginx-1", exact: true }).click();
+  const containerNode = diagram.getByRole("button", { name: "Container sentinellan-prod-nginx-1", exact: true });
+  await expect(containerNode).toBeVisible();
+  await expect(containerNode).toHaveAttribute("aria-expanded", "true");
+  await expect(nodeDetails.getByText("nginx:test", { exact: true })).toBeVisible();
+  await expect(nodeDetails.locator(".vps-diagram-binding")).toHaveText("127.0.0.1:9003→8443/tcp");
+  await diagram.screenshot({ path: test.info().outputPath("vps-service-diagram.png") });
+  await nodeDetails.getByRole("button", { name: "Thu gọn", exact: true }).click();
+  await expect(containerNode).toBeFocused();
+  await expect(containerNode).toHaveAttribute("aria-expanded", "false");
+  await diagram.getByRole("button", { name: "Dịch vụ ufw", exact: true }).click();
+  await expect(nodeDetails.getByText("inactive", { exact: true })).toBeVisible();
+  await expect(nodeDetails.getByText("Chưa ghi nhận cổng tương ứng với tiến trình của dịch vụ này.", { exact: true })).toBeVisible();
+  await nodeDetails.getByRole("button", { name: "Thu gọn", exact: true }).click();
   await services.getByRole("button", { name: /Dịch vụ trên VPS/ }).click();
-  await expect(services.getByText("0.0.0.0:443/tcp", { exact: true })).toBeHidden();
+  await expect(diagram).toBeHidden();
   await page.getByRole("button", { name: /Cổng đang nghe trên VPS/ }).click();
   const localhost = page.getByRole("button", { name: "Chi tiết cổng 127.0.0.1:9003/tcp", exact: true });
   await expect(localhost.locator("xpath=ancestor::tr")).toContainText("Chỉ localhost");
@@ -98,4 +124,5 @@ test("Admin can expand individual VPS resources and port bindings, recognize old
   await expect(page.getByRole("heading", { name: "vps-test · 192.0.2.1" })).toHaveCount(0);
   await expect(docker).toHaveCount(0);
   await expect(page.locator("#vps-docker-details")).toHaveCount(0);
+  await expect(diagram).toHaveCount(0);
 });
