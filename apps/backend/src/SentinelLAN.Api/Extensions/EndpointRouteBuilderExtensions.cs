@@ -10,9 +10,9 @@ public static class EndpointRouteBuilderExtensions
         app.MapHealthEndpoints();
 
         var v1 = app.MapGroup("/api/v1");
-        if (app.Services.GetRequiredService<DeploymentSettings>().PlatformEnabled) v1.MapPlatform();
         v1.MapSelfService();
         v1.MapAuthEndpoints();
+        v1.MapHostMonitoringEndpoints();
         v1.MapMobileAuthEndpoints();
         v1.MapUserEndpoints();
         v1.MapEnrollmentEndpoints();
@@ -26,7 +26,7 @@ public static class EndpointRouteBuilderExtensions
         v1.MapAssetManagementEndpoints();
         v1.MapQrEndpoints();
 
-        app.MapHub<UpdatesHub>("/hubs/updates").RequireAuthorization(AuthorizationPolicies.ViewDevices);
+        app.MapHub<UpdatesHub>("/hubs/updates", options => options.CloseOnAuthenticationExpiration = true).RequireAuthorization(AuthorizationPolicies.ViewDevices);
         return app;
     }
 }

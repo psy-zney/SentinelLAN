@@ -14,17 +14,19 @@ public sealed partial class SelfServiceService
                 {
                     var (command, result) = await commands.GetAsync(organizationId, request.CommandId!.Value, ct);
                     if (command is null) continue;
-                    var status = command.ExpiresAt <= Now && command.Status is DeviceCommandStatus.Pending or DeviceCommandStatus.Delivered ? "Expired" : command.Status.ToString();
+                    var status = command.EffectiveStatus(Now).ToString();
                     var message = result?.Message ?? (status == "Expired"
-                        ? "Máy chưa hoàn tất thao tác trong thời hạn cho phép."
+                        ? "Lệnh đã hết hạn trước khi được giao cho máy."
+                        : status == "ExecutionUnconfirmed" ? "Lệnh đã được giao nhưng chưa nhận được xác nhận. IT cần kiểm tra trước khi thực hiện lại."
                         : "Đang chờ máy báo kết quả.");
                     if (request.CommandStatus == status && request.CommandMessage == message) continue;
                     request.CommandStatus = status;
                     request.CommandMessage = message;
                     request.UpdatedAt = Now;
-                    if (status is not ("Succeeded" or "Failed" or "Expired")) continue;
+                    if (status is not ("Succeeded" or "Failed" or "Expired" or "ExecutionUnconfirmed")) continue;
                     if (status == "Succeeded" && request.Status is not ("Closed" or "Resolved")) request.Status = "AwaitingEmployee";
-                    var title = status == "Succeeded" ? "Máy đã báo hoàn tất thao tác" : "Thao tác trên máy chưa hoàn tất";
+                    var title = status == "Succeeded" ? "Máy đã báo hoàn tất thao tác"
+                        : status == "ExecutionUnconfirmed" ? "Chưa xác nhận kết quả thao tác" : "Thao tác trên máy chưa hoàn tất";
                     await NotifyAsync(organizationId, request.UserId, title, "Mở yêu cầu để xem kết quả và xác nhận với IT.", request.Id, $"command:{command.Id}:{status}", ct);
                     await NotifyItAsync(organizationId, title, "Có kết quả thao tác cần IT theo dõi.", request.Id, $"command:{command.Id}:{status}", ct);
                     audit.Record(organizationId, command.IssuedByUserId, request.DeviceId, "SelfServiceCommandReconciled", "Kết quả được Agent gửi hoặc lệnh đã hết hạn", status);

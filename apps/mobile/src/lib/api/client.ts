@@ -316,7 +316,7 @@ export class MobileApiClient {
   async operatorDashboard() { return OperatorDashboardSchema.parse(await this.executeWithRefresh('/api/v1/dashboard')); }
   async operatorDevices() { return z.array(OperatorDeviceSchema).parse(await this.executeWithRefresh('/api/v1/devices')); }
   async operatorUsers() { return z.array(OperatorUserSchema).parse(await this.executeWithRefresh('/api/v1/users')); }
-  async createCompanyUser(input: {email: string; displayName: string; role: 'Employee' | 'Technician' | 'Admin'; reason: string; confirmed: boolean}) {
+  async createCompanyUser(input: {email: string; displayName: string; role: 'Employee' | 'Admin'; reason: string; confirmed: boolean}) {
     return z.object({ activationUrl: z.string().nullable(), activationTokenExpiresAt: z.string().nullable().optional() }).passthrough().parse(await this.executeWithRefresh('/api/v1/users', { method: 'POST', body: JSON.stringify(input) }));
   }
   async setCompanyUserStatus(id: string, status: 'Active' | 'Locked', reason: string) {

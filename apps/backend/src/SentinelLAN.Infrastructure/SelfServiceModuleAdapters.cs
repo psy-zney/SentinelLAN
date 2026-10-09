@@ -14,7 +14,7 @@ public sealed class SelfServiceDirectory(SentinelDbContext db) : ISelfServiceDir
     public Task<Device?> FindAssignedDeviceAsync(Guid org, Guid user, CancellationToken ct) => db.Devices.AsNoTracking().SingleOrDefaultAsync(x => x.OrganizationId == org && x.AssignedUserId == user && !x.IsRevoked, ct);
     public Task<Device?> FindDeviceAsync(Guid org, Guid id, CancellationToken ct) => db.Devices.AsNoTracking().SingleOrDefaultAsync(x => x.OrganizationId == org && x.Id == id, ct);
     public Task<User?> FindUserAsync(Guid org, Guid id, CancellationToken ct) => db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.OrganizationId == org && x.Id == id, ct);
-    public async Task<IReadOnlyList<User>> GetActiveUsersAsync(Guid org, CancellationToken ct) => await db.Users.AsNoTracking().Where(x => x.OrganizationId == org && x.Status == UserStatuses.Active).ToListAsync(ct);
+    public async Task<IReadOnlyList<User>> GetActiveUsersAsync(Guid org, CancellationToken ct) => await db.Users.AsNoTracking().Where(x => x.OrganizationId == org && x.Status == UserStatuses.Active && (x.Role == Roles.Admin || x.Role == Roles.Employee)).ToListAsync(ct);
     public async Task<IReadOnlyList<Device>> GetDevicesAsync(Guid org, CancellationToken ct) => await db.Devices.AsNoTracking().Where(x => x.OrganizationId == org).ToListAsync(ct);
     public async Task<IReadOnlyList<Guid>> GetOrganizationIdsAsync(CancellationToken ct) => await db.Organizations.Select(x => x.Id).ToListAsync(ct);
 }

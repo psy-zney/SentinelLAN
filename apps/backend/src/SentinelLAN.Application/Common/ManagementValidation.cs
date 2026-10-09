@@ -9,7 +9,7 @@ public static class ManagementValidation
         IsReasonConfirmed(request.Reason, request.Confirmed) &&
         IsEmail(request.Email) && !string.IsNullOrWhiteSpace(request.DisplayName) && request.DisplayName.Trim().Length is >= 2 and <= 100 &&
         (string.IsNullOrEmpty(request.Password) || (request.Password.Length is >= 12 and <= 1024)) &&
-        request.Role is Roles.Admin or Roles.Technician or Roles.Employee;
+        request.Role is Roles.Admin or Roles.Employee;
 
     public static bool IsValid(EnrollmentTokenRequest request) =>
         IsReasonConfirmed(request.Reason, request.Confirmed) && request.ValidForMinutes is >= 1 and <= 60;

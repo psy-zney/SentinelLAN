@@ -33,7 +33,7 @@ public interface IPendingCommandResultStore
 public interface IDeviceIdentityStore { Task<DeviceIdentity?> LoadAsync(CancellationToken cancellationToken); Task SaveAsync(DeviceIdentity identity, CancellationToken cancellationToken); }
 public interface ITelemetryCollector { TelemetrySnapshot Collect(); }
 public record TelemetrySnapshot(double CpuPercent, double RamPercent, double DiskPercent, string OsVersion, string AgentVersion,
-    DateTimeOffset? MaintenanceUntil = null, string? MaintenanceAction = null);
+    DateTimeOffset? MaintenanceUntil = null, string? MaintenanceAction = null, DateTimeOffset? CollectedAt = null);
 public record QueuedTelemetry(TelemetrySnapshot Snapshot, string IdempotencyKey);
 public interface IAgentApi
 {

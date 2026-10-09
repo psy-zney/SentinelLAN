@@ -20,7 +20,7 @@ public sealed class UserManagementService(
 
         var user = await store.FindUserAsync(actor.OrganizationId, userId, cancellationToken);
         if (user is null) return (ManagementResultStatus.NotFound, null);
-        if (user.Status == UserStatuses.PendingActivation || userId == actor.UserId)
+        if (user.Role is not (Roles.Admin or Roles.Employee) || user.Status == UserStatuses.PendingActivation || userId == actor.UserId)
             return (ManagementResultStatus.Conflict, null);
         if (user.Status != request.Status)
         {
@@ -211,7 +211,7 @@ public sealed class UserManagementService(
             return new ValidateActivationTokenResponse(false, "Token is invalid, expired, or already used.");
 
         var user = await store.FindUserByIdAsync(token.UserId, cancellationToken);
-        if (user is null || user.Status == UserStatuses.Locked)
+        if (user is null || user.Role is not (Roles.Admin or Roles.Employee) || user.Status == UserStatuses.Locked)
             return new ValidateActivationTokenResponse(false, "Token is invalid.");
 
         return new ValidateActivationTokenResponse(true, "Token is valid.");
@@ -232,13 +232,17 @@ public sealed class UserManagementService(
             return (ManagementResultStatus.Invalid, "Activation token is invalid, expired, or has already been used.");
 
         var user = await store.FindUserByIdAsync(token.UserId, cancellationToken);
-        if (user is null || user.Status == UserStatuses.Locked)
+        if (user is null || user.Role is not (Roles.Admin or Roles.Employee) || user.Status == UserStatuses.Locked)
             return (ManagementResultStatus.Invalid, "Account cannot be activated.");
 
         user.Status = UserStatuses.Active;
         user.PasswordHash = passwordHasher.Hash(request.Password);
         user.SecurityStamp = Guid.NewGuid().ToString("N");
         user.UpdatedAt = DateTimeOffset.UtcNow;
+
+        var sessions = await store.GetActiveUserSessionsAsync(user.OrganizationId, user.Id, DateTimeOffset.UtcNow, cancellationToken);
+        foreach (var session in sessions)
+            session.TryRevoke(DateTimeOffset.UtcNow, "Password changed through account activation");
 
         var otherTokens = await store.GetActiveActivationTokensByUserAsync(user.OrganizationId, user.Id, cancellationToken);
         foreach (var ot in otherTokens)

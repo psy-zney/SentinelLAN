@@ -186,8 +186,7 @@ describe("QR Asset Lifecycle & Resolution Client", () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
-          role: "Technician",
-          nextRoute: "/devices/dev-1",
+          role: "Admin", nextRoute: "/devices/dev-1",
           deviceId: "dev-1",
           deviceName: "FINANCE-LAPTOP-01",
           authorized: true
@@ -200,7 +199,7 @@ describe("QR Asset Lifecycle & Resolution Client", () => {
     const client = new ApiClient();
     const res = await client.resolveQr("demo-qr-asset-employee-pc-2026");
 
-    expect(res.role).toBe("Technician");
+    expect(res.role).toBe("Admin");
     expect(res.nextRoute).toBe("/devices/dev-1");
   });
 });

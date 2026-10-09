@@ -20,15 +20,21 @@ public static class ServiceCollectionExtensions
             options.AddOperationTransformer<AuthenticationOpenApiTransformer>();
         });
         services.AddSignalR();
+        services.AddSingleton<RealtimeConnectionGuard>();
+        services.AddHostedService<RealtimeAuthorizationWorker>();
         services.AddHostedService<DeviceStatusPublisher>();
-        var allowedOrigins = (configuration["SENTINELLAN_WEB_ORIGINS"] ?? "http://localhost:3000,http://localhost:3001,http://localhost:3002")
+        var allowedOrigins = (configuration["SENTINELLAN_WEB_ORIGINS"] ?? "http://localhost:3000,http://localhost:3001")
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (!environment.IsDevelopment() && (allowedOrigins.Length == 0 || allowedOrigins.Any(origin =>
+            !Uri.TryCreate(origin, UriKind.Absolute, out var uri) || uri.Scheme != "https" || uri.UserInfo.Length > 0 ||
+            uri.AbsolutePath != "/" || uri.Query.Length > 0 || uri.Fragment.Length > 0)))
+            throw new InvalidOperationException("SENTINELLAN_WEB_ORIGINS must contain explicit HTTPS origins outside Development.");
         services.AddCors(options => options.AddDefaultPolicy(policy => policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
             options.AddPolicy("sensitive", context => RateLimitPartition.GetFixedWindowLimiter(
-                $"{context.Request.Path}|{context.User.ToAgentContext()?.DeviceId.ToString() ?? context.User.ToActorContext()?.UserId.ToString() ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}",
+                $"{(context.GetEndpoint() as Microsoft.AspNetCore.Routing.RouteEndpoint)?.RoutePattern.RawText?.ToLowerInvariant() ?? "unknown"}|{context.User.ToAgentContext()?.DeviceId.ToString() ?? context.User.ToActorContext()?.UserId.ToString() ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}",
                 _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }));
         });
 
@@ -43,9 +49,19 @@ public static class ServiceCollectionExtensions
         var signingKey = configuration["SENTINELLAN_SIGNING_KEY"] ?? "development-signing-key-change-before-deployment";
         var accessTokenSigningKey = configuration["SENTINELLAN_ACCESS_TOKEN_SIGNING_KEY"] ?? "development-access-token-signing-key-change-before-deployment";
         var serverVaultKey = configuration["SENTINELLAN_SERVER_VAULT_KEY"] ?? "development-server-vault-key-32-bytes-long!";
+        var dataEncryptionKey = configuration["SENTINELLAN_DATA_ENCRYPTION_KEY"];
+        var developmentDataKey = Convert.ToBase64String(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes("development-data-key-never-use-in-production")));
+        if (string.IsNullOrWhiteSpace(dataEncryptionKey) && !environment.IsDevelopment())
+            throw new InvalidOperationException("SENTINELLAN_DATA_ENCRYPTION_KEY is required outside Development.");
+        dataEncryptionKey ??= developmentDataKey;
+        if (!environment.IsDevelopment() && dataEncryptionKey == developmentDataKey)
+            throw new InvalidOperationException("The development data encryption key cannot be used in production.");
+        if (dataEncryptionKey == accessTokenSigningKey || dataEncryptionKey == serverVaultKey || dataEncryptionKey == signingKey)
+            throw new InvalidOperationException("The data encryption key must be distinct from authentication and command keys.");
+        services.AddSingleton(new SensitiveDataCipher(dataEncryptionKey));
         var privateCommandKey = configuration["SENTINELLAN_COMMAND_PRIVATE_KEY_PEM"];
         var useRsaCommands = !string.IsNullOrWhiteSpace(privateCommandKey);
-        if (!deployment.PlatformEnabled && !useRsaCommands)
+        if (!environment.IsDevelopment() && !useRsaCommands)
             throw new InvalidOperationException("SelfHost requires SENTINELLAN_COMMAND_PRIVATE_KEY_PEM and a company installer with the corresponding public key.");
         if (!environment.IsDevelopment())
         {
@@ -77,11 +93,10 @@ public static class ServiceCollectionExtensions
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentTenantProvider, HttpCurrentTenantProvider>();
         services.AddScoped<IAuthenticationStore, AuthenticationStore>();
-        if (deployment.PlatformEnabled)
-        {
-            services.AddScoped<IPlatformStore, PlatformStore>();
-            services.AddScoped<PlatformService>();
-        }
+        services.AddSingleton(new VpsHostMonitorSettings(configuration["SENTINELLAN_HOST_MONITOR_ORG_CODE"]?.Trim()));
+        services.AddSingleton<IVpsHostSnapshotReader>(new FileVpsHostSnapshotReader(configuration["SENTINELLAN_HOST_SNAPSHOT_PATH"]));
+        services.AddScoped<VpsHostMonitorService>();
+        services.AddScoped<IRealtimeSessionValidator, RealtimeSessionValidator>();
         services.AddScoped<SentinelLAN.Application.AuthenticationService>();
         services.AddScoped<IManagementStore, ManagementStore>();
         services.AddSingleton<IEnrollmentSecretGenerator, EnrollmentSecretGenerator>();
@@ -94,15 +109,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAlertStore, AlertStore>();
         services.AddScoped<IAlertDeviceLookup, AlertDeviceLookup>();
         services.AddScoped<AlertService>();
-        if (deployment.PlatformEnabled)
-        {
-            services.AddSingleton<IVpsVaultService>(new VpsVaultService(serverVaultKey));
-            services.AddSingleton<IVpsSshService, SshNetVpsSshService>();
-            services.AddScoped<IVpsNodeStore, VpsNodeStore>();
-            services.AddScoped<VpsNodeService>();
-            services.AddSingleton<IVpsHostSnapshotReader>(new FileVpsHostSnapshotReader(configuration["SENTINELLAN_HOST_MONITOR_PATH"]));
-            services.AddScoped<VpsHostMonitorService>();
-        }
+        services.AddScoped<IDeviceHealthReader, DeviceHealthReader>();
+        services.AddScoped<IAutomaticAlertStore, AutomaticAlertStore>();
+        services.AddScoped<DeviceHealthMonitoringService>();
+        services.AddScoped<ITechnicalDataRetentionStore, TechnicalDataRetentionStore>();
+        services.AddScoped<TechnicalDataRetentionService>();
+        services.AddHostedService<DeviceHealthWorker>();
         services.AddScoped<IAssetStore, AssetStore>();
         services.AddScoped<IAssetManagementService, AssetManagementService>();
         services.AddSingleton<IActivationTokenGenerator, ActivationTokenGenerator>();
@@ -118,9 +130,7 @@ public static class ServiceCollectionExtensions
             .AddScheme<AuthenticationSchemeOptions, AgentAuthenticationHandler>(AgentAuthenticationDefaults.Scheme, _ => { });
         services.AddAuthorization(options =>
         {
-            options.AddPolicy(Roles.PlatformOwner, policy => policy.RequireRole(Roles.PlatformOwner));
             options.AddPolicy(AuthorizationPolicies.Admin, policy => policy.RequireRole(Roles.Admin));
-            options.AddPolicy(AuthorizationPolicies.Technician, policy => policy.RequireRole(Roles.Admin, Roles.Technician));
             options.AddPolicy(AuthorizationPolicies.Employee, policy => policy.RequireRole(Roles.Employee));
             options.AddPolicy(AuthorizationPolicies.Agent, policy =>
             {
@@ -128,14 +138,14 @@ public static class ServiceCollectionExtensions
                 policy.RequireAuthenticatedUser();
                 policy.RequireRole(Roles.Agent);
             });
-            options.AddPolicy(AuthorizationPolicies.ViewDevices, policy => policy.RequireRole(Roles.Admin, Roles.Technician));
+            options.AddPolicy(AuthorizationPolicies.ViewDevices, policy => policy.RequireRole(Roles.Admin));
             options.AddPolicy(AuthorizationPolicies.ViewAssignedDevice, policy => policy.RequireRole(Roles.Employee));
-            options.AddPolicy(AuthorizationPolicies.ManageCommands, policy => policy.RequireRole(Roles.Admin, Roles.Technician));
+            options.AddPolicy(AuthorizationPolicies.ManageCommands, policy => policy.RequireRole(Roles.Admin));
             options.AddPolicy(AuthorizationPolicies.ViewAudit, policy => policy.RequireRole(Roles.Admin));
-            options.AddPolicy(AuthorizationPolicies.ViewPolicies, policy => policy.RequireRole(Roles.Admin, Roles.Technician));
-            options.AddPolicy(AuthorizationPolicies.ManagePolicies, policy => policy.RequireRole(Roles.Admin, Roles.Technician));
-            options.AddPolicy(AuthorizationPolicies.ViewAlerts, policy => policy.RequireRole(Roles.Admin, Roles.Technician));
-            options.AddPolicy(AuthorizationPolicies.ManageAlerts, policy => policy.RequireRole(Roles.Admin, Roles.Technician));
+            options.AddPolicy(AuthorizationPolicies.ViewPolicies, policy => policy.RequireRole(Roles.Admin));
+            options.AddPolicy(AuthorizationPolicies.ManagePolicies, policy => policy.RequireRole(Roles.Admin));
+            options.AddPolicy(AuthorizationPolicies.ViewAlerts, policy => policy.RequireRole(Roles.Admin));
+            options.AddPolicy(AuthorizationPolicies.ManageAlerts, policy => policy.RequireRole(Roles.Admin));
         });
         return services;
     }

@@ -32,9 +32,7 @@ public static class EnrollmentEndpoints
             var token = result.Token!;
             return Results.Created("/api/v1/enrollment-tokens", token with
             {
-                ConnectionCode = http.RequestServices.GetRequiredService<DeploymentSettings>().PlatformEnabled
-                    ? new EnrollmentConnectionCode(serverUrl, token.Token, token.ExpiresAt).Encode()
-                    : token.Token
+                ConnectionCode = token.Token
             });
         })
             .WithName("CreateEnrollmentToken")

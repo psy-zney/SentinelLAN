@@ -10,6 +10,8 @@ public static class SentinelAuthenticationDefaults
 {
     public const string Scheme = "SentinelAccess";
     public const string OrganizationClaim = "sentinellan:organization";
+    public const string SecurityStampClaim = "sentinellan:stamp";
+    public const string ExpiryClaim = "sentinellan:expires";
 }
 
 public sealed class AccessTokenAuthenticationHandler(
@@ -26,9 +28,7 @@ public sealed class AccessTokenAuthenticationHandler(
         if (string.IsNullOrWhiteSpace(token)) return AuthenticateResult.NoResult();
 
         var actor = tokens.Validate(token, timeProvider.GetUtcNow());
-        if (actor is null) return AuthenticateResult.Fail("Invalid or expired access token.");
-        if ((actor.Value.Role == Roles.PlatformOwner) != Request.Path.StartsWithSegments("/api/v1/platform"))
-            return AuthenticateResult.Fail("Session belongs to a different application.");
+        if (actor is null || actor.Value.ExpiresAt is null) return AuthenticateResult.Fail("Invalid or expired access token.");
         if ((await users.FindOrganizationAsync(actor.Value.OrganizationId, Context.RequestAborted))?.IsSuspended == true)
             return AuthenticateResult.Fail("Company is suspended.");
         var user = await users.FindUserAsync(actor.Value.UserId, actor.Value.OrganizationId, Context.RequestAborted);
@@ -40,10 +40,12 @@ public sealed class AccessTokenAuthenticationHandler(
         {
             new Claim(ClaimTypes.NameIdentifier, actor.Value.UserId.ToString()),
             new Claim(SentinelAuthenticationDefaults.OrganizationClaim, actor.Value.OrganizationId.ToString()),
-            new Claim(ClaimTypes.Role, actor.Value.Role)
+            new Claim(ClaimTypes.Role, actor.Value.Role),
+            new Claim(SentinelAuthenticationDefaults.SecurityStampClaim, actor.Value.SecurityStamp ?? ""),
+            new Claim(SentinelAuthenticationDefaults.ExpiryClaim, actor.Value.ExpiresAt!.Value.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture))
         };
         var identity = new ClaimsIdentity(claims, SentinelAuthenticationDefaults.Scheme, ClaimTypes.NameIdentifier, ClaimTypes.Role);
-        var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), SentinelAuthenticationDefaults.Scheme);
+        var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), new AuthenticationProperties { ExpiresUtc = actor.Value.ExpiresAt }, SentinelAuthenticationDefaults.Scheme);
         return AuthenticateResult.Success(ticket);
     }
 
@@ -51,6 +53,6 @@ public sealed class AccessTokenAuthenticationHandler(
     {
         var authorization = Request.Headers.Authorization.ToString();
         if (authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)) return authorization[7..].Trim();
-        return Request.Cookies[Request.Path.StartsWithSegments("/api/v1/platform") ? PlatformApi.AccessCookie : AuthCookieManager.AccessCookieName];
+        return Request.Cookies[AuthCookieManager.AccessCookieName];
     }
 }

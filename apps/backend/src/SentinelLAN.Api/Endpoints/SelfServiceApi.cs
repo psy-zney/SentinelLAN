@@ -11,7 +11,7 @@ public static class SelfServiceApi
     public static RouteGroupBuilder MapSelfService(this RouteGroupBuilder root)
     {
         var group = root.MapGroup("/self-service")
-            .RequireAuthorization(new AuthorizeAttribute { Roles = $"{Roles.Admin},{Roles.Technician},{Roles.Employee}" });
+            .RequireAuthorization(new AuthorizeAttribute { Roles = $"{Roles.Admin},{Roles.Employee}" });
         group.AddEndpointFilter(async (context, next) =>
         {
             try { return await next(context); }

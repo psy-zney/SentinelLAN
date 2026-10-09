@@ -32,7 +32,7 @@ public static class AssetManagementEndpoints
                 ManagementResultStatus.Forbidden => Results.Forbid(),
                 _ => Results.BadRequest(new ProblemDetails { Title = "Invalid profile update", Detail = message })
             };
-        }).RequireAuthorization(AuthorizationPolicies.Technician);
+        }).RequireAuthorization(AuthorizationPolicies.Admin);
 
         v1.MapGet("/devices/{id:guid}/timeline", async (Guid id, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
         {
@@ -82,7 +82,7 @@ public static class AssetManagementEndpoints
                 ManagementResultStatus.Forbidden => Results.Forbid(),
                 _ => Results.BadRequest(new ProblemDetails { Title = "Failed to update incident", Detail = message })
             };
-        }).RequireAuthorization(AuthorizationPolicies.Technician);
+        }).RequireAuthorization(AuthorizationPolicies.Admin);
 
         v1.MapGet("/work-orders", async (Guid? deviceId, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
         {
@@ -105,7 +105,7 @@ public static class AssetManagementEndpoints
                 ManagementResultStatus.Forbidden => Results.Forbid(),
                 _ => Results.BadRequest(new ProblemDetails { Title = "Failed to create work order", Detail = message })
             };
-        }).RequireAuthorization(AuthorizationPolicies.Technician);
+        }).RequireAuthorization(AuthorizationPolicies.Admin);
 
         v1.MapPut("/work-orders/{id:guid}/complete", async (Guid id, CompleteWorkOrderRequest req, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
         {
@@ -118,14 +118,14 @@ public static class AssetManagementEndpoints
                 ManagementResultStatus.Forbidden => Results.Forbid(),
                 _ => Results.BadRequest(new ProblemDetails { Title = "Failed to complete work order", Detail = message })
             };
-        }).RequireAuthorization(AuthorizationPolicies.Technician);
+        }).RequireAuthorization(AuthorizationPolicies.Admin);
 
         v1.MapGet("/asset-loans", async (Guid? deviceId, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
         {
             var actor = http.User.ToActorContext()!.Value;
             var loans = await assetService.GetAssetLoansAsync(actor, deviceId, ct);
             return Results.Ok(loans);
-        }).RequireAuthorization(AuthorizationPolicies.Technician);
+        }).RequireAuthorization(AuthorizationPolicies.Admin);
 
         v1.MapPost("/asset-loans", async (CreateLoanRequest req, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
         {
@@ -138,7 +138,7 @@ public static class AssetManagementEndpoints
                 ManagementResultStatus.Forbidden => Results.Forbid(),
                 _ => Results.BadRequest(new ProblemDetails { Title = "Failed to create asset loan", Detail = message })
             };
-        }).RequireAuthorization(AuthorizationPolicies.Technician);
+        }).RequireAuthorization(AuthorizationPolicies.Admin);
 
         v1.MapPut("/asset-loans/{id:guid}/return", async (Guid id, ReturnLoanRequest req, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
         {
@@ -151,6 +151,6 @@ public static class AssetManagementEndpoints
                 ManagementResultStatus.Forbidden => Results.Forbid(),
                 _ => Results.BadRequest(new ProblemDetails { Title = "Failed to process asset return", Detail = message })
             };
-        }).RequireAuthorization(AuthorizationPolicies.Technician);
+        }).RequireAuthorization(AuthorizationPolicies.Admin);
     }
 }

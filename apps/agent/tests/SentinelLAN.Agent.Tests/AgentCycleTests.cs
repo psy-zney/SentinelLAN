@@ -5,6 +5,31 @@ namespace SentinelLAN.Agent.Tests;
 public sealed class AgentCycleTests
 {
     [Fact]
+    public async Task ReceiptIsStillSentAfterExecutionExpiryAndStoredCollectionTimeSurvivesRetry()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var pending = new PendingCommandResult(Guid.NewGuid(), now.AddHours(-1), new(true, "Completed while offline"));
+        var api = new FakeApi { FailHeartbeat = true };
+        var store = new ReceiptStore(pending);
+        var cycle = new AgentCycle(new(DeviceId, "test"), new Collector(), api, new CommandVerifier(), new Signatures(),
+            TimeProvider.System, pendingResultStore: store);
+        await Assert.ThrowsAsync<HttpRequestException>(() => cycle.RunAsync(default));
+        Assert.Single(api.Results);
+        Assert.Null(store.Pending);
+        var firstTime = api.Measurements[0].CollectedAt;
+        Assert.NotNull(firstTime);
+        await cycle.RunAsync(default);
+        Assert.Equal(firstTime, api.Measurements[1].CollectedAt);
+    }
+
+    private sealed class ReceiptStore(PendingCommandResult pending) : IPendingCommandResultStore
+    {
+        public PendingCommandResult? Pending { get; private set; } = pending;
+        public PendingCommandResult? Load() => Pending;
+        public void Save(PendingCommandResult result) => Pending = result;
+        public void Clear() => Pending = null;
+    }
+    [Fact]
     public async Task HeartbeatRetryPreservesSnapshotAndIdempotencyKey()
     {
         var api = new FakeApi { FailHeartbeat = true };
@@ -250,12 +275,14 @@ public sealed class AgentCycleTests
         public RemoteCommand? Command { get; set; }
         public int Polls { get; private set; }
         public List<string?> HeartbeatKeys { get; } = [];
+        public List<TelemetrySnapshot> Measurements { get; } = [];
         public List<(Guid Id, ExecutionResult Result)> Results { get; } = [];
         public Task<DeviceIdentity> EnrollAsync(string token, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task SendHeartbeatAsync(DeviceIdentity identity, TelemetrySnapshot telemetry, CancellationToken cancellationToken) => throw new InvalidOperationException("Retries must supply a stable key.");
         public Task SendHeartbeatAsync(DeviceIdentity identity, TelemetrySnapshot telemetry, string? idempotencyKey, CancellationToken cancellationToken)
         {
             HeartbeatKeys.Add(idempotencyKey);
+            Measurements.Add(telemetry);
             if (FailHeartbeat) { FailHeartbeat = false; throw new HttpRequestException("Lost response"); }
             return Task.CompletedTask;
         }

@@ -77,12 +77,16 @@ public static class DeviceEndpoints
             if (!canAccess) return Results.NotFound();
             var snapshots = await db.Telemetry
                 .Where(x => x.DeviceId == id && x.OrganizationId == actor.OrganizationId)
-                .OrderByDescending(x => x.CreatedAt)
+                .Where(x => (x.CollectedAt ?? x.CreatedAt) >= DateTimeOffset.UtcNow.AddDays(-TechnicalDataRetentionService.RetentionDays))
+                .OrderByDescending(x => x.CollectedAt ?? x.CreatedAt)
                 .Take(100)
-                .Select(x => new TelemetrySnapshotDto(x.Id, x.DeviceId, x.CpuPercent, x.RamPercent, x.DiskPercent, x.CreatedAt))
+                .Select(x => new TelemetrySnapshotDto(x.Id, x.DeviceId, x.CpuPercent, x.RamPercent, x.DiskPercent, x.CollectedAt ?? x.CreatedAt, x.CollectedAt, x.CreatedAt))
                 .ToListAsync(ct);
             return Results.Ok(snapshots);
-        }).RequireAuthorization();
+        }).RequireAuthorization()
+            .Produces<IReadOnlyList<TelemetrySnapshotDto>>(StatusCodes.Status200OK)
+            .WithSummary("Read technical measurements in original collection-time order")
+            .WithDescription("CreatedAt uses collection time when known. CollectedAt is null for legacy samples; ReceivedAt is server receipt time. Only the last 30 days are returned.");
 
         v1.MapGet("/dashboard", async (HttpContext http, SentinelDbContext db, CancellationToken ct) =>
         {

@@ -1,15 +1,12 @@
 namespace SentinelLAN.Api;
 
-public sealed record DeploymentSettings(bool PlatformEnabled)
+public sealed record DeploymentSettings
 {
     public static DeploymentSettings FromConfiguration(IConfiguration configuration)
     {
-        var mode = configuration["SENTINELLAN_DEPLOYMENT_MODE"] ?? "Platform";
-        return mode.ToLowerInvariant() switch
-        {
-            "selfhost" => new(false),
-            "platform" => new(true),
-            _ => throw new InvalidOperationException("SENTINELLAN_DEPLOYMENT_MODE must be SelfHost or Platform.")
-        };
+        var mode = configuration["SENTINELLAN_DEPLOYMENT_MODE"] ?? "SelfHost";
+        if (!string.Equals(mode, "SelfHost", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Only SelfHost deployment is supported. Remove the obsolete Platform configuration.");
+        return new DeploymentSettings();
     }
 }

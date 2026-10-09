@@ -126,6 +126,10 @@ export class ApiClient {
     return this.request<Dashboard>("/api/v1/dashboard");
   }
 
+  hostStatus(signal?: AbortSignal) {
+    return this.request<import("@/types/host-status").VpsHostStatus>("/api/v1/host/status", { signal });
+  }
+
   devices() {
     return this.request<Device[]>("/api/v1/devices");
   }

@@ -12,7 +12,7 @@ public sealed class QrManagementServiceTests
     private readonly FakeTestStore store = new();
 
     [Fact]
-    public async Task AdminOrTechnicianGeneratesSingleRedactedQrLabel()
+    public async Task AdminGeneratesSingleRedactedQrLabel()
     {
         var device = new Device
         {
@@ -25,7 +25,7 @@ public sealed class QrManagementServiceTests
         store.Devices.Add(device);
 
         var service = new QrManagementService(store);
-        var tech = new ActorContext(techId, orgId, Roles.Technician);
+        var tech = new ActorContext(techId, orgId, Roles.Admin);
 
         // First label
         var res1 = await service.GenerateOrRotateLabelAsync(tech, device.Id, new GenerateQrLabelRequest("First label", true), CancellationToken.None);

@@ -140,7 +140,7 @@ public sealed class DeviceEnrollmentToken : Entity, ITenantOwned
 
 public sealed class DeviceCredential : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public Guid DeviceId { get; init; } public required string SecretHash { get; init; } public DateTimeOffset? RevokedAt { get; set; } }
 public sealed class DeviceHeartbeat : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public Guid DeviceId { get; init; } public required string IdempotencyKey { get; init; } public DateTimeOffset RecordedAt { get; init; } }
-public sealed class TelemetrySnapshot : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public Guid DeviceId { get; init; } public double CpuPercent { get; init; } public double RamPercent { get; init; } public double DiskPercent { get; init; } }
+public sealed class TelemetrySnapshot : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public Guid DeviceId { get; init; } public double CpuPercent { get; init; } public double RamPercent { get; init; } public double DiskPercent { get; init; } public DateTimeOffset? CollectedAt { get; init; } }
 public sealed class Policy : Entity, ITenantOwned
 {
     public Guid OrganizationId { get; init; }
@@ -150,7 +150,7 @@ public sealed class Policy : Entity, ITenantOwned
 }
 public sealed class PolicyAssignment : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public Guid PolicyId { get; init; } public Guid DeviceId { get; init; } }
 
-public enum DeviceCommandStatus { Pending, Delivered, Succeeded, Failed, Expired }
+public enum DeviceCommandStatus { Pending, Delivered, Succeeded, Failed, Expired, ExecutionUnconfirmed }
 public sealed class DeviceCommand : Entity, ITenantOwned
 {
     private static readonly HashSet<string> Allowed = ["ShowNotification", "CollectTelemetryNow", "RefreshPolicy", "SimulateLock", "SimulateNetworkIsolation", "RestartService", "LockWorkstation", "IsolateNetwork", "InstallApprovedApp", "PauseAgent", "UninstallAgent"];
@@ -166,6 +166,12 @@ public sealed class DeviceCommand : Entity, ITenantOwned
     public DateTimeOffset ExpiresAt { get; init; }
     public DeviceCommandStatus Status { get; set; }
     public DateTimeOffset? DeliveryLeaseExpiresAt { get; set; }
+    public DeviceCommandStatus EffectiveStatus(DateTimeOffset now) => ExpiresAt > now ? Status : Status switch
+    {
+        DeviceCommandStatus.Pending => DeviceCommandStatus.Expired,
+        DeviceCommandStatus.Delivered => DeviceCommandStatus.ExecutionUnconfirmed,
+        _ => Status
+    };
 
     public bool CanDeliver(DateTimeOffset now) =>
         Allowed.Contains(Type) && now < ExpiresAt &&
@@ -193,6 +199,7 @@ public sealed class Alert : Entity, ITenantOwned
     public DateTimeOffset? AcknowledgedAt { get; set; }
     public DateTimeOffset? ResolvedAt { get; set; }
     public Guid? ResolvedByUserId { get; set; }
+    public string? AutomaticRule { get; init; }
     public void Acknowledge(DateTimeOffset now) => AcknowledgedAt = now;
     public void Resolve(Guid userId, DateTimeOffset now) { IsOpen = false; ResolvedAt = now; ResolvedByUserId = userId; }
 }

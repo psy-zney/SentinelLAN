@@ -11,7 +11,8 @@ public static class ClaimsPrincipalExtensions
         var organizationIdValue = principal.FindFirstValue(SentinelAuthenticationDefaults.OrganizationClaim);
         var role = principal.FindFirstValue(ClaimTypes.Role);
         return Guid.TryParse(userIdValue, out var userId) && Guid.TryParse(organizationIdValue, out var organizationId) && role is not null
-            ? new ActorContext(userId, organizationId, role)
+            ? new ActorContext(userId, organizationId, role, principal.FindFirstValue(SentinelAuthenticationDefaults.SecurityStampClaim),
+                long.TryParse(principal.FindFirstValue(SentinelAuthenticationDefaults.ExpiryClaim), out var expiry) ? DateTimeOffset.FromUnixTimeSeconds(expiry) : null)
             : null;
     }
 

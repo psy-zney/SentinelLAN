@@ -14,7 +14,8 @@ public sealed class MyDeviceStore(SentinelDbContext db) : IMyDeviceStore
     public Task<TelemetrySnapshot?> GetLatestTelemetryAsync(Guid organizationId, Guid deviceId, CancellationToken cancellationToken) =>
         db.Telemetry
             .Where(t => t.OrganizationId == organizationId && t.DeviceId == deviceId)
-            .OrderByDescending(t => t.CreatedAt)
+            .Where(t => (t.CollectedAt ?? t.CreatedAt) >= DateTimeOffset.UtcNow.AddDays(-TechnicalDataRetentionService.RetentionDays))
+            .OrderByDescending(t => t.CollectedAt ?? t.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
     public async Task<string?> GetAppliedPolicyNameAsync(Guid organizationId, Guid deviceId, CancellationToken cancellationToken)
@@ -41,7 +42,8 @@ public sealed class MyDeviceStore(SentinelDbContext db) : IMyDeviceStore
     public async Task<IReadOnlyList<TelemetrySnapshot>> GetDeviceTelemetryHistoryAsync(Guid organizationId, Guid deviceId, int limit, CancellationToken cancellationToken) =>
         await db.Telemetry
             .Where(t => t.OrganizationId == organizationId && t.DeviceId == deviceId)
-            .OrderByDescending(t => t.CreatedAt)
+            .Where(t => (t.CollectedAt ?? t.CreatedAt) >= DateTimeOffset.UtcNow.AddDays(-TechnicalDataRetentionService.RetentionDays))
+            .OrderByDescending(t => t.CollectedAt ?? t.CreatedAt)
             .Take(limit)
             .ToListAsync(cancellationToken);
 

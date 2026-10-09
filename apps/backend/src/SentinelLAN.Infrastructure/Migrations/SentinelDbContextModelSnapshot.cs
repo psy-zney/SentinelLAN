@@ -84,6 +84,9 @@ namespace SentinelLAN.Infrastructure.Migrations
                     b.Property<DateTimeOffset?>("AcknowledgedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("AutomaticRule")
+                        .HasColumnType("text");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -116,6 +119,10 @@ namespace SentinelLAN.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "DeviceId", "AutomaticRule")
+                        .IsUnique()
+                        .HasFilter("\"AutomaticRule\" IS NOT NULL AND \"IsOpen\" = TRUE");
 
                     b.ToTable("Alerts");
                 });
@@ -852,6 +859,9 @@ namespace SentinelLAN.Infrastructure.Migrations
                     b.Property<DateTimeOffset?>("RevokedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("SecurityStamp")
+                        .HasColumnType("text");
+
                     b.Property<string>("TokenHash")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1423,6 +1433,9 @@ namespace SentinelLAN.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTimeOffset?>("CollectedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<double>("CpuPercent")
                         .HasColumnType("double precision");
 
@@ -1447,6 +1460,8 @@ namespace SentinelLAN.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "DeviceId", "CollectedAt");
 
                     b.ToTable("Telemetry");
                 });

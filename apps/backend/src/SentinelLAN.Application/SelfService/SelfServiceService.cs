@@ -14,13 +14,13 @@ public sealed partial class SelfServiceService(ISelfServiceStore store, ISelfSer
     private static readonly HashSet<string> States = ["Open", "InProgress", "AwaitingEmployee", "Approved", "Rejected", "Resolved", "Closed"];
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private DateTimeOffset Now => timeProvider.GetUtcNow();
-    private static bool IsIt(ActorContext actor) => actor.Role is Roles.Admin or Roles.Technician;
+    private static bool IsIt(ActorContext actor) => actor.Role is Roles.Admin;
     private static bool IsMaintenance(SelfServiceRequest request) => request.Kind is "PauseAgent" or "UninstallAgent";
     private static void Require(bool condition, int status, string message)
     {
         if (!condition) throw new SelfServiceException(status, message);
     }
-    private static void Human(ActorContext actor) => Require(actor.Role is Roles.Admin or Roles.Technician or Roles.Employee, 403, "Chỉ tài khoản nhân viên hoặc IT được sử dụng tính năng này.");
+    private static void Human(ActorContext actor) => Require(actor.Role is Roles.Admin or Roles.Employee, 403, "Chỉ tài khoản nhân viên hoặc IT được sử dụng tính năng này.");
     private static void Confirm(string? reason, bool confirmed) => Require(confirmed && !string.IsNullOrWhiteSpace(reason) && reason.Length <= 1000, 400, "Vui lòng nhập lý do và xác nhận thao tác.");
     private async Task<T> MutateAsync<T>(Guid organizationId, Func<Task<T>> action, CancellationToken ct)
     {
@@ -197,7 +197,7 @@ public sealed partial class SelfServiceService(ISelfServiceStore store, ISelfSer
             if (input.AssignedTechnicianId is Guid technicianId)
             {
                 var technician = await directory.FindUserAsync(actor.OrganizationId, technicianId, ct);
-                Require(technician is { Status: UserStatuses.Active } && technician.Role is Roles.Admin or Roles.Technician, 400, "Người phụ trách phải là IT đang hoạt động trong công ty.");
+                Require(technician is { Status: UserStatuses.Active } && technician.Role is Roles.Admin, 400, "Người phụ trách phải là IT đang hoạt động trong công ty.");
                 request.AssignedTechnicianId = technicianId;
                 request.AssignedTechnicianName = technician!.DisplayName;
             }

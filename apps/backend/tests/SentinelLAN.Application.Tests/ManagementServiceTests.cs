@@ -28,7 +28,7 @@ public sealed class ManagementServiceTests
     {
         var store = new FakeManagementStore();
         var service = new UserManagementService(store);
-        var technician = await service.CreateAsync(new ActorContext(Guid.NewGuid(), organizationId, Roles.Technician),
+        var technician = await service.CreateAsync(new ActorContext(Guid.NewGuid(), organizationId, "Technician"),
             new CreateUserRequest("person@example.com", "Person", Roles.Employee, "long-password-123", "reason", true),
             new FakePasswordHasher(), CancellationToken.None);
         var invalid = await service.CreateAsync(new ActorContext(adminId, organizationId, Roles.Admin),

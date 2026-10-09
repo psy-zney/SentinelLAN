@@ -36,6 +36,11 @@ public sealed class AuthenticationApiTests(SentinelApiFactory factory) : IClassF
         AssertSecurityRequirement(json, "/api/v1/devices", "get", "accessCookie");
         AssertSecurityRequirement(json, "/api/v1/auth/refresh", "post", "refreshCookie", "csrfHeader");
         AssertSecurityRequirement(json, "/api/v1/agent/heartbeat", "post", "agentDeviceId", "agentDeviceSecret");
+        var heartbeatSchema = json.RootElement.GetProperty("components").GetProperty("schemas").GetProperty("HeartbeatRequest").GetProperty("properties");
+        Assert.True(heartbeatSchema.TryGetProperty("collectedAt", out _));
+        var telemetrySchema = json.RootElement.GetProperty("components").GetProperty("schemas").GetProperty("TelemetrySnapshotDto").GetProperty("properties");
+        Assert.True(telemetrySchema.TryGetProperty("collectedAt", out _));
+        Assert.True(telemetrySchema.TryGetProperty("receivedAt", out _));
     }
 
     [Fact]
@@ -86,7 +91,7 @@ public sealed class AuthenticationApiTests(SentinelApiFactory factory) : IClassF
         Assert.DoesNotContain(devices, device => device.Id == seeded.OtherTenantDeviceId);
 
         using var technician = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
-        Assert.Equal(HttpStatusCode.OK, (await LoginAsync(technician, "technician@sentinellan.local")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await LoginAsync(technician, "employee@sentinellan.local")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await technician.GetAsync("/api/v1/audit-logs")).StatusCode);
 
         using var employee = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });

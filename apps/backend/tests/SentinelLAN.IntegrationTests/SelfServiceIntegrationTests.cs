@@ -17,7 +17,7 @@ public sealed class SelfServiceIntegrationTests(SentinelApiFactory factory) : IC
     public async Task EmployeeRequestIsAssignedScopedAndIdempotent()
     {
         using var employee = await LoginAsync("employee");
-        using var technician = await LoginAsync("technician");
+        using var technician = await LoginAsync("admin");
         var key = Guid.NewGuid().ToString("N");
         var request = new { kind = "Incident", category = "Printer", title = "Không in được", description = "Máy in không phản hồi", canWork = false, confirmed = true, idempotencyKey = key };
         var response = await employee.PostAsJsonAsync($"{Root}/requests", request);
@@ -26,7 +26,7 @@ public sealed class SelfServiceIntegrationTests(SentinelApiFactory factory) : IC
         var replay = await employee.PostAsJsonAsync($"{Root}/requests", request);
         Assert.Equal(created, (await replay.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid());
         Assert.Equal(HttpStatusCode.Conflict, (await employee.PostAsJsonAsync($"{Root}/requests", new { kind = "Incident", category = "Printer", title = "Khác", canWork = true, confirmed = true, idempotencyKey = key })).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await technician.PostAsJsonAsync($"{Root}/requests/{created}/decision", new { approved = true, reason = "Đã duyệt", confirmed = true })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await employee.PostAsJsonAsync($"{Root}/requests/{created}/decision", new { approved = true, reason = "Đã duyệt", confirmed = true })).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await employee.PatchAsJsonAsync($"{Root}/requests/{created}", new { status = "Closed", reason = "Đã dùng được", confirmed = false })).StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, (await employee.PatchAsJsonAsync($"{Root}/requests/{created}", new { status = "Closed", reason = "Chưa xử lý", confirmed = true })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await technician.PatchAsJsonAsync($"{Root}/requests/{created}", new { status = "InProgress", reason = "IT tiếp nhận", confirmed = true })).StatusCode);
@@ -96,7 +96,7 @@ public sealed class SelfServiceIntegrationTests(SentinelApiFactory factory) : IC
     public async Task EmployeeSelectedImageAndConversationStayInsideTheRequest()
     {
         using var employee = await LoginAsync("employee");
-        using var technician = await LoginAsync("technician");
+        using var technician = await LoginAsync("admin");
         var id = await CreateAsync(employee, "Incident");
         var key = Guid.NewGuid().ToString("N");
         var message = new { body = "Máy in báo lỗi, nhờ IT kiểm tra.", idempotencyKey = key };
@@ -126,7 +126,7 @@ public sealed class SelfServiceIntegrationTests(SentinelApiFactory factory) : IC
     public async Task AdminCatalogPublicationQueuesOnlyThePinnedInstallerForEmployee()
     {
         using var employee = await LoginAsync("employee");
-        using var technician = await LoginAsync("technician");
+        using var technician = await LoginAsync("admin");
         using var admin = await LoginAsync("admin");
         var app = new
         {
@@ -141,7 +141,7 @@ public sealed class SelfServiceIntegrationTests(SentinelApiFactory factory) : IC
             reason = "Đã xác minh gói cài",
             confirmed = true
         };
-        Assert.Equal(HttpStatusCode.Forbidden, (await technician.PostAsJsonAsync($"{Root}/catalog", app)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await employee.PostAsJsonAsync($"{Root}/catalog", app)).StatusCode);
         var published = await admin.PostAsJsonAsync($"{Root}/catalog", app);
         Assert.Equal(HttpStatusCode.OK, published.StatusCode);
         var appId = (await published.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
@@ -170,7 +170,7 @@ public sealed class SelfServiceIntegrationTests(SentinelApiFactory factory) : IC
     public async Task CompanyOutageAnnouncementReachesEmployeeAndRecordsAcknowledgement()
     {
         using var employee = await LoginAsync("employee");
-        using var technician = await LoginAsync("technician");
+        using var technician = await LoginAsync("admin");
         var announcement = await technician.PostAsJsonAsync($"{Root}/announcements", new
         {
             title = "Bảo trì máy chủ kế toán",

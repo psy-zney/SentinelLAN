@@ -12,6 +12,7 @@ test("Employee completes login, refresh, assigned-device view, and logout", asyn
 
   await expect(page).toHaveURL(/\/my-device$/);
   await expect(page.getByText("EMPLOYEE-DEMO-PC")).toBeVisible();
+  await page.getByText("Thông số máy tính", { exact: true }).click();
   await expect(page.getByText("Standard Workstation", { exact: true })).toBeVisible();
 
   const refreshStatus = await page.evaluate(async url => {

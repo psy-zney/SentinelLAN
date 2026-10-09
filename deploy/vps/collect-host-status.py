@@ -94,7 +94,11 @@ def collect(name, host):
     docker_error = None
     available = False
     try:
-        code, output = run(DOCKER + ["ps", "-a", "--no-trunc", "--size", "--format", "{{json .}}"], 12)
+        project = os.environ.get("SENTINELLAN_COMPOSE_PROJECT", "sentinellan-prod")
+        if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,63}", project):
+            raise ValueError("Invalid Compose project")
+        code, output = run(DOCKER + ["ps", "-a", "--no-trunc", "--size", "--filter",
+                                   "label=com.docker.compose.project=" + project, "--format", "{{json .}}"], 12)
         if code:
             raise RuntimeError("docker unavailable")
         available = True
@@ -108,7 +112,7 @@ def collect(name, host):
                 warnings.append("Chưa đọc được cổng công bố và cấu hình Docker.")
             else:
                 details = {item["Id"]: item for item in (json.loads(line) for line in output.splitlines())}
-            code, output = run(DOCKER + ["stats", "--no-stream", "--no-trunc", "--format", "{{json .}}"], 12)
+            code, output = run(DOCKER + ["stats", "--no-stream", "--no-trunc", "--format", "{{json .}}"] + ids, 12)
             if code:
                 warnings.append("Chưa đọc được mức sử dụng CPU và RAM của Docker.")
             else:

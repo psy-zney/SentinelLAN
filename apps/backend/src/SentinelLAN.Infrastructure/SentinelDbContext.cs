@@ -1,10 +1,19 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using SentinelLAN.Domain;
 
 namespace SentinelLAN.Infrastructure;
 
-public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> options, SentinelLAN.Application.ICurrentTenantProvider? tenantProvider = null) : DbContext(options)
+public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> options, SentinelLAN.Application.ICurrentTenantProvider? tenantProvider = null, SensitiveDataCipher? dataCipher = null) : DbContext(options)
 {
+    public string? EncryptionKeyId => dataCipher?.KeyId;
+    internal object? EncryptionModelKey => dataCipher;
+    internal void SetLegacyDataReading(bool enabled)
+    {
+        if (dataCipher is not null) dataCipher.AllowLegacyReading = enabled;
+    }
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) =>
+        optionsBuilder.ReplaceService<IModelCacheKeyFactory, SensitiveDataModelCacheKeyFactory>();
     private readonly SentinelLAN.Application.ICurrentTenantProvider? _tenantProvider = tenantProvider;
     private Guid? CurrentOrganizationId => _tenantProvider?.CurrentOrganizationId;
     public DbSet<Organization> Organizations => Set<Organization>();
@@ -46,6 +55,18 @@ public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> option
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         SelfServiceModelConfiguration.Configure(modelBuilder);
+        if (dataCipher is not null)
+        {
+            modelBuilder.Entity<SelfServiceMessage>().Property(x => x.Body).HasConversion(v => dataCipher.EncryptText(v, "message.body"), v => dataCipher.DecryptText(v, "message.body"));
+            modelBuilder.Entity<SelfServiceMessage>().Property(x => x.AuthorName).HasConversion(v => dataCipher.EncryptText(v, "message.author"), v => dataCipher.DecryptText(v, "message.author"));
+            modelBuilder.Entity<SelfServiceRequest>().Property(x => x.Title).HasConversion(v => dataCipher.EncryptText(v, "request.title"), v => dataCipher.DecryptText(v, "request.title"));
+            modelBuilder.Entity<SelfServiceRequest>().Property(x => x.Description).HasConversion(v => dataCipher.EncryptText(v!, "request.description"), v => dataCipher.DecryptText(v!, "request.description"));
+            modelBuilder.Entity<SelfServiceAttachment>().Property(x => x.Content).HasConversion(v => dataCipher.EncryptBytes(v, "attachment.content"), v => dataCipher.DecryptBytes(v, "attachment.content"));
+            modelBuilder.Entity<SelfServiceAttachment>().Property(x => x.FileName).HasConversion(v => dataCipher.EncryptText(v, "attachment.filename"), v => dataCipher.DecryptText(v, "attachment.filename"));
+        }
+        modelBuilder.Entity<TelemetrySnapshot>().HasIndex(t => new { t.OrganizationId, t.DeviceId, t.CollectedAt });
+        modelBuilder.Entity<Alert>().HasIndex(a => new { a.OrganizationId, a.DeviceId, a.AutomaticRule })
+            .HasFilter("\"AutomaticRule\" IS NOT NULL AND \"IsOpen\" = TRUE").IsUnique();
         modelBuilder.Entity<PlatformOperation>().HasIndex(x => new { x.ActorId, x.Nonce }).IsUnique();
         modelBuilder.Entity<Organization>().Property(x => x.IsSuspended).IsConcurrencyToken();
         modelBuilder.Entity<Organization>().HasIndex(x => x.Code).IsUnique();

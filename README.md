@@ -5,8 +5,9 @@ SentinelLAN giúp tổ chức quản lý máy tính được phép tham gia hệ
 ## Chức năng
 
 - **Nhân viên:** xem máy được giao, báo sự cố và theo dõi yêu cầu hỗ trợ.
-- **IT:** theo dõi thiết bị, xử lý cảnh báo, sự cố và công việc bảo trì trong công ty.
-- **Admin công ty:** quản lý tài khoản, đăng ký và phân công thiết bị trong công ty.
+- **Admin:** quản lý tài khoản, thiết bị, cảnh báo, yêu cầu hỗ trợ và bảo trì trong công ty.
+- **Tình trạng VPS:** Admin của đơn vị vận hành xem CPU/RAM/đĩa, dịch vụ, container SentinelLAN và cổng đang nghe; cập nhật mỗi phút.
+- **Mobile:** ứng dụng cho Admin hoặc Employee, dùng cùng quyền với web.
 - **Agent:** gửi tình trạng kết nối và số liệu kỹ thuật từ thiết bị đã đăng ký.
 
 ## Tải và cài đặt

@@ -27,7 +27,8 @@ export function executionLabel(request: Pick<SupportRequest, "commandId" | "comm
   switch (request.commandStatus) {
     case "Succeeded": return request.kind === "Panic" ? "Agent đã xác nhận lệnh cô lập trong môi trường lab." : "Agent đã xác nhận hoàn tất.";
     case "Failed": return "Thao tác trên máy chưa thực hiện được. IT cần kiểm tra.";
-    case "Expired": return "Lệnh đã hết hạn trước khi hoàn tất. IT cần kiểm tra lại.";
+    case "Expired": return "Lệnh đã hết hạn trước khi được giao cho máy.";
+    case "ExecutionUnconfirmed": return "Lệnh đã được giao nhưng chưa có xác nhận. IT cần kiểm tra trước khi thực hiện lại.";
     default: return "Đang chờ máy tính xác nhận. Bạn chưa cần gửi lại yêu cầu.";
   }
 }

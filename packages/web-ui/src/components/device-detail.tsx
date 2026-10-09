@@ -21,7 +21,6 @@ export function DeviceDetail({ id }: { id: string }) {
   const { t, lang } = useTranslation();
   const session = useCurrentSession();
   const isAdmin = session?.role === "Admin";
-  const isTechnician = session?.role === "Admin" || session?.role === "Technician";
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"overview" | "timeline" | "cmms" | "tco">("overview");
@@ -335,7 +334,7 @@ export function DeviceDetail({ id }: { id: string }) {
         </div>
 
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {isTechnician && (
+          {isAdmin && (
             <button
               type="button"
               className="action-outline"
@@ -352,7 +351,7 @@ export function DeviceDetail({ id }: { id: string }) {
           >
             {t("reportIncident")}
           </button>
-          {isTechnician && (
+          {isAdmin && (
             <button
               type="button"
               className="action"
@@ -571,7 +570,7 @@ export function DeviceDetail({ id }: { id: string }) {
                       {t("printQr")}
                     </button>
 
-                    {isTechnician && (
+                    {isAdmin && (
                       <div style={{ display: "flex", gap: 6 }}>
                         <button
                           type="button"
@@ -598,7 +597,7 @@ export function DeviceDetail({ id }: { id: string }) {
                   <p className="subtitle" style={{ fontSize: ".84rem", margin: "0 0 14px" }}>
                     {t("noActiveQr")}
                   </p>
-                  {isTechnician && (
+                  {isAdmin && (
                     <button
                       type="button"
                       className="action"
@@ -670,7 +669,7 @@ export function DeviceDetail({ id }: { id: string }) {
           )}
 
           {/* Safe Operations (Lock/Isolation) */}
-          {isTechnician && !asset.isRevoked && (
+          {isAdmin && !asset.isRevoked && (
             <div className="panel" style={{ marginBottom: 24 }}>
               <div className="panel-head"><h2>{lang === "vi" ? "Thao tác an toàn trên thiết bị" : "Safe operations"}</h2></div>
               <p className="subtitle">{lang === "vi" ? "Chọn thao tác và ghi lý do. Hệ thống sẽ lưu người thực hiện và kết quả." : "Commands require cryptographic signatures and audit accountability."}</p>
@@ -848,7 +847,7 @@ export function DeviceDetail({ id }: { id: string }) {
           <div className="panel">
             <div className="panel-head">
               <h2>{lang === "vi" ? "Phiếu Bảo trì & Sửa chữa (Work Orders)" : "Maintenance Work Orders"}</h2>
-              {isTechnician && (
+              {isAdmin && (
                 <button
                   type="button"
                   className="action-sm"
@@ -894,7 +893,7 @@ export function DeviceDetail({ id }: { id: string }) {
                         )}
                       </td>
                       <td style={{ textAlign: "right" }}>
-                        {isTechnician && wo.status !== "Completed" && wo.status !== "Cancelled" && (
+                        {isAdmin && wo.status !== "Completed" && wo.status !== "Cancelled" && (
                           <button
                             type="button"
                             className="action-sm"
@@ -967,7 +966,7 @@ export function DeviceDetail({ id }: { id: string }) {
                       <td>{inc.reportedByUserName ?? "Nhân sự"}</td>
                       <td>{new Date(inc.createdAt).toLocaleString()}</td>
                       <td style={{ textAlign: "right" }}>
-                        {isTechnician && inc.status !== "Resolved" && inc.status !== "Closed" && (
+                        {isAdmin && inc.status !== "Resolved" && inc.status !== "Closed" && (
                           <button
                             type="button"
                             className="action-outline"

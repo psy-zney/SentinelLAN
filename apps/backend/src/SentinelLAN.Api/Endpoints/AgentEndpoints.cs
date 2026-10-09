@@ -19,7 +19,7 @@ public static class AgentEndpoints
             if (!DeviceRequestValidation.IsValid(request)) return Results.BadRequest(new ProblemDetails { Title = "Valid token, device name, OS and Agent version are required", Status = 400 });
             if (request.DeviceSecret is not null && !IsEnrollmentSecret(request.DeviceSecret))
                 return EnrollmentError("EnrollmentRejected", "Thông tin đăng ký máy không hợp lệ.");
-            if (!http.RequestServices.GetRequiredService<DeploymentSettings>().PlatformEnabled && request.DeviceSecret is null)
+            if (!http.RequestServices.GetRequiredService<IHostEnvironment>().IsDevelopment() && request.DeviceSecret is null)
                 return EnrollmentError("EnrollmentRejected", "Bộ cài cũ chưa hỗ trợ đăng ký công ty. Nhờ IT cung cấp bộ cài mới.");
             var hash = SecretHash.Create(request.Token);
             var token = await db.EnrollmentTokens.SingleOrDefaultAsync(x => x.TokenHash == hash, ct);
@@ -89,14 +89,17 @@ public static class AgentEndpoints
             var agent = http.User.ToAgentContext()!.Value;
             if (!DeviceRequestValidation.IsValid(request)) return Results.BadRequest(new ProblemDetails { Title = "Valid idempotency key, 0-100 telemetry percentages, OS and Agent version are required", Status = 400 });
             if (await db.Heartbeats.AnyAsync(x => x.DeviceId == agent.DeviceId && x.OrganizationId == agent.OrganizationId && x.IdempotencyKey == request.IdempotencyKey, ct)) return Results.Ok(new { duplicate = true });
+            var receivedAt = DateTimeOffset.UtcNow;
+            if (request.CollectedAt is { } collectedAt && (collectedAt > receivedAt.AddMinutes(2) || collectedAt < receivedAt.AddHours(-2)))
+                return Results.BadRequest(new ProblemDetails { Title = "Collection time must be within two hours before receipt and no more than two minutes in the future", Status = 400 });
             var device = await db.Devices.SingleAsync(x => x.Id == agent.DeviceId && x.OrganizationId == agent.OrganizationId, ct);
-            device.LastSeenAt = DateTimeOffset.UtcNow;
+            device.LastSeenAt = receivedAt;
             device.OsVersion = request.OsVersion;
             device.AgentVersion = request.AgentVersion;
             device.MaintenanceUntil = request.MaintenanceUntil?.ToUniversalTime();
             device.MaintenanceAction = request.MaintenanceAction;
             db.Add(new DeviceHeartbeat { OrganizationId = device.OrganizationId, DeviceId = device.Id, IdempotencyKey = request.IdempotencyKey, RecordedAt = DateTimeOffset.UtcNow });
-            db.Add(new TelemetrySnapshot { OrganizationId = device.OrganizationId, DeviceId = device.Id, CpuPercent = request.CpuPercent, RamPercent = request.RamPercent, DiskPercent = request.DiskPercent });
+            db.Add(new TelemetrySnapshot { OrganizationId = device.OrganizationId, DeviceId = device.Id, CpuPercent = request.CpuPercent, RamPercent = request.RamPercent, DiskPercent = request.DiskPercent, CollectedAt = request.CollectedAt?.ToUniversalTime(), CreatedAt = receivedAt });
             try { await db.SaveChangesAsync(ct); }
             catch (DbUpdateException)
             {
@@ -107,7 +110,9 @@ public static class AgentEndpoints
             }
             await hub.Clients.Group(TenantGroup.Name(device.OrganizationId)).SendAsync("device-status", new { device.Id, online = true, device.LastSeenAt }, ct);
             return Results.Accepted();
-        }).RequireAuthorization(AuthorizationPolicies.Agent).RequireRateLimiting("sensitive");
+        }).RequireAuthorization(AuthorizationPolicies.Agent).RequireRateLimiting("sensitive")
+            .WithSummary("Receive technical telemetry with an optional original UTC collection time")
+            .WithDescription("CollectedAt preserves offline sample time; server receipt time controls availability. Samples older than two hours or more than two minutes in the future are rejected. Idempotent retries retain the original key and timestamp.");
 
         v1.MapGet("/agent/policy", async (HttpContext http, PolicyService policies, CancellationToken ct) =>
         {
@@ -128,7 +133,7 @@ public static class AgentEndpoints
             var expired = await db.Commands.Where(x => x.DeviceId == agent.DeviceId && x.OrganizationId == agent.OrganizationId && (x.Status == DeviceCommandStatus.Pending || x.Status == DeviceCommandStatus.Delivered) && x.ExpiresAt <= now).ToListAsync(ct);
             foreach (var item in expired)
             {
-                item.Status = DeviceCommandStatus.Expired;
+                item.Status = item.Status == DeviceCommandStatus.Delivered ? DeviceCommandStatus.ExecutionUnconfirmed : DeviceCommandStatus.Expired;
                 item.DeliveryLeaseExpiresAt = null;
             }
             var command = await db.Commands.OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(x =>
@@ -156,8 +161,8 @@ public static class AgentEndpoints
             if (command is null) return Results.NotFound();
             if (string.IsNullOrWhiteSpace(request.Message) || request.Message.Length > 2000) return Results.BadRequest();
             if (await db.CommandResults.AnyAsync(x => x.CommandId == id && x.OrganizationId == agent.OrganizationId, ct)) return Results.Ok(new { duplicate = true });
-            if (command.Status != DeviceCommandStatus.Delivered || command.ExpiresAt <= DateTimeOffset.UtcNow)
-                return Results.Conflict(new ProblemDetails { Title = "Only a delivered, unexpired command can receive a result", Status = 409 });
+            if (command.Status is not (DeviceCommandStatus.Delivered or DeviceCommandStatus.ExecutionUnconfirmed) || command.ExpiresAt.AddDays(7) <= DateTimeOffset.UtcNow)
+                return Results.Conflict(new ProblemDetails { Title = "Only a previously delivered command can receive a result, within seven days of execution expiry", Status = 409 });
             command.Status = request.Succeeded ? DeviceCommandStatus.Succeeded : DeviceCommandStatus.Failed;
             command.DeliveryLeaseExpiresAt = null;
             db.Add(new CommandResult { OrganizationId = command.OrganizationId, DeviceId = command.DeviceId, CommandId = id, Succeeded = request.Succeeded, Message = request.Message });
@@ -172,7 +177,9 @@ public static class AgentEndpoints
             }
             await hub.Clients.Group(TenantGroup.Name(command.OrganizationId)).SendAsync("command-status", new { command.Id, status = command.Status.ToString() }, ct);
             return Results.Accepted();
-        }).RequireAuthorization(AuthorizationPolicies.Agent);
+        }).RequireAuthorization(AuthorizationPolicies.Agent)
+            .WithSummary("Record one receipt for a previously delivered command")
+            .WithDescription("Execution must be accepted before signed ExpiresAt. Receipts for Delivered or ExecutionUnconfirmed commands remain valid for seven days after that expiry. Results are idempotent by command ID; this does not permit late execution.");
     }
 
     private static bool IsEnrollmentSecret(string value) => value.Length == 64 && value.All(char.IsAsciiHexDigit);
@@ -188,8 +195,15 @@ public static class AgentEndpoints
         var credential = await db.DeviceCredentials.AsNoTracking().SingleOrDefaultAsync(c =>
             c.DeviceId == id && c.OrganizationId == token.OrganizationId && c.RevokedAt == null, ct);
         if (credential is null || !SecretHash.Matches(request.DeviceSecret, credential.SecretHash)) return null;
-        db.Add(new AuditLog { OrganizationId = token.OrganizationId, ActorId = id, DeviceId = id,
-            Action = "AgentEnrollmentRecovered", Reason = "Original device proved its pre-persisted enrollment secret", Outcome = "Success" });
+        db.Add(new AuditLog
+        {
+            OrganizationId = token.OrganizationId,
+            ActorId = id,
+            DeviceId = id,
+            Action = "AgentEnrollmentRecovered",
+            Reason = "Original device proved its pre-persisted enrollment secret",
+            Outcome = "Success"
+        });
         await db.SaveChangesAsync(ct);
         return new EnrollResponse(id, request.DeviceSecret);
     }

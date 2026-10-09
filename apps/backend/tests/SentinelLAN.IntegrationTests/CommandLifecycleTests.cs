@@ -133,7 +133,7 @@ public sealed class CommandLifecycleTests(SentinelApiFactory factory) : IClassFi
         await using var verifyScope = factory.Services.CreateAsyncScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<SentinelDbContext>();
         var storedExpired = await verifyDb.Commands.SingleAsync(item => item.Id == commandId);
-        Assert.Equal(DeviceCommandStatus.Expired, storedExpired.Status);
+        Assert.Equal(DeviceCommandStatus.ExecutionUnconfirmed, storedExpired.Status);
         Assert.Null(storedExpired.DeliveryLeaseExpiresAt);
     }
 
@@ -157,21 +157,21 @@ public sealed class CommandLifecycleTests(SentinelApiFactory factory) : IClassFi
 
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<SentinelDbContext>();
-        var expired = new DeviceCommand { OrganizationId = device.OrganizationId, DeviceId = device.Id, IssuedByUserId = command.IssuedByUserId, Type = "SimulateLock", Reason = "Expired", Nonce = Guid.NewGuid().ToString("N"), Signature = "unused", IssuedAt = DateTimeOffset.UtcNow.AddMinutes(-5), ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(-1), Status = DeviceCommandStatus.Delivered };
+        var expired = new DeviceCommand { OrganizationId = device.OrganizationId, DeviceId = device.Id, IssuedByUserId = command.IssuedByUserId, Type = "SimulateLock", Reason = "Expired", Nonce = Guid.NewGuid().ToString("N"), Signature = "unused", IssuedAt = DateTimeOffset.UtcNow.AddDays(-8), ExpiresAt = DateTimeOffset.UtcNow.AddDays(-8).AddMinutes(5), Status = DeviceCommandStatus.Delivered };
         db.Add(expired);
         await db.SaveChangesAsync();
         Assert.Equal(HttpStatusCode.Conflict, (await agent.PostAsJsonAsync($"/api/v1/agent/commands/{expired.Id}/result", new CommandResultRequest(true, "Too late"))).StatusCode);
     }
 
     [Fact]
-    public async Task TechnicianCanDispatchButEmployeeCannotAndAuditCannotBeRewritten()
+    public async Task AdminCanDispatchButEmployeeCannotAndAuditCannotBeRewritten()
     {
         var device = await SeedDeviceAsync();
-        using var technician = await OperatorAsync("technician");
+        using var technician = await OperatorAsync("admin");
         using var employee = await OperatorAsync("employee");
         await CreateAsync(technician, device.Id, "SimulateLock");
         Assert.Equal(HttpStatusCode.Forbidden, (await employee.PostAsJsonAsync("/api/v1/commands", new CreateCommandRequest(device.Id, "SimulateLock", "Test", Confirmed: true))).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await technician.GetAsync("/api/v1/audit-logs")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await technician.GetAsync("/api/v1/audit-logs")).StatusCode);
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<SentinelDbContext>();
         var audit = await db.AuditLogs.FirstAsync(item => item.DeviceId == device.Id);

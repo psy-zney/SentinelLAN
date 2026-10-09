@@ -7,7 +7,7 @@ public sealed class PermissionTests
 {
     [Theory]
     [InlineData("Admin", Permissions.ViewAudit, true)]
-    [InlineData("Technician", Permissions.ManageCommands, true)]
+    [InlineData("Technician", Permissions.ManageCommands, false)]
     [InlineData("Technician", Permissions.ViewAudit, false)]
     [InlineData("Employee", Permissions.ViewDevices, false)]
     [InlineData("Employee", Permissions.ViewAssignedDevice, true)]

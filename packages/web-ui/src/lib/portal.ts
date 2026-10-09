@@ -3,7 +3,7 @@ import type { Role } from "@/types/api";
 export const portal = process.env.NEXT_PUBLIC_PORTAL === "employee" ? "employee" : "company";
 export const portalTitle = portal === "employee" ? "Nhân viên" : "Quản trị công ty";
 export function portalAllows(role: Role) {
-  return portal === "employee" ? role === "Employee" : role === "Admin" || role === "Technician";
+  return portal === "employee" ? role === "Employee" : role === "Admin";
 }
 export function portalHomeUrl(role: Role) {
   return `${portalBaseUrl(role)}${role === "Employee" ? "/my-device" : "/dashboard"}`;

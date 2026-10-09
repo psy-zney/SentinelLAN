@@ -8,7 +8,7 @@ import { ServicePage, ServiceText, ServiceError, useActiveScreen } from '../self
 
 export function OperatorView() {
   const {user,apiClient} = useAuth(); const active = useActiveScreen(); const router = useRouter();
-  const operator = user?.role === 'Admin' || user?.role === 'Technician';
+  const operator = user?.role === 'Admin';
   const dashboard = useQuery({queryKey:['operator-dashboard'],queryFn:()=>apiClient.operatorDashboard(),enabled:active && operator,refetchInterval:active ? 15000 : false});
   const devices = useQuery({queryKey:['operator-devices'],queryFn:()=>apiClient.operatorDevices(),enabled:active && operator,refetchInterval:active ? 15000 : false});
   const [reason,setReason] = useState(''); const [token,setToken] = useState(''); const [busy,setBusy] = useState(false); const [error,setError] = useState<unknown>();

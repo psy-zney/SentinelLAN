@@ -15,7 +15,7 @@ public sealed class DeviceAdministrationIntegrationTests(SentinelApiFactory fact
         using var agent = factory.CreateClient();
 
         Assert.Equal(HttpStatusCode.OK, (await LoginAsync(admin, "admin@sentinellan.local", "local-demo-only")).StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await LoginAsync(technician, "technician@sentinellan.local", "local-demo-only")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await LoginAsync(technician, "employee@sentinellan.local", "local-demo-only")).StatusCode);
 
         var tokenRequest = new EnrollmentTokenRequest(15, "Prepare authorized test device", true);
         Assert.Equal(HttpStatusCode.Forbidden,

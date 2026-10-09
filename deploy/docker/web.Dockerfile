@@ -3,7 +3,6 @@ WORKDIR /src
 COPY package.json package-lock.json ./
 COPY apps/company/package.json apps/company/package.json
 COPY apps/employee/package.json apps/employee/package.json
-COPY apps/platform/package.json apps/platform/package.json
 COPY apps/mobile/package.json apps/mobile/package.json
 COPY packages/api-client/package.json packages/api-client/package.json
 COPY packages/shared-config/package.json packages/shared-config/package.json
@@ -12,7 +11,6 @@ ARG WEB_APP=company
 RUN npm ci --workspace=@sentinellan/$WEB_APP --include-workspace-root
 COPY apps/company apps/company
 COPY apps/employee apps/employee
-COPY apps/platform apps/platform
 COPY packages packages
 ARG NEXT_PUBLIC_API_URL=
 ARG NEXT_PUBLIC_COMPANY_URL=/company

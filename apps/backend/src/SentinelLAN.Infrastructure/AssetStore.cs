@@ -25,7 +25,8 @@ public sealed class AssetStore(SentinelDbContext dbContext) : IAssetStore
     public async Task<IReadOnlyList<TelemetrySnapshot>> GetRecentTelemetryAsync(Guid organizationId, Guid deviceId, int limit, CancellationToken cancellationToken = default) =>
         await dbContext.Telemetry
             .Where(x => x.OrganizationId == organizationId && x.DeviceId == deviceId)
-            .OrderByDescending(x => x.CreatedAt)
+            .Where(x => (x.CollectedAt ?? x.CreatedAt) >= DateTimeOffset.UtcNow.AddDays(-TechnicalDataRetentionService.RetentionDays))
+            .OrderByDescending(x => x.CollectedAt ?? x.CreatedAt)
             .Take(limit)
             .ToListAsync(cancellationToken);
 

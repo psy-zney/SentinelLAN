@@ -19,7 +19,6 @@ public static class Permissions
     public static bool RoleHas(string role, string permission) => role switch
     {
         "Admin" => true,
-        "Technician" => permission is ViewDevices or ManageCommands or ViewPolicies or ManagePolicies or ViewAlerts or ManageAlerts,
         "Employee" => permission is ViewAssignedDevice,
         "Agent" => false,
         _ => false

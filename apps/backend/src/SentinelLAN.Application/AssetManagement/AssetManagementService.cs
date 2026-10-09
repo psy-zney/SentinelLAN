@@ -53,7 +53,7 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
     public async Task<(ManagementResultStatus Status, string Message)> UpdateAssetProfileAsync(
         ActorContext actor, Guid deviceId, UpdateAssetProfileRequest request, CancellationToken cancellationToken = default)
     {
-        if (actor.Role != Roles.Admin && actor.Role != Roles.Technician)
+        if (actor.Role != Roles.Admin)
             return (ManagementResultStatus.Forbidden, "Only Admin and Technician can update asset profile.");
 
         if (string.IsNullOrWhiteSpace(request.Reason) || !request.Confirmed)
@@ -341,7 +341,7 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
     public async Task<(ManagementResultStatus Status, string Message)> UpdateIncidentStatusAsync(
         ActorContext actor, Guid incidentId, UpdateIncidentStatusRequest request, CancellationToken cancellationToken = default)
     {
-        if (actor.Role != Roles.Admin && actor.Role != Roles.Technician)
+        if (actor.Role != Roles.Admin)
             return (ManagementResultStatus.Forbidden, "Only Admin and Technician can update incident status.");
 
         if (request.Status is not ("Open" or "InProgress" or "Resolved" or "Closed") ||
@@ -351,7 +351,7 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
         if (request.AssignedTechnicianId.HasValue)
         {
             var technician = await store.FindUserAsync(actor.OrganizationId, request.AssignedTechnicianId.Value, cancellationToken);
-            if (technician is null || technician.Role != Roles.Technician || technician.Status != UserStatuses.Active)
+            if (technician is null || technician.Role != Roles.Admin || technician.Status != UserStatuses.Active)
                 return (ManagementResultStatus.Invalid, "Assigned technician must be an active Technician in this organization.");
         }
 
@@ -436,7 +436,7 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
     public async Task<(ManagementResultStatus Status, WorkOrderDto? WorkOrder, string Message)> CreateWorkOrderAsync(
         ActorContext actor, CreateWorkOrderRequest request, CancellationToken cancellationToken = default)
     {
-        if (actor.Role != Roles.Admin && actor.Role != Roles.Technician)
+        if (actor.Role != Roles.Admin)
             return (ManagementResultStatus.Forbidden, null, "Only Admin and Technician can create Work Orders.");
 
         if (string.IsNullOrWhiteSpace(request.Title) || request.Title.Trim().Length is < 3 or > 200 ||
@@ -457,7 +457,7 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
         if (request.AssignedTechnicianId.HasValue)
         {
             var technician = await store.FindUserAsync(actor.OrganizationId, request.AssignedTechnicianId.Value, cancellationToken);
-            if (technician is null || technician.Role != Roles.Technician || technician.Status != UserStatuses.Active)
+            if (technician is null || technician.Role != Roles.Admin || technician.Status != UserStatuses.Active)
                 return (ManagementResultStatus.Invalid, null, "Assigned technician must be an active Technician in this organization.");
         }
 
@@ -476,7 +476,7 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
             DueDate = request.DueDate,
             ChecklistJson = request.ChecklistJson,
             Notes = request.Notes?.Trim(),
-            AssignedTechnicianId = request.AssignedTechnicianId ?? (actor.Role == Roles.Technician ? actor.UserId : null)
+            AssignedTechnicianId = request.AssignedTechnicianId ?? (actor.Role == Roles.Admin ? actor.UserId : null)
         };
 
         var created = await store.CreateWorkOrderAsync(wo, cancellationToken);
@@ -522,7 +522,7 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
     public async Task<(ManagementResultStatus Status, string Message)> CompleteWorkOrderAsync(
         ActorContext actor, Guid workOrderId, CompleteWorkOrderRequest request, CancellationToken cancellationToken = default)
     {
-        if (actor.Role != Roles.Admin && actor.Role != Roles.Technician)
+        if (actor.Role != Roles.Admin)
             return (ManagementResultStatus.Forbidden, "Only Admin and Technician can complete Work Orders.");
 
         if (request.LaborHours is < 0 or > 1000 || request.PartsCost < 0 || request.LaborCost < 0 ||
@@ -595,7 +595,7 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
     public async Task<(ManagementResultStatus Status, AssetLoanDto? Loan, string Message)> CreateAssetLoanAsync(
         ActorContext actor, CreateLoanRequest request, CancellationToken cancellationToken = default)
     {
-        if (actor.Role != Roles.Admin && actor.Role != Roles.Technician)
+        if (actor.Role != Roles.Admin)
             return (ManagementResultStatus.Forbidden, null, "Only Admin and Technician can create asset loans.");
 
         var device = await store.FindDeviceAsync(actor.OrganizationId, request.DeviceId, cancellationToken);
@@ -663,7 +663,7 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
     public async Task<(ManagementResultStatus Status, string Message)> ReturnAssetLoanAsync(
         ActorContext actor, Guid loanId, ReturnLoanRequest request, CancellationToken cancellationToken = default)
     {
-        if (actor.Role != Roles.Admin && actor.Role != Roles.Technician)
+        if (actor.Role != Roles.Admin)
             return (ManagementResultStatus.Forbidden, "Only Admin and Technician can process asset return.");
 
         var loan = await store.FindAssetLoanAsync(actor.OrganizationId, loanId, cancellationToken);

@@ -5,7 +5,6 @@ namespace SentinelLAN.Application;
 public static class AuthorizationPolicies
 {
     public const string Admin = nameof(Admin);
-    public const string Technician = nameof(Technician);
     public const string Employee = nameof(Employee);
     public const string Agent = nameof(Agent);
     public const string ViewDevices = nameof(ViewDevices);

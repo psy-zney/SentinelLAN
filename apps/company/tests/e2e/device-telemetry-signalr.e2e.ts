@@ -20,7 +20,7 @@ test("Enrollment, live inventory, telemetry, simulated command, audit and heartb
   await page.locator('input[name="password"]').fill("local-demo-only");
   await page.locator("form.login button[type=submit]").click();
   await expect(page).toHaveURL(/\/dashboard$/);
-  await page.getByRole("button", { name: "Toggle language" }).click();
+  await page.getByRole("button", { name: "Chuyển sang tiếng Anh" }).click();
   await page.goto("/company/devices");
   await expect(page.getByText("EMPLOYEE-DEMO-PC")).toBeVisible();
   await expect.poll(() => hubReady).toBe(true);
@@ -88,7 +88,7 @@ test("API failures are visible and never replaced by demo inventory", async ({ p
   await page.locator('input[name="password"]').fill("local-demo-only");
   await page.locator("form.login button[type=submit]").click();
   await expect(page).toHaveURL(/\/dashboard$/);
-  await page.getByRole("button", { name: "Toggle language" }).click();
+  await page.getByRole("button", { name: "Chuyển sang tiếng Anh" }).click();
   await page.route("**/api/v1/dashboard", route => route.fulfill({ status: 503, body: "Unavailable" }));
   await page.reload();
   await expect(page.getByRole("alert").filter({ hasText: "An error occurred" })).toBeVisible();

@@ -18,7 +18,7 @@ public sealed class AgentCycle(DeviceIdentity identity, ITelemetryCollector tele
         // Command receipts are time-sensitive and must not wait behind telemetry retries.
         if (_result is not null)
         {
-            if (clock.GetUtcNow() >= _result.ExpiresAt)
+            if (clock.GetUtcNow() >= _result.ExpiresAt.AddDays(7))
             {
                 pendingResultStore?.Clear();
                 _result = null;
@@ -30,7 +30,7 @@ public sealed class AgentCycle(DeviceIdentity identity, ITelemetryCollector tele
         }
 
         var maintenance = maintenanceStateStore?.Load(clock.GetUtcNow());
-        var health = telemetry.Collect() with { MaintenanceUntil = maintenance?.MaintenanceUntil, MaintenanceAction = maintenance?.Action };
+        var health = telemetry.Collect() with { MaintenanceUntil = maintenance?.MaintenanceUntil, MaintenanceAction = maintenance?.Action, CollectedAt = clock.GetUtcNow() };
         _offlineQueue.Enqueue(new QueuedTelemetry(health, Guid.NewGuid().ToString("N")));
         var sent = 0;
         while (sent < 10 && _offlineQueue.TryPeek(TimeSpan.FromHours(1), out var queuedTelemetry))
@@ -54,7 +54,7 @@ public sealed class AgentCycle(DeviceIdentity identity, ITelemetryCollector tele
             }
             else if (command.Type == "CollectTelemetryNow")
             {
-                var sample = telemetry.Collect() with { MaintenanceUntil = maintenance?.MaintenanceUntil, MaintenanceAction = maintenance?.Action };
+                var sample = telemetry.Collect() with { MaintenanceUntil = maintenance?.MaintenanceUntil, MaintenanceAction = maintenance?.Action, CollectedAt = clock.GetUtcNow() };
                 // Use a stable key so an ambiguous HTTP response cannot duplicate the measurement.
                 await api.SendHeartbeatAsync(identity, sample, $"command-{command.Id:N}", cancellationToken);
                 result = new(true, "Fresh system telemetry collected and acknowledged by the server");

@@ -18,7 +18,7 @@ public sealed class ManagementStore(SentinelDbContext db) : IManagementStore
         db.Users.SingleOrDefaultAsync(user => user.OrganizationId == organizationId && user.Email == email, cancellationToken);
 
     public async Task<IReadOnlyList<User>> GetUsersAsync(Guid organizationId, CancellationToken cancellationToken) =>
-        await db.Users.AsNoTracking().Where(u => u.OrganizationId == organizationId).OrderBy(u => u.DisplayName).ToListAsync(cancellationToken);
+        await db.Users.AsNoTracking().Where(u => u.OrganizationId == organizationId && (u.Role == Roles.Admin || u.Role == Roles.Employee)).OrderBy(u => u.DisplayName).ToListAsync(cancellationToken);
 
     public Task<int> CountActiveAdminsAsync(Guid organizationId, CancellationToken cancellationToken) =>
         db.Users.CountAsync(user => user.OrganizationId == organizationId && user.Role == Roles.Admin && user.Status == UserStatuses.Active, cancellationToken);

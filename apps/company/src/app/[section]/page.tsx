@@ -20,19 +20,19 @@ const sections: Record<string, SectionConfig> = {
   policies: {
     title: "Policies",
     eyebrow: "Governance",
-    allowedRoles: ["Admin", "Technician"],
+    allowedRoles: ["Admin"],
     render: () => <PoliciesView />
   },
   commands: {
     title: "Command Center",
     eyebrow: "Operations",
-    allowedRoles: ["Admin", "Technician"],
+    allowedRoles: ["Admin"],
     render: () => <CommandsView />
   },
   alerts: {
     title: "Alerts & Incidents",
     eyebrow: "Monitoring",
-    allowedRoles: ["Admin", "Technician"],
+    allowedRoles: ["Admin"],
     render: () => <AlertsView />
   },
   "audit-logs": {

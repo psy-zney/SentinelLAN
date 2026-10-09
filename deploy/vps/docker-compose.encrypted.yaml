@@ -35,7 +35,6 @@ services:
     tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
     environment:
       DOTNET_EnableDiagnostics: "0"
-      SENTINELLAN_HOST_MONITOR_PATH: /run/sentinellan-host-monitor/status.json
       Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command: Warning
       Logging__LogLevel__Microsoft.AspNetCore.Hosting.Diagnostics: Warning
       ASPNETCORE_URLS: https://+:8443
@@ -46,7 +45,6 @@ services:
       ConnectionStrings__SentinelLAN: Host=postgres;Port=5432;Database=${POSTGRES_DB:-sentinellan};Username=${POSTGRES_USER:-sentinellan};Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD};SSL Mode=VerifyFull;Root Certificate=/run/sentinellan-tls/ca.crt;SSL Certificate=/run/sentinellan-tls/db-client.crt;SSL Key=/run/sentinellan-tls/db-client.key;SSL Negotiation=direct;Channel Binding=Require
     volumes:
       - ${TLS_DIRECTORY:?Set TLS_DIRECTORY}/api:/run/sentinellan-tls:ro
-      - ${HOST_MONITOR_DIRECTORY:-/opt/sentinellan/shared/host-monitor}:/run/sentinellan-host-monitor:ro
 
   company:
     user: "1000:1000"
@@ -57,14 +55,6 @@ services:
     environment:
       HOSTNAME: 127.0.0.1
   employee:
-    user: "1000:1000"
-    security_opt: [no-new-privileges:true]
-    cap_drop: [ALL]
-    read_only: true
-    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
-    environment:
-      HOSTNAME: 127.0.0.1
-  platform:
     user: "1000:1000"
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
@@ -103,21 +93,6 @@ services:
     volumes:
       - ./nginx.web-tls.conf:/etc/nginx/nginx.conf:ro
       - ${TLS_DIRECTORY:?Set TLS_DIRECTORY}/employee:/run/sentinellan-tls:ro
-  platform-tls:
-    image: nginx:1.30.5-alpine@sha256:0985e772fb9f729e6fa0980da05fca5d9c468e870eed43071545afa9d2e27d94
-    restart: unless-stopped
-    network_mode: service:platform
-    depends_on: [platform]
-    security_opt: [no-new-privileges:true]
-    user: "101:101"
-    cap_drop: [ALL]
-    read_only: true
-    tmpfs:
-      - /tmp:rw,noexec,nosuid,uid=101,gid=101,size=16m
-      - /var/cache/nginx:rw,noexec,nosuid,uid=101,gid=101,size=64m
-    volumes:
-      - ./nginx.web-tls.conf:/etc/nginx/nginx.conf:ro
-      - ${TLS_DIRECTORY:?Set TLS_DIRECTORY}/platform:/run/sentinellan-tls:ro
 
   nginx:
     image: nginx:1.30.5-alpine@sha256:0985e772fb9f729e6fa0980da05fca5d9c468e870eed43071545afa9d2e27d94
@@ -130,7 +105,7 @@ services:
       - /tmp:rw,noexec,nosuid,uid=101,gid=101,size=16m
       - /var/cache/nginx:rw,noexec,nosuid,uid=101,gid=101,size=64m
     ports: !override
-      - "127.0.0.1:${HOST_PROXY_PORT:-3180}:8443"
+      - "127.0.0.1:${HOST_PROXY_PORT:-9003}:8443"
     volumes: !override
       - ./nginx.encrypted.conf:/etc/nginx/nginx.conf:ro
       - ${TLS_DIRECTORY:?Set TLS_DIRECTORY}/gateway:/run/sentinellan-tls:ro
@@ -138,4 +113,3 @@ services:
       - api
       - company-tls
       - employee-tls
-      - platform-tls

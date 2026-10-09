@@ -1,4 +1,4 @@
-# Replace sentinel.example.com and 3180 before installing as a new host Nginx site.
+# Replace sentinel.example.com and 9003 before installing as a new host Nginx site.
 server {
     listen 80;
     listen [::]:80;
@@ -27,7 +27,7 @@ server {
         default_type text/plain;
     }
     location / {
-        proxy_pass http://127.0.0.1:3180;
+        proxy_pass http://127.0.0.1:9003;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

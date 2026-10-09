@@ -14,7 +14,6 @@ public static class DemoSeeder
         var organization = new Organization { Code = "demo", Name = "SentinelLAN Demo" };
         var password = getSetting("SENTINELLAN_DEMO_ADMIN_PASSWORD") ?? "local-demo-only";
         var admin = new User { OrganizationId = organization.Id, Email = getSetting("SENTINELLAN_DEMO_ADMIN_EMAIL") ?? "admin@sentinellan.local", DisplayName = "Demo Admin", Role = Roles.Admin, PasswordHash = passwordHasher.Hash(password), Status = UserStatuses.Active };
-        var technician = new User { OrganizationId = organization.Id, Email = "technician@sentinellan.local", DisplayName = "Demo Technician", Role = Roles.Technician, PasswordHash = passwordHasher.Hash(password), Status = UserStatuses.Active };
         var employee = new User { OrganizationId = organization.Id, Email = "employee@sentinellan.local", DisplayName = "Demo Employee", Role = Roles.Employee, PasswordHash = passwordHasher.Hash(password), Status = UserStatuses.Active };
         var employeeDevice = new Device
         {
@@ -43,7 +42,7 @@ public static class DemoSeeder
         var serverDevice = new Device
         {
             OrganizationId = organization.Id,
-            AssignedUserId = technician.Id,
+            AssignedUserId = admin.Id,
             Name = "SERVER-SRV-CORE01",
             OsVersion = "Ubuntu 24.04 LTS",
             AgentVersion = "0.1.0",
@@ -84,7 +83,7 @@ public static class DemoSeeder
             Severity = "Medium",
             Status = "Resolved",
             ReportedByUserId = employee.Id,
-            AssignedTechnicianId = technician.Id,
+            AssignedTechnicianId = admin.Id,
             ResolvedAt = DateTimeOffset.UtcNow.AddDays(-5),
             ResolutionNotes = "Đã tháo máy, vệ sinh cánh quạt, tra dầu bôi trơn và thay keo tản nhiệt gốm mới."
         };
@@ -98,7 +97,7 @@ public static class DemoSeeder
             Severity = "Low",
             Status = "Open",
             ReportedByUserId = employee.Id,
-            AssignedTechnicianId = technician.Id
+            AssignedTechnicianId = admin.Id
         };
 
         var sampleWorkOrder = new WorkOrder
@@ -118,7 +117,7 @@ public static class DemoSeeder
             LaborCost = 45.0m,
             ChecklistJson = "[\"Vệ sinh bụi toàn bộ mainboard\",\"Kiểm tra quạt làm mát\",\"Tra keo MX-4\",\"Chạy bài test nhiệt độ AIDA64\"]",
             Notes = "Nhiệt độ sau bảo trì giảm từ 89°C xuống còn 68°C ở mức tải 100%.",
-            AssignedTechnicianId = technician.Id
+            AssignedTechnicianId = admin.Id
         };
 
         var sampleTelemetry1 = new TelemetrySnapshot
@@ -142,7 +141,6 @@ public static class DemoSeeder
         db.AddRange(
             organization,
             admin,
-            technician,
             employee,
             employeeDevice,
             serverDevice,

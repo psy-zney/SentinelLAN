@@ -106,8 +106,8 @@ public sealed class ActivationAndQrIntegrationTests(SentinelApiFactory factory) 
     {
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
 
-        // Login as Technician
-        var techLogin = await client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest("demo", "technician@sentinellan.local", "local-demo-only"));
+        // Login as Admin
+        var techLogin = await client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest("demo", "admin@sentinellan.local", "local-demo-only"));
         Assert.Equal(HttpStatusCode.OK, techLogin.StatusCode);
 
         // Fetch demo devices
@@ -117,7 +117,7 @@ public sealed class ActivationAndQrIntegrationTests(SentinelApiFactory factory) 
         Assert.NotEmpty(devices);
         var targetDevice = devices[0];
 
-        // 1. Technician generates QR label for target device
+        // 1. Admin generates QR label for target device
         var genReq = new GenerateQrLabelRequest("Label replacement", true);
         var genMsg = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/devices/{targetDevice.Id}/qr-label")
         {
@@ -139,7 +139,7 @@ public sealed class ActivationAndQrIntegrationTests(SentinelApiFactory factory) 
         Assert.NotNull(publicData);
         Assert.Equal(targetDevice.Name, publicData.DeviceName);
 
-        // 3. Authenticated resolve: Technician routed to /devices/{deviceId}
+        // 3. Authenticated resolve: Admin routed to /devices/{deviceId}
         var authResolveRes = await client.GetAsync($"/api/v1/qr/{genResult.Code}");
         Assert.Equal(HttpStatusCode.OK, authResolveRes.StatusCode);
         var authResolveData = await authResolveRes.Content.ReadFromJsonAsync<AuthenticatedQrResolveDto>(JsonOptions);

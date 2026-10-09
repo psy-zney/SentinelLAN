@@ -2,11 +2,11 @@ export type Device = { id: string; name: string; osVersion: string; agentVersion
 export type Dashboard = { totalDevices: number; onlineDevices: number; offlineDevices: number; openAlerts: number; devices: Device[] };
 export type CommandType = "ShowNotification" | "CollectTelemetryNow" | "RefreshPolicy" | "SimulateLock" | "SimulateNetworkIsolation" | "RestartService" | "LockWorkstation" | "IsolateNetwork";
 export type AuditEvent = { id: string; actorId?: string; actorName?: string; deviceId?: string | null; deviceName?: string | null; action: string; reason: string; outcome: string; createdAt: string };
-export type Role = "Admin" | "Technician" | "Employee" | "Agent";
+export type Role = "Admin" | "Employee" | "Agent";
 export type CurrentSession = { role: Role; displayName: string };
 export type EmployeeDeviceAction = { action: string; reason: string; outcome: string; createdAt: string };
 export type EmployeeDevice = { device: Device; appliedPolicy: string | null; recentActions: EmployeeDeviceAction[] };
-export type TelemetrySnapshot = { id: string; deviceId: string; cpuPercent: number; ramPercent: number; diskPercent: number; createdAt: string };
+export type TelemetrySnapshot = { id: string; deviceId: string; cpuPercent: number; ramPercent: number; diskPercent: number; createdAt: string; collectedAt?: string | null; receivedAt?: string | null };
 
 export type Policy = {
   id: string;
@@ -24,7 +24,7 @@ export type CommandHistoryItem = {
   type: CommandType;
   reason: string;
   parameter?: string | null;
-  status: "Pending" | "Delivered" | "Succeeded" | "Failed" | "Expired";
+  status: "Pending" | "Delivered" | "Succeeded" | "Failed" | "Expired" | "ExecutionUnconfirmed";
   issuedAt: string;
   expiresAt: string;
   succeeded?: boolean | null;
@@ -443,6 +443,8 @@ export type MyDeviceTelemetryDto = {
   ramPercent: number;
   diskPercent: number;
   createdAt: string;
+  collectedAt?: string | null;
+  receivedAt?: string | null;
 };
 
 export type ReportMyDeviceIncidentRequest = {

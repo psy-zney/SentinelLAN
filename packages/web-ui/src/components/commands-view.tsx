@@ -78,6 +78,7 @@ export function CommandsView() {
   };
 
   const getStatusBadge = (status: string, succeeded?: boolean | null, type?: CommandType) => {
+    if (status === "ExecutionUnconfirmed") return <span className="badge badge-warn">{lang === "vi" ? "Chưa xác nhận kết quả" : "Execution unconfirmed"}</span>;
     if ((status === "Succeeded" || succeeded === true) && type?.startsWith("Simulate"))
       return <span className="badge badge-neutral">{lang === "vi" ? "Đã mô phỏng" : "Simulated"}</span>;
     if (status === "Succeeded" || succeeded === true) return <span className="badge badge-success">{t("succeeded")}</span>;
@@ -194,7 +195,7 @@ export function CommandsView() {
                     </td>
                     <td>{getStatusBadge(c.status, c.succeeded, c.type)}</td>
                     <td style={{ maxWidth: 180, fontSize: ".8rem" }}>
-                      {c.resultMessage ?? (c.succeeded === true ? t("succeeded") : t("pending"))}
+                      {c.resultMessage ?? (c.status === "ExecutionUnconfirmed" ? (lang === "vi" ? "Lệnh đã giao; cần kiểm tra trước khi chạy lại." : "Delivered; verify before retrying.") : c.succeeded === true ? t("succeeded") : t("pending"))}
                     </td>
                     <td>{new Date(c.issuedAt).toLocaleTimeString()}</td>
                   </tr>

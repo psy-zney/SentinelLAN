@@ -38,7 +38,7 @@ public sealed class BootstrapOrganizationTests
         await using var db = CreateDatabase();
         db.Organizations.Add(new SentinelLAN.Domain.Organization
         {
-            Code = PlatformIdentity.OrganizationCode,
+            Code = "_platform",
             Name = "Platform"
         });
         await db.SaveChangesAsync();

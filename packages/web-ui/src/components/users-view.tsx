@@ -205,7 +205,7 @@ export function UsersView() {
                   <td><strong>{user.displayName}</strong></td>
                   <td>{user.email}</td>
                   <td>
-                    <span className={`badge ${user.role === "Admin" ? "badge-info" : user.role === "Technician" ? "badge-warn" : "badge-neutral"}`}>
+                    <span className={`badge ${user.role === "Admin" ? "badge-info" : "badge-neutral"}`}>
                       {user.role}
                     </span>
                   </td>
@@ -305,7 +305,6 @@ export function UsersView() {
                 onChange={e => setForm({ ...form, role: e.target.value as NewUserRole })}
               >
                 <option value="Employee">Employee</option>
-                <option value="Technician">Technician</option>
                 <option value="Admin">Admin</option>
               </select>
             </div>

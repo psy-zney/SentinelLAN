@@ -13,6 +13,7 @@ public sealed class RefreshSession : Entity, ITenantOwned
     public Guid Version { get; private set; } = Guid.NewGuid();
     public string? ClientType { get; init; }
     public string? AppVersion { get; init; }
+    public string? SecurityStamp { get; init; }
 
     public bool IsActive(DateTimeOffset now) => RevokedAt is null && now < ExpiresAt;
 

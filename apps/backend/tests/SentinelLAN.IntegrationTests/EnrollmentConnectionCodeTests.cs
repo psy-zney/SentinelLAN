@@ -32,12 +32,11 @@ public sealed class EnrollmentConnectionCodeTests(SentinelApiFactory factory) : 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.Equal("no-store", response.Headers.CacheControl?.ToString());
         var issued = (await response.Content.ReadFromJsonAsync<EnrollmentTokenResponse>())!;
-        var code = EnrollmentConnectionCode.Decode(issued.ConnectionCode!);
-        Assert.Equal("https://sentinel.company.test", code.ServerUrl);
-        Assert.Equal(issued.Token, code.Token);
-        Assert.True(code.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(50));
+        Assert.Equal(issued.Token, issued.ConnectionCode);
+        Assert.Equal(64, issued.ConnectionCode!.Length);
+        Assert.True(issued.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(50));
         using var agent = configured.CreateClient();
-        var enrollment = new EnrollRequest(code.Token, $"CODE-{Guid.NewGuid():N}", "Windows", "test");
+        var enrollment = new EnrollRequest(issued.Token, $"CODE-{Guid.NewGuid():N}", "Windows", "test");
         Assert.Equal(HttpStatusCode.OK, (await agent.PostAsJsonAsync("/api/v1/agent/enroll", enrollment)).StatusCode);
         var second = await agent.PostAsJsonAsync("/api/v1/agent/enroll", enrollment with { DeviceName = "Other device" });
         Assert.Equal(HttpStatusCode.BadRequest, second.StatusCode);
@@ -46,10 +45,10 @@ public sealed class EnrollmentConnectionCodeTests(SentinelApiFactory factory) : 
 
         await using var scope = configured.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<SentinelDbContext>();
-        var stored = await db.EnrollmentTokens.SingleAsync(token => token.TokenHash == SecretHash.Create(code.Token));
+        var stored = await db.EnrollmentTokens.SingleAsync(token => token.TokenHash == SecretHash.Create(issued.Token));
         Assert.NotNull(stored.UsedAt);
         var audits = await db.AuditLogs.Where(a => a.OrganizationId == stored.OrganizationId).ToListAsync();
-        Assert.DoesNotContain(audits, a => a.Reason.Contains(code.Token, StringComparison.Ordinal) || a.Reason.Contains(issued.ConnectionCode!, StringComparison.Ordinal));
+        Assert.DoesNotContain(audits, a => a.Reason.Contains(issued.Token, StringComparison.Ordinal) || a.Reason.Contains(issued.ConnectionCode!, StringComparison.Ordinal));
     }
 
     [Fact]

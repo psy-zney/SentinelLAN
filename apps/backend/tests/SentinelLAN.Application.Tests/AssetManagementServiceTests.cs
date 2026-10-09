@@ -157,7 +157,7 @@ public sealed class AssetManagementServiceTests
         store.Incidents.Add(incident);
 
         var service = new AssetManagementService(store);
-        var techActor = new ActorContext(technicianId, organizationId, Roles.Technician);
+        var techActor = new ActorContext(technicianId, organizationId, Roles.Admin);
 
         var (createStatus, wo, _) = await service.CreateWorkOrderAsync(techActor, new CreateWorkOrderRequest(
             device.Id, incident.Id, "Fix heatsink", "Corrective", "High"
@@ -218,14 +218,14 @@ public sealed class AssetManagementServiceTests
     }
 
     [Fact]
-    public async Task IncidentAssignmentRejectsCrossTenantTechnicianAndInvalidStatus()
+    public async Task IncidentAssignmentRejectsCrossTenantAdminAndInvalidStatus()
     {
         var store = new FakeAssetStore();
         var device = NewDevice();
         store.Devices.Add(device);
         var incident = new IncidentTicket { OrganizationId = organizationId, DeviceId = device.Id, Title = "Fault", ReportedByUserId = employeeId };
         store.Incidents.Add(incident);
-        store.Users.Add(new User { OrganizationId = Guid.NewGuid(), Email = "other@example.test", DisplayName = "Other", Role = Roles.Technician, PasswordHash = "unused" });
+        store.Users.Add(new User { OrganizationId = Guid.NewGuid(), Email = "other@example.test", DisplayName = "Other", Role = Roles.Admin, PasswordHash = "unused" });
         var service = new AssetManagementService(store);
         var actor = new ActorContext(adminId, organizationId, Roles.Admin);
 

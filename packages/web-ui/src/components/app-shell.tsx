@@ -12,8 +12,8 @@ import { useTranslation, type TranslationKey } from "@/lib/i18n";
 import type { CurrentSession, Role } from "@/types/api";
 import { portalAllows, portalHomeUrl } from "@/lib/portal";
 
-const operatorRoles: readonly Role[] = ["Admin", "Technician"];
-const navIcons: Record<string, IconName> = { "/dashboard": "overview", "/support": "support", "/devices": "device", "/my-device": "device", "/scan": "qr", "/policies": "settings", "/commands": "command", "/alerts": "alert", "/audit-logs": "history", "/users": "users" };
+const operatorRoles: readonly Role[] = ["Admin"];
+const navIcons: Record<string, IconName> = { "/dashboard": "overview", "/vps": "overview", "/support": "support", "/devices": "device", "/my-device": "device", "/scan": "qr", "/policies": "settings", "/commands": "command", "/alerts": "alert", "/audit-logs": "history", "/users": "users" };
 
 const SessionContext = createContext<CurrentSession | null>(null);
 
@@ -24,6 +24,7 @@ export function useCurrentSession() {
 const linkDefs: Record<Exclude<Role, "Agent">, readonly (readonly [TranslationKey, string])[]> = {
   Admin: [
     ["dashboard", "/dashboard"],
+    ["vpsStatus", "/vps"],
     ["selfService", "/support"],
     ["devices", "/devices"],
     ["scanQr", "/scan"],
@@ -32,15 +33,6 @@ const linkDefs: Record<Exclude<Role, "Agent">, readonly (readonly [TranslationKe
     ["alerts", "/alerts"],
     ["auditLogs", "/audit-logs"],
     ["users", "/users"]
-  ],
-  Technician: [
-    ["dashboard", "/dashboard"],
-    ["selfService", "/support"],
-    ["devices", "/devices"],
-    ["scanQr", "/scan"],
-    ["policies", "/policies"],
-    ["commands", "/commands"],
-    ["alerts", "/alerts"]
   ],
   Employee: [
     ["selfService", "/support"],
@@ -56,6 +48,7 @@ const sectionMetaMap: Record<string, { titleKey: TranslationKey; eyebrowKey: Tra
   "Audit Trail": { titleKey: "auditLogs", eyebrowKey: "eyebrowCompliance" },
   "People & Access": { titleKey: "users", eyebrowKey: "eyebrowDirectory" },
   "Dashboard": { titleKey: "dashboard", eyebrowKey: "eyebrowOperations" },
+  "VPS Status": { titleKey: "vpsStatus", eyebrowKey: "eyebrowMonitoring" },
   "Devices": { titleKey: "devices", eyebrowKey: "eyebrowOperations" },
   "Device Details": { titleKey: "devices", eyebrowKey: "eyebrowOperations" },
   "Your Assigned Device": { titleKey: "myDevice", eyebrowKey: "eyebrowTransparency" },
@@ -113,7 +106,7 @@ export function AppShell({
 
   const links = linkDefs[session.role];
   const currentPath = pathname.replace(/^\/(company|employee)(?=\/|$)/, "");
-  const roleLabel = session.role === "Admin" ? (lang === "vi" ? "Quản trị viên" : "Administrator") : session.role === "Technician" ? (lang === "vi" ? "Nhân viên IT" : "IT staff") : (lang === "vi" ? "Nhân viên" : "Employee");
+  const roleLabel = session.role === "Admin" ? (lang === "vi" ? "Quản trị viên" : "Administrator") : (lang === "vi" ? "Nhân viên" : "Employee");
   const areaLabel = session.role === "Employee" ? (lang === "vi" ? "Dành cho nhân viên" : "Employee workspace") : (lang === "vi" ? "Quản trị công ty" : "Company management");
 
   return (

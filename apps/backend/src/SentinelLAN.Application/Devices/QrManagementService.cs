@@ -31,7 +31,7 @@ public sealed class QrManagementService(
     public async Task<(ManagementResultStatus Status, QrLabelResponse? Label, string Message)> GenerateOrRotateLabelAsync(
         ActorContext actor, Guid deviceId, GenerateQrLabelRequest request, CancellationToken cancellationToken = default)
     {
-        if (actor.Role is not (Roles.Admin or Roles.Technician))
+        if (actor.Role is not (Roles.Admin))
             return (ManagementResultStatus.Forbidden, null, "Only administrators and technicians can manage QR labels.");
 
         if (!request.Confirmed || string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Trim().Length is < 3 or > 1000)
@@ -84,7 +84,7 @@ public sealed class QrManagementService(
     public async Task<(ManagementResultStatus Status, string Message)> RevokeLabelAsync(
         ActorContext actor, Guid deviceId, RevokeQrLabelRequest request, CancellationToken cancellationToken = default)
     {
-        if (actor.Role is not (Roles.Admin or Roles.Technician))
+        if (actor.Role is not (Roles.Admin))
             return (ManagementResultStatus.Forbidden, "Only administrators and technicians can revoke QR labels.");
 
         if (!request.Confirmed || string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Trim().Length is < 3 or > 1000)
@@ -176,7 +176,7 @@ public sealed class QrManagementService(
 
         await store.TrySaveChangesAsync(cancellationToken);
 
-        if (actor.Role is Roles.Admin or Roles.Technician)
+        if (actor.Role is Roles.Admin)
         {
             return (ManagementResultStatus.Succeeded, new AuthenticatedQrResolveDto(
                 device.Id,

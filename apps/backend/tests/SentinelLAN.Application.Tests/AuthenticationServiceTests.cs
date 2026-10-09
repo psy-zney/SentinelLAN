@@ -5,6 +5,46 @@ namespace SentinelLAN.Application.Tests;
 
 public sealed class AuthenticationServiceTests
 {
+    [Theory]
+    [InlineData("PlatformOwner")]
+    [InlineData("SuperAdmin")]
+    [InlineData("Technician")]
+    [InlineData("Agent")]
+    public async Task UnsupportedRolesCannotLoginOrRefreshOnWebOrMobile(string role)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var user = new User { OrganizationId = Guid.NewGuid(), Email = "legacy@example.test", DisplayName = "Legacy", Role = role, PasswordHash = "valid" };
+        var store = new FakeAuthenticationStore(user);
+        store.Sessions.Add(new RefreshSession
+        {
+            OrganizationId = user.OrganizationId,
+            UserId = user.Id,
+            FamilyId = Guid.NewGuid(),
+            TokenHash = "hash:legacy-token",
+            SecurityStamp = user.SecurityStamp,
+            ExpiresAt = now.AddDays(1)
+        });
+        var service = new AuthenticationService(store, new FakePasswordHasher(), new FakeAccessTokens(), new SequentialRefreshTokens("unused"),
+            new AuthenticationSettings(TimeSpan.FromMinutes(15), TimeSpan.FromDays(7)), new FixedTimeProvider(now));
+        Assert.Null(await service.LoginAsync(new LoginRequest("demo", user.Email, "password"), default));
+        Assert.Null(await service.LoginMobileAsync(new MobileLoginRequest("demo", user.Email, "password"), default));
+        Assert.Equal(RefreshStatus.Invalid, (await service.RefreshAsync("legacy-token", default)).Status);
+        Assert.Equal(RefreshStatus.Invalid, (await service.RefreshMobileAsync("legacy-token", default)).Status);
+    }
+
+    [Fact]
+    public async Task ChangingSecurityStampRejectsAnOtherwiseActiveRefreshToken()
+    {
+        var user = new User { OrganizationId = Guid.NewGuid(), Email = "stamp@example.test", DisplayName = "User", Role = Roles.Employee, PasswordHash = "valid" };
+        var store = new FakeAuthenticationStore(user);
+        var service = new AuthenticationService(store, new FakePasswordHasher(), new FakeAccessTokens(), new SequentialRefreshTokens("old-token"),
+            new AuthenticationSettings(TimeSpan.FromMinutes(15), TimeSpan.FromDays(7)), new FixedTimeProvider(DateTimeOffset.UtcNow));
+        Assert.NotNull(await service.LoginAsync(new LoginRequest("demo", user.Email, "password"), default));
+        user.SecurityStamp = Guid.NewGuid().ToString("N");
+        Assert.Equal(RefreshStatus.Invalid, (await service.RefreshAsync("old-token", default)).Status);
+        Assert.Equal(RefreshStatus.Invalid, (await service.RefreshMobileAsync("old-token", default)).Status);
+    }
+
     [Fact]
     public async Task RefreshRotatesTokenAndReuseRevokesTheFamily()
     {

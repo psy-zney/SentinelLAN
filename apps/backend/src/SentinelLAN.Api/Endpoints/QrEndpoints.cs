@@ -24,7 +24,7 @@ public static class QrEndpoints
                 ManagementResultStatus.Conflict => Results.Conflict(new ProblemDetails { Title = "Conflict", Detail = message, Status = 409 }),
                 _ => Results.BadRequest(new ProblemDetails { Title = "Invalid request", Detail = message, Status = 400 })
             };
-        }).RequireAuthorization(AuthorizationPolicies.Technician).RequireRateLimiting("sensitive");
+        }).RequireAuthorization(AuthorizationPolicies.Admin).RequireRateLimiting("sensitive");
 
         v1.MapDelete("/devices/{id:guid}/qr-label", async (Guid id, [FromBody] RevokeQrLabelRequest? req, HttpContext http, SentinelDbContext db, IQrManagementService qrService, CancellationToken ct) =>
         {
@@ -39,14 +39,14 @@ public static class QrEndpoints
                 ManagementResultStatus.Forbidden => Results.StatusCode(StatusCodes.Status403Forbidden),
                 _ => Results.BadRequest(new ProblemDetails { Title = "Invalid request", Detail = message, Status = 400 })
             };
-        }).RequireAuthorization(AuthorizationPolicies.Technician).RequireRateLimiting("sensitive");
+        }).RequireAuthorization(AuthorizationPolicies.Admin).RequireRateLimiting("sensitive");
 
         v1.MapGet("/devices/{id:guid}/qr-label", async (Guid id, HttpContext http, IQrManagementService qrService, CancellationToken ct) =>
         {
             var actor = http.User.ToActorContext()!.Value;
             var label = await qrService.GetActiveLabelAsync(actor, id, ct);
             return label is null ? Results.NotFound() : Results.Ok(label);
-        }).RequireAuthorization(AuthorizationPolicies.Technician);
+        }).RequireAuthorization(AuthorizationPolicies.Admin);
 
         v1.MapGet("/qr/{code}/public", async (string code, IQrManagementService qrService, HttpContext http, CancellationToken ct) =>
         {

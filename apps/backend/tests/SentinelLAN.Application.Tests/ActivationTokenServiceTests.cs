@@ -38,7 +38,7 @@ public sealed class ActivationTokenServiceTests
     public async Task NonAdminCannotCreateUserOrReissueToken()
     {
         var service = new UserManagementService(store);
-        var tech = new ActorContext(Guid.NewGuid(), orgId, Roles.Technician);
+        var tech = new ActorContext(Guid.NewGuid(), orgId, "Technician");
         var emp = new ActorContext(Guid.NewGuid(), orgId, Roles.Employee);
 
         var createResult = await service.CreateAsync(tech, new CreateUserRequest("a@b.com", "A", Roles.Employee, "reason", true), hasher, CancellationToken.None);

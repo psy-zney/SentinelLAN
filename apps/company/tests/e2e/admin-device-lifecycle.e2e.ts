@@ -21,10 +21,10 @@ test("Admin can create an Employee, issue a one-time token, and open assignment 
   await expect(page.getByRole("cell", { name: email, exact: true })).toBeVisible();
 
   await page.goto("/company/devices");
-  await page.getByRole("button", { name: "+ Cấp token enrollment" }).click();
+  await page.getByRole("button", { name: "+ Tạo mã kết nối thiết bị" }).click();
   await page.locator("#token-reason").fill("E2E device enrollment");
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Lưu" }).click();
-  await expect(page.getByLabel("Enrollment token")).toBeVisible();
-  await expect(page.getByText("Token chỉ hiển thị trong phiên này.")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Mã kết nối", exact: true })).toBeVisible();
+  await expect(page.getByText("Mỗi mã chỉ đăng ký được một máy. Đã dùng thì không thể dùng lại, dù còn thời hạn.")).toBeVisible();
 });

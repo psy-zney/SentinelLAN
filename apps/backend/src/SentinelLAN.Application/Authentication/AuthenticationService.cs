@@ -11,12 +11,6 @@ public sealed class AuthenticationService(
     TimeProvider timeProvider)
 {
     public async Task<AuthenticationResult?> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
-        => await LoginCoreAsync(request, false, cancellationToken);
-
-    public Task<AuthenticationResult?> LoginPlatformAsync(PlatformLoginRequest request, CancellationToken cancellationToken) =>
-        LoginCoreAsync(new LoginRequest(PlatformIdentity.OrganizationCode, request.Email, request.Password), true, cancellationToken);
-
-    private async Task<AuthenticationResult?> LoginCoreAsync(LoginRequest request, bool platform, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.OrganizationCode) || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrEmpty(request.Password) || request.Password.Length > 1024) return null;
         var organizationCode = request.OrganizationCode.Trim().ToLowerInvariant();
@@ -25,12 +19,13 @@ public sealed class AuthenticationService(
 
         var user = await store.FindUserAsync(organizationCode, email, cancellationToken);
         if (user is null || user.Status != UserStatuses.Active ||
-            (platform ? user.Role != Roles.PlatformOwner : user.Role is not (Roles.Admin or Roles.Technician or Roles.Employee))) return null;
+            user.Role is not (Roles.Admin or Roles.Employee)) return null;
         if ((await store.FindOrganizationAsync(user.OrganizationId, cancellationToken))?.IsSuspended == true) return null;
 
         var verification = passwordHasher.Verify(request.Password, user.PasswordHash);
         if (verification == PasswordVerificationResult.Failed) return null;
         if (verification == PasswordVerificationResult.SuccessNeedsRehash) user.PasswordHash = passwordHasher.Hash(request.Password);
+        user.SecurityStamp ??= Guid.NewGuid().ToString("N");
 
         var now = timeProvider.GetUtcNow();
         var refreshToken = refreshTokens.Generate();
@@ -48,7 +43,7 @@ public sealed class AuthenticationService(
         if (organizationCode.Length is < 2 or > 64 || email.Length is < 3 or > 320) return null;
 
         var user = await store.FindUserAsync(organizationCode, email, cancellationToken);
-        if (user is null || user.Role is not (Roles.Admin or Roles.Technician or Roles.Employee) || user.Status != UserStatuses.Active)
+        if (user is null || user.Role is not (Roles.Admin or Roles.Employee) || user.Status != UserStatuses.Active)
         {
             if (user is not null)
             {
@@ -81,6 +76,7 @@ public sealed class AuthenticationService(
             return null;
         }
         if (verification == PasswordVerificationResult.SuccessNeedsRehash) user.PasswordHash = passwordHasher.Hash(request.Password);
+        user.SecurityStamp ??= Guid.NewGuid().ToString("N");
 
         var org = await store.FindOrganizationAsync(user.OrganizationId, cancellationToken);
         var orgCode = org?.Code ?? organizationCode;
@@ -103,7 +99,7 @@ public sealed class AuthenticationService(
         return CreateMobileResult(user, refreshSession, refreshToken, orgCode, now);
     }
 
-    public async Task<RefreshResult> RefreshAsync(string? refreshToken, CancellationToken cancellationToken, bool platform = false)
+    public async Task<RefreshResult> RefreshAsync(string? refreshToken, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(refreshToken)) return new RefreshResult(RefreshStatus.Invalid);
 
@@ -119,8 +115,9 @@ public sealed class AuthenticationService(
 
         if (!current.IsActive(now)) return new RefreshResult(RefreshStatus.Invalid);
         var user = await store.FindUserAsync(current.UserId, current.OrganizationId, cancellationToken);
-        if (user is null || user.Status != UserStatuses.Active) return new RefreshResult(RefreshStatus.Invalid);
-        if ((user.Role == Roles.PlatformOwner) != platform || (await store.FindOrganizationAsync(user.OrganizationId, cancellationToken))?.IsSuspended == true)
+        if (user is null || user.Status != UserStatuses.Active || current.SecurityStamp is null || current.SecurityStamp != user.SecurityStamp)
+            return new RefreshResult(RefreshStatus.Invalid);
+        if (user.Role is not (Roles.Admin or Roles.Employee) || (await store.FindOrganizationAsync(user.OrganizationId, cancellationToken))?.IsSuspended == true)
             return new RefreshResult(RefreshStatus.Invalid);
 
         var replacementToken = refreshTokens.Generate();
@@ -156,8 +153,9 @@ public sealed class AuthenticationService(
 
         if (!current.IsActive(now)) return new MobileRefreshResult(RefreshStatus.Invalid);
         var user = await store.FindUserAsync(current.UserId, current.OrganizationId, cancellationToken);
-        if (user is null || user.Status != UserStatuses.Active) return new MobileRefreshResult(RefreshStatus.Invalid);
-        if (user.Role == Roles.PlatformOwner || (await store.FindOrganizationAsync(user.OrganizationId, cancellationToken))?.IsSuspended == true)
+        if (user is null || user.Status != UserStatuses.Active || current.SecurityStamp is null || current.SecurityStamp != user.SecurityStamp)
+            return new MobileRefreshResult(RefreshStatus.Invalid);
+        if (user.Role is not (Roles.Admin or Roles.Employee) || (await store.FindOrganizationAsync(user.OrganizationId, cancellationToken))?.IsSuspended == true)
             return new MobileRefreshResult(RefreshStatus.Invalid);
 
         var org = await store.FindOrganizationAsync(user.OrganizationId, cancellationToken);
@@ -238,6 +236,7 @@ public sealed class AuthenticationService(
         TokenHash = refreshTokens.Hash(token),
         ClientType = clientType,
         AppVersion = appVersion,
+        SecurityStamp = user.SecurityStamp,
         ExpiresAt = now.Add(settings.RefreshTokenLifetime),
         CreatedAt = now,
         UpdatedAt = now

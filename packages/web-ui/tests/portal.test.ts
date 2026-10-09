@@ -5,12 +5,12 @@ describe("separate web applications",()=>{
   it("company permits only tenant operators",async()=>{
     vi.stubEnv("NEXT_PUBLIC_PORTAL","company");
     const {portalAllows}=await import("../src/lib/portal");
-    expect(portalAllows("Admin")).toBe(true);expect(portalAllows("Technician")).toBe(true);expect(portalAllows("Employee")).toBe(false);
+    expect(portalAllows("Admin")).toBe(true);expect(portalAllows("Agent")).toBe(false);expect(portalAllows("Employee")).toBe(false);
   });
   it("employee permits only employees",async()=>{
     vi.stubEnv("NEXT_PUBLIC_PORTAL","employee");
     const {portalAllows}=await import("../src/lib/portal");
-    expect(portalAllows("Employee")).toBe(true);expect(portalAllows("Admin")).toBe(false);expect(portalAllows("Technician")).toBe(false);
+    expect(portalAllows("Employee")).toBe(true);expect(portalAllows("Admin")).toBe(false);expect(portalAllows("Agent")).toBe(false);
   });
   it("accepts prefixed genuine QR links while rejecting foreign origins",()=>{
     const code="opaque-valid-code-0123456789";

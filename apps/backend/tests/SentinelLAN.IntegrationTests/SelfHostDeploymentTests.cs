@@ -39,10 +39,8 @@ public sealed class SelfHostDeploymentTests
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/v1/devices")).StatusCode);
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<SentinelDbContext>();
-        Assert.False(await db.Users.AnyAsync(user => user.Role == Roles.PlatformOwner));
-        Assert.False(await db.Organizations.AnyAsync(org => org.Code == PlatformIdentity.OrganizationCode));
-        Assert.Null(scope.ServiceProvider.GetService<PlatformService>());
-        Assert.Null(scope.ServiceProvider.GetService<VpsNodeService>());
+        Assert.False(await db.Users.AnyAsync(user => user.Role == "PlatformOwner"));
+        Assert.False(await db.Organizations.AnyAsync(org => org.Code == "_platform"));
         var openApi = await client.GetStringAsync("/openapi/v1.json");
         Assert.DoesNotContain("/api/v1/platform/", openApi, StringComparison.Ordinal);
     }
@@ -72,12 +70,14 @@ public sealed class SelfHostDeploymentTests
             (await agent.PostAsJsonAsync("/api/v1/agent/enroll", enrollment with { DeviceName = "OTHER-LAB" })).StatusCode);
     }
 
-    [Fact]
-    public void UnknownModeFailsRatherThanSilentlyEnablingPlatform()
+    [Theory]
+    [InlineData("SelfHots")]
+    [InlineData("Platform")]
+    public void UnsupportedModeFailsRatherThanEnablingPlatform(string mode)
     {
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["SENTINELLAN_DEPLOYMENT_MODE"] = "SelfHots"
+            ["SENTINELLAN_DEPLOYMENT_MODE"] = mode
         }).Build();
         Assert.Throws<InvalidOperationException>(() => DeploymentSettings.FromConfiguration(config));
     }

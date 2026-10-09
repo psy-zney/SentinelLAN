@@ -132,7 +132,7 @@ public sealed partial class SelfServiceService
     public async Task<IReadOnlyList<SelfServiceTeamMemberDto>> GetTeamAsync(ActorContext actor, CancellationToken ct)
     {
         Require(IsIt(actor), 403, "Chỉ IT được xem người phụ trách.");
-        return (await directory.GetActiveUsersAsync(actor.OrganizationId, ct)).Where(u => u.Role is Roles.Admin or Roles.Technician).OrderBy(u => u.DisplayName).Select(u => new SelfServiceTeamMemberDto(u.Id, u.DisplayName)).ToArray();
+        return (await directory.GetActiveUsersAsync(actor.OrganizationId, ct)).Where(u => u.Role is Roles.Admin).OrderBy(u => u.DisplayName).Select(u => new SelfServiceTeamMemberDto(u.Id, u.DisplayName)).ToArray();
     }
     public async Task<IReadOnlyList<AnnouncementDto>> GetAnnouncementsAsync(ActorContext actor, CancellationToken ct)
     {
@@ -212,7 +212,7 @@ public sealed partial class SelfServiceService
     }
     private async Task NotifyItAsync(Guid organizationId, string title, string body, Guid? requestId, string key, CancellationToken ct)
     {
-        foreach (var user in (await directory.GetActiveUsersAsync(organizationId, ct)).Where(u => u.Role is Roles.Admin or Roles.Technician))
+        foreach (var user in (await directory.GetActiveUsersAsync(organizationId, ct)).Where(u => u.Role is Roles.Admin))
             await NotifyAsync(organizationId, user.Id, title, body, requestId, key, ct);
     }
     public Task<bool> RegisterPushAsync(ActorContext actor, RegisterPushDevice input, CancellationToken ct) => MutateAsync(actor.OrganizationId, async () =>

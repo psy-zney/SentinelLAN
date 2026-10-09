@@ -12,7 +12,7 @@ export const MobileUserInfoSchema = z.object({
   id: z.string().uuid(),
   email: z.string().email(),
   displayName: z.string(),
-  role: z.enum(['Admin', 'Technician', 'Employee', 'Agent']),
+  role: z.enum(['Admin', 'Employee', 'Agent']),
   organizationId: z.string().uuid(),
   organizationCode: z.string(),
 });
@@ -69,6 +69,8 @@ export const TelemetrySnapshotSchema = z.object({
   ramPercent: z.number(),
   diskPercent: z.number(),
   createdAt: z.string(),
+  collectedAt: z.string().nullable().optional(),
+  receivedAt: z.string().nullable().optional(),
 });
 
 export const IncidentDtoSchema = z.object({

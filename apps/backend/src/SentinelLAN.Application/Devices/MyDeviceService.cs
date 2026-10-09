@@ -50,7 +50,7 @@ public sealed class MyDeviceService(IMyDeviceStore store) : IMyDeviceService
             "Chỉ nhận các lệnh đã định nghĩa, ký số, có lý do và thời hạn",
             "Không chạy với quyền quản trị nếu tác vụ không bắt buộc"
         ],
-        DataRetentionDays: 30
+        DataRetentionDays: TechnicalDataRetentionService.RetentionDays
     );
 
     public async Task<MyDeviceDto?> GetMyDeviceAsync(ActorContext actor, CancellationToken cancellationToken = default)
@@ -73,7 +73,7 @@ public sealed class MyDeviceService(IMyDeviceStore store) : IMyDeviceService
         var latestTelemetry = await store.GetLatestTelemetryAsync(actor.OrganizationId, device.Id, cancellationToken);
         TelemetrySnapshotDto? telemetryDto = latestTelemetry is null
             ? null
-            : new TelemetrySnapshotDto(latestTelemetry.Id, latestTelemetry.DeviceId, latestTelemetry.CpuPercent, latestTelemetry.RamPercent, latestTelemetry.DiskPercent, latestTelemetry.CreatedAt);
+            : new TelemetrySnapshotDto(latestTelemetry.Id, latestTelemetry.DeviceId, latestTelemetry.CpuPercent, latestTelemetry.RamPercent, latestTelemetry.DiskPercent, latestTelemetry.CollectedAt ?? latestTelemetry.CreatedAt, latestTelemetry.CollectedAt, latestTelemetry.CreatedAt);
 
         var appliedPolicy = await store.GetAppliedPolicyNameAsync(actor.OrganizationId, device.Id, cancellationToken);
         var incidents = await store.GetUserDeviceIncidentsAsync(actor.OrganizationId, device.Id, actor.UserId, cancellationToken);
@@ -131,7 +131,7 @@ public sealed class MyDeviceService(IMyDeviceStore store) : IMyDeviceService
         if (device is null || device.IsRevoked) return [];
 
         var items = await store.GetDeviceTelemetryHistoryAsync(actor.OrganizationId, device.Id, Math.Clamp(limit, 1, 50), cancellationToken);
-        return items.Select(t => new TelemetrySnapshotDto(t.Id, t.DeviceId, t.CpuPercent, t.RamPercent, t.DiskPercent, t.CreatedAt)).ToList();
+        return items.Select(t => new TelemetrySnapshotDto(t.Id, t.DeviceId, t.CpuPercent, t.RamPercent, t.DiskPercent, t.CollectedAt ?? t.CreatedAt, t.CollectedAt, t.CreatedAt)).ToList();
     }
 
     public async Task<IReadOnlyList<IncidentDto>> GetMyDeviceIncidentsAsync(ActorContext actor, CancellationToken cancellationToken = default)

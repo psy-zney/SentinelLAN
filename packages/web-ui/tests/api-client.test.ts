@@ -10,7 +10,7 @@ describe("cookie session client", () => {
   it("routes Employee to the assigned-device view and operators to the dashboard", () => {
     expect(homePathForRole("Employee")).toBe("/my-device");
     expect(homePathForRole("Admin")).toBe("/dashboard");
-    expect(homePathForRole("Technician")).toBe("/dashboard");
+    expect(homePathForRole("Admin")).toBe("/dashboard");
   });
 
   it("logs in without exposing or storing an access token", async () => {
