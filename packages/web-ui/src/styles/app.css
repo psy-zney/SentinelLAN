@@ -24,6 +24,9 @@ h2 { font-size: 17px; font-weight: 650; }
 h3 { font-size: 15px; font-weight: 650; }
 small { font-size: 12px; }
 code { font-size: .9em; overflow-wrap: anywhere; }
+.vps-table { overflow-x: auto; }
+.vps-table td { vertical-align: top; }
+.vps-table details { max-width: 280px; margin-top: 4px; }
 .ui-icon { flex: 0 0 auto; width: 18px; height: 18px; }
 .shell { min-height: 100vh; display: grid; grid-template-columns: 224px minmax(0, 1fr); }
 .sidebar { position: sticky; top: 0; height: 100dvh; background: var(--panel); border-right: 1px solid var(--border); padding: 24px 14px 16px; display: flex; flex-direction: column; }
@@ -174,5 +177,37 @@ input::placeholder, textarea::placeholder { color: #7d8791; font-weight: 400; }
   .support-shortcut { padding: 16px; }
   .modal-backdrop { padding: 12px; }
   .modal, .modal-card { padding: 20px; }
+}
+/* ── VPS Dashboard: Gauge cards ── */
+.vps-gauges { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0 0 20px; }
+.vps-gauge-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.vps-gauge-header { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 13px; font-weight: 600; }
+.vps-gauge-detail { color: var(--muted); font-size: 12px; text-align: center; }
+
+/* ── VPS Dashboard: Container cards ── */
+.vps-containers-grid { display: grid; gap: 8px; }
+.vps-container-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: box-shadow .15s; }
+.vps-container-card:hover { box-shadow: 0 2px 8px #18212b0a; }
+.vps-container-card[data-state="warn"] { border-left: 3px solid var(--warn); }
+.vps-container-card[data-state="ok"] { border-left: 3px solid var(--accent); }
+.vps-container-header { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 16px; background: none; border: 0; text-align: left; cursor: pointer; font: inherit; color: var(--ink); }
+.vps-container-header:hover { background: #fafbfc; }
+.vps-container-icon { display: flex; align-items: center; color: var(--accent); }
+.vps-container-name { font-weight: 600; font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
+.vps-container-stats { margin-left: auto; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.vps-container-chevron { display: flex; align-items: center; color: var(--muted); margin-left: 4px; }
+.vps-container-body { padding: 0 16px 16px; border-top: 1px solid var(--border); }
+.vps-container-detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 20px; padding-top: 14px; }
+.vps-detail-label { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 12px; font-weight: 500; margin-bottom: 3px; }
+.vps-detail-value { font-size: 13px; overflow-wrap: anywhere; }
+.vps-container-ports { margin-top: 12px; display: flex; flex-direction: column; gap: 4px; }
+.vps-container-ports code { font-size: 12px; background: #f7f8f9; padding: 3px 7px; border-radius: 4px; display: inline-block; }
+
+@media (max-width: 1000px) { .vps-gauges { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 540px) {
+  .vps-gauges { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .vps-gauge-card { padding: 14px; }
+  .vps-container-detail-grid { grid-template-columns: 1fr; }
+  .vps-container-stats { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
