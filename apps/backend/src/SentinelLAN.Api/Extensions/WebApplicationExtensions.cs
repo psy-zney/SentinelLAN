@@ -1,3 +1,5 @@
+using System.Net;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using SentinelLAN.Application;
 using SentinelLAN.Infrastructure;
@@ -8,6 +10,7 @@ public static class WebApplicationExtensions
 {
     public static WebApplication UseSentinelLan(this WebApplication app)
     {
+        app.UseForwardedHeaders(ForwardingOptions(app.Configuration));
         app.UseExceptionHandler();
         app.Use(async (context, next) =>
         {
@@ -56,6 +59,36 @@ public static class WebApplicationExtensions
         app.UseRateLimiter();
         if (app.Environment.IsDevelopment()) app.MapOpenApi();
         return app;
+    }
+
+    private static ForwardedHeadersOptions ForwardingOptions(IConfiguration configuration)
+    {
+        var options = new ForwardedHeadersOptions
+        {
+            ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+            ForwardLimit = 1,
+            RequireHeaderSymmetry = true
+        };
+        options.KnownProxies.Clear();
+        // .NET 10 replaces the obsolete KnownNetworks property with KnownIPNetworks.
+        options.KnownIPNetworks.Clear();
+        foreach (var value in (configuration["SENTINELLAN_KNOWN_PROXIES"] ?? "127.0.0.1,::1")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (!IPAddress.TryParse(value, out var address) || address.Equals(IPAddress.Any) || address.Equals(IPAddress.IPv6Any))
+                throw new InvalidOperationException("SENTINELLAN_KNOWN_PROXIES must contain explicit proxy IP addresses.");
+            options.KnownProxies.Add(address);
+        }
+        foreach (var value in (configuration["SENTINELLAN_KNOWN_NETWORKS"] ?? "")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (!System.Net.IPNetwork.TryParse(value, out var network) || network.PrefixLength == 0)
+                throw new InvalidOperationException("SENTINELLAN_KNOWN_NETWORKS must contain bounded proxy CIDR networks.");
+            options.KnownIPNetworks.Add(network);
+        }
+        if (options.KnownProxies.Count == 0 && options.KnownIPNetworks.Count == 0)
+            throw new InvalidOperationException("At least one trusted proxy or proxy network must be configured.");
+        return options;
     }
 
     public static async Task InitializeSentinelLanAsync(this WebApplication app)

@@ -23,3 +23,7 @@ Chỉ thu thập dữ liệu kỹ thuật phục vụ vận hành như trạng t
 Không thu thập mật khẩu, nội dung gõ phím, webcam, âm thanh hoặc chụp màn hình ngầm. Các thao tác quản trị phụ thuộc quyền tài khoản và cấu hình thiết bị; việc cài Agent không phải sự đồng ý cho mọi thao tác.
 
 Tài liệu công khai chỉ gồm giới thiệu và hướng dẫn tải/cài đặt. Tài liệu thiết kế, vận hành và giao diện quản trị nền tảng được lưu riêng.
+
+## Nâng cấp tháng 10 năm 2026
+
+Inventory/posture, ngưỡng theo tenant, preventive CMMS, đối chiếu MSI, phòng ban/bulk, enrollment QR/script riêng từng máy, HMAC request, SignalR wake-up, Redis/S3 tùy chọn và adapter Linux đã được nối trong mã nguồn. Xem [hướng dẫn cấu hình và giới hạn](docs/guides/product-upgrade.md), [API](docs/api/product-upgrade.md), [trạng thái kiểm chứng](docs/roadmap/product-upgrade-2026-10.md). Không dùng kết quả test InMemory/fake adapter làm bằng chứng nghiệm thu OS hoặc dịch vụ ngoài.

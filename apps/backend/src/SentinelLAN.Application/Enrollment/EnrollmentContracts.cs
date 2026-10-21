@@ -2,11 +2,12 @@ using SentinelLAN.Domain;
 
 namespace SentinelLAN.Application;
 
-public record EnrollRequest(string Token, string DeviceName, string OsVersion, string AgentVersion, string? DeviceSecret = null);
+public record EnrollRequest(string Token, string DeviceName, string OsVersion, string AgentVersion, string? DeviceSecret = null, HardwareInventoryDto? Inventory = null);
 
-public record EnrollResponse(Guid DeviceId, string DeviceSecret);
+public record EnrollResponse(Guid DeviceId, string DeviceSecret, string? RequestSigningKey = null);
 
-public record HeartbeatRequest(string IdempotencyKey, double CpuPercent, double RamPercent, double DiskPercent, string OsVersion, string AgentVersion, DateTimeOffset? MaintenanceUntil = null, string? MaintenanceAction = null, DateTimeOffset? CollectedAt = null);
+public record HeartbeatRequest(string IdempotencyKey, double CpuPercent, double RamPercent, double DiskPercent, string OsVersion, string AgentVersion, DateTimeOffset? MaintenanceUntil = null, string? MaintenanceAction = null, DateTimeOffset? CollectedAt = null,
+    HardwareInventoryDto? Inventory = null, EndpointSecurityPostureDto? Security = null, IReadOnlyList<AgentSoftwareObservationDto>? Software = null);
 
 public record EnrollmentTokenRequest(int ValidForMinutes, string Reason, bool Confirmed);
 

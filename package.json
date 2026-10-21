@@ -35,5 +35,8 @@
     "source-map-js": "1.2.2",
     "braces": "3.0.3",
     "node-forge": "1.4.0"
+  },
+  "dependencies": {
+    "@zxing/library": "0.23.0"
   }
 }

@@ -4,6 +4,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>14.0</LangVersion>
+    <RuntimeFrameworkVersion Condition="'$(SelfContained)' == 'true'">10.0.13</RuntimeFrameworkVersion>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <TreatWarningsAsErrors Condition="'$(CI)' == 'true'">true</TreatWarningsAsErrors>
     <NoWarn>$(NoWarn);CA1711;CA1725;CA1848;CA1861</NoWarn>

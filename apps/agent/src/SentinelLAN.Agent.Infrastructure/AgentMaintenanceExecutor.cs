@@ -20,7 +20,7 @@ public sealed class AgentMaintenanceExecutor(AgentExecutionOptions options, IAge
         var until = command.Type == "PauseAgent" ? now.AddMinutes(parameters!.PauseMinutes) : parameters!.MaintenanceExpiresAt;
         store.Save(new(command.Id, parameters.RequestId, command.Type, parameters.MaintenanceExpiresAt, until, command));
         if (command.Type == "PauseAgent")
-            return new(true, "Agent work paused for 15 minutes; health and signed control remain active. Work resumes automatically at expiry, including after restart");
+            return new(true, $"Agent work paused for {parameters!.PauseMinutes} minutes; health and signed control remain active. Work resumes automatically at expiry, including after restart");
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter((command.ExpiresAt < parameters.MaintenanceExpiresAt ? command.ExpiresAt : parameters.MaintenanceExpiresAt) - now);
         return await platform.UninstallAsync(platform.RegisteredSentinelProductCode()!.Value, deadline.Token);

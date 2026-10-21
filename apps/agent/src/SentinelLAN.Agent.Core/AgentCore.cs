@@ -1,6 +1,6 @@
 namespace SentinelLAN.Agent.Core;
 
-public record DeviceIdentity(Guid DeviceId, string DeviceSecret);
+public record DeviceIdentity(Guid DeviceId, string DeviceSecret, string? RequestSigningKey = null);
 public record RemoteCommand(Guid Id, Guid DeviceId, string Type, string Reason, string Nonce, string Signature, DateTimeOffset IssuedAt, DateTimeOffset ExpiresAt, Guid OrganizationId = default, Guid IssuedByUserId = default, string? Parameter = null);
 public interface ICommandSignatureVerifier { bool IsConfigured { get; } bool Verify(RemoteCommand command); }
 public interface ICommandNonceStore { bool TryAdd(string nonce, DateTimeOffset expiresAt, DateTimeOffset now); }
@@ -33,10 +33,13 @@ public interface IPendingCommandResultStore
 public interface IDeviceIdentityStore { Task<DeviceIdentity?> LoadAsync(CancellationToken cancellationToken); Task SaveAsync(DeviceIdentity identity, CancellationToken cancellationToken); }
 public interface ITelemetryCollector { TelemetrySnapshot Collect(); }
 public record TelemetrySnapshot(double CpuPercent, double RamPercent, double DiskPercent, string OsVersion, string AgentVersion,
-    DateTimeOffset? MaintenanceUntil = null, string? MaintenanceAction = null, DateTimeOffset? CollectedAt = null);
+    DateTimeOffset? MaintenanceUntil = null, string? MaintenanceAction = null, DateTimeOffset? CollectedAt = null,
+    HardwareInventory? Inventory = null, EndpointSecurityPosture? Security = null, IReadOnlyList<SoftwareObservation>? Software = null);
 public record QueuedTelemetry(TelemetrySnapshot Snapshot, string IdempotencyKey);
 public interface IAgentApi
 {
+    Task<DeviceIdentity> UpgradeIdentityAsync(DeviceIdentity identity, CancellationToken cancellationToken) => Task.FromResult(identity);
+    Task<IReadOnlyList<SoftwareDetectionRule>> GetSoftwareRulesAsync(DeviceIdentity identity, CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<SoftwareDetectionRule>>([]);
     Task ConfirmEnrollmentStoredAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     Task<DeviceIdentity> EnrollAsync(string token, CancellationToken cancellationToken);
     Task SendHeartbeatAsync(DeviceIdentity identity, TelemetrySnapshot telemetry, CancellationToken cancellationToken);

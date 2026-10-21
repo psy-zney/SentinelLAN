@@ -1,6 +1,6 @@
 # Luồng dữ liệu lõi
 
-Các sơ đồ dưới đây cùng mô tả vòng đời thiết bị đầu cuối được ủy quyền. Quản trị VPS qua SSH là phần mở rộng riêng, không nằm trong chuỗi này.
+Các sơ đồ dưới đây cùng mô tả vòng đời thiết bị đầu cuối được ủy quyền. Giám sát host đọc JSON snapshot cục bộ qua mount chỉ đọc, không nằm trong chuỗi này và không dùng SSH.
 
 ```mermaid
 sequenceDiagram
@@ -40,7 +40,7 @@ sequenceDiagram
   API-->>W: SignalR command-status
 ```
 
-Agent dùng adapter Windows thật và companion cho desktop; hai lệnh `Simulate` vẫn mô phỏng. Lệnh lab cô lập Firewall có tác vụ khôi phục và còn cần nghiệm thu traffic trên thiết bị thật; xem [ADR 0007](../adr/0007-real-windows-agent-actions.md). Restart dịch vụ VPS qua SSH là luồng riêng, có host-key pinning, quyền, lý do, xác nhận, nonce và audit; xem [bối cảnh](context.md) và [threat model](../security/threat-model.md).
+Agent dùng adapter Windows thật và companion cho desktop; hai lệnh `Simulate` vẫn mô phỏng. Lệnh lab cô lập Firewall có tác vụ khôi phục và còn cần nghiệm thu traffic trên thiết bị thật; xem [ADR 0007](../adr/0007-real-windows-agent-actions.md). API không có thao tác restart/reboot VPS; giám sát host chỉ đọc snapshot JSON; xem [bối cảnh](context.md) và [threat model](../security/threat-model.md).
 
 ```mermaid
 sequenceDiagram
@@ -48,7 +48,7 @@ sequenceDiagram
   participant API
   participant DB as PostgreSQL
   participant Employee as Employee web/mobile
-  participant Tech as Technician
+  participant Tech as Admin xử lý IT
   Admin->>API: gán thiết bị cho Employee
   API->>DB: kiểm tra tenant và lưu assignment + audit
   Employee->>API: xem /my-device và telemetry được công bố

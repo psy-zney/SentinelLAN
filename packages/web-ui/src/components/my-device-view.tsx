@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { ApiClient, ApiError } from "@/lib/api-client";
 import { useTranslation } from "@/lib/i18n";
+import { EndpointObservationPanel } from "@/components/endpoint-observation-panel";
+import { SoftwareCompliancePanel } from "@/components/software-compliance-panel";
 import type {
   MyDeviceDetailDto,
   MyDeviceTelemetryDto,
@@ -178,6 +180,8 @@ export function MyDeviceView() {
       </div>
 
       {/* Key Metric Cards */}
+      <EndpointObservationPanel />
+      <SoftwareCompliancePanel />
       <section className="metrics employee-summary" aria-label={lang === "vi" ? "Tình trạng máy tính" : "Computer status"}>
         <div className="metric">
           <span>{t("status")}</span>

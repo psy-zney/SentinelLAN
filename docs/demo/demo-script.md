@@ -1,24 +1,28 @@
 # Kịch bản demo và checklist nghiệm thu
 
-Demo chỉ dùng môi trường Development/lab và thiết bị được ủy quyền. Xác nhận PostgreSQL, API `health/ready`, dashboard và Agent hoạt động trước khi bắt đầu. Nếu chưa có Docker/thiết bị thật, ghi rõ phần nào chỉ được kiểm thử bằng mock hoặc InMemory.
+Dùng môi trường Development/lab và máy được ủy quyền. Ghi rõ PostgreSQL hoặc InMemory, phiên bản Agent/API, RSA key ID và các adapter thực sự được chạy. Không chiếu secret, token, QR enrollment còn hạn hoặc thông tin cá nhân.
 
 ## Luồng trình diễn
 
-1. Admin đăng nhập bằng tài khoản demo của môi trường Development. Xem thiết bị và telemetry CPU/RAM/disk. Nếu đã chuẩn bị tenant thứ hai cho bài test, đăng nhập tài khoản tenant đó để xác nhận không thấy dữ liệu tenant đầu.
-2. Admin cấp token enrollment một lần. Agent đăng ký và gửi heartbeat; thử dùng lại token hoặc token hết hạn để xác nhận bị từ chối.
-3. Admin gán thiết bị cho Employee. Employee mở `/my-device`, xem dữ liệu đang thu thập và tạo incident cho chính thiết bị được gán.
-4. Admin tạo lệnh `SimulateLock` với lý do và xác nhận. Agent kiểm tra chữ ký, thời hạn, nonce, trả biên lai; màn hình máy thử **không bị khóa**. Có thể trình diễn retry/idempotency bằng cùng command ID trong bài test hoặc môi trường lab.
-5. Xem audit với actor, target, lý do, thời gian UTC và kết quả. Audit chỉ được chặn sửa/xóa qua ứng dụng; chưa có WORM hay kho lưu trữ độc lập.
+1. Admin đăng nhập, xem inventory/posture và thời gian đo. Agent mới enrollment tự điền serial/CPU/RAM/đĩa/IP LAN; thiếu quyền là chưa xác định, không báo an toàn giả.
+2. Cấp lô hai gói cài 15 phút, chứng minh mã khác nhau và dùng lại bị từ chối. QR tạo trong browser; không chạy script cài trên máy làm việc. Gói Windows xác minh hash/publisher; Linux xác minh hash.
+3. Tạo phòng ban, gán policy và máy/nhân viên riêng. Policy gán riêng máy được ưu tiên; xếp RefreshPolicy hoặc chọn hai máy gửi CollectTelemetryNow. Theo dõi kết quả từng máy và audit.
+4. Khi có mẫu CPU mới ≥20%, đổi ngưỡng CPU thành 20 và duy trì 0, lưu với lý do/xác nhận. Theo dõi alert và thông báo IT; sau demo khôi phục ngưỡng. Mẫu cũ hoặc máy offline không chứng minh đường CPU hoạt động. Kiểm thử MonitoringNotificationTests là bằng chứng logic với fixture.
+5. Xem posture AV/firewall/BitLocker và phần mềm MSI được cấu hình. Chỉ thử tắt bảo vệ hoặc cài phần mềm trên lab có console/khôi phục đã được phép; có thể dùng adapter fixture trong bài test và ghi rõ. Mẫu Unknown không đóng alert; phần mềm cấm không bị tự gỡ.
+6. Thiết bị có mốc bảo trì quá sáu tháng hoặc bảo hành còn dưới 30 ngày sinh Preventive Scheduled. Chạy lại không tạo trùng; đây là phiếu cần người IT xử lý.
+7. Gửi SimulateLock có lý do/xác nhận. Quan sát wake-up rồi poll, RSA, nonce và receipt; không khóa màn hình. Không cam kết dưới một giây nếu chưa đo độ trễ. Thử mất SignalR và xác nhận poll vẫn nhận lệnh.
+8. Xem host JSON snapshot read-only, báo cũ đúng khi ngừng collector; không trình diễn SSH/reboot VPS từ API.
+9. Xem danh sách ảnh chỉ metadata và tải đúng tenant. Redis/MinIO là demo riêng sau khi đã cấu hình TLS/credentials và kiểm tra phục hồi. Giữ mặc định DB/một node nếu chưa nghiệm thu dịch vụ ngoài.
 
-**Demo mở rộng tùy chọn:** nếu có VPS thử nghiệm và SSH host key được xác minh qua console tin cậy, Admin có thể thử quản trị VPS và restart một dịch vụ được allow-list. Đây là đường SSH từ API tới VPS, khác với lệnh `RestartService` của Agent vốn chỉ mô phỏng. Không cần bước này để chứng minh luồng lõi endpoint.
+## Checklist ghi kết quả
 
-## Checklist trước khi báo hoàn thành
+- [ ] Backup trước migration ProductUpgrade; PostgreSQL readiness, tenant FKs và restore đã được kiểm chứng.
+- [ ] Khóa RSA/public key đúng; HMAC request sai body/nonce/time bị từ chối; không log secret.
+- [ ] Employee/tenant khác bị chặn; role cũ bị khóa.
+- [ ] Mẫu mới, posture Unknown, trạng thái phần mềm và revision được trình bày đúng.
+- [ ] Chỉnh ngưỡng tạo alert và thông báo với mẫu mới; khôi phục cấu hình sau demo.
+- [ ] Preventive, bulk, enrollment một lần và outbox retry không tạo bản sao nghiệp vụ.
+- [ ] Kiểm tra native Windows/Linux/phone/Redis/S3 riêng; ghi chưa thử nếu chỉ có fake/InMemory.
+- [ ] Audit có actor/tenant/device/reason/outcome; không coi EF append-only là WORM.
 
-- [ ] PostgreSQL và API `health/ready` hoạt động trên môi trường demo.
-- [ ] Dữ liệu demo chỉ được seed trong Development; không để lộ mật khẩu/token trong log hoặc màn hình chiếu.
-- [ ] Token enrollment dùng một lần, bị từ chối khi dùng lại hoặc hết hạn.
-- [ ] Heartbeat giữ idempotency key; trạng thái và telemetry xuất hiện trong dashboard.
-- [ ] Lệnh Agent có chữ ký, hạn và nonce; kết quả mô phỏng được nhận một lần, không đổi OS.
-- [ ] Tenant khác và Employee chưa được gán không thấy thiết bị.
-- [ ] Audit có actor, target, lý do, thời gian UTC và outcome; không chứa secret.
-- [ ] Chạy các bài kiểm tra phù hợp trong README và ghi lại kết quả thực tế; không dùng kết quả cũ làm bằng chứng cho bản hiện tại.
+Bằng chứng hiện tại được ghi tại [trạng thái nâng cấp](../roadmap/product-upgrade-2026-10.md). Không dùng số test hoặc ảnh triển khai cũ làm bằng chứng bản mới.

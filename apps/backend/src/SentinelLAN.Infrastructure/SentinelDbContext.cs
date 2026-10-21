@@ -35,8 +35,6 @@ public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> option
     public DbSet<Alert> Alerts => Set<Alert>();
     public DbSet<SecurityEvent> SecurityEvents => Set<SecurityEvent>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
-    public DbSet<VpsNode> VpsNodes => Set<VpsNode>();
-    public DbSet<VpsActionReservation> VpsActionReservations => Set<VpsActionReservation>();
     public DbSet<IncidentTicket> Incidents => Set<IncidentTicket>();
     public DbSet<WorkOrder> WorkOrders => Set<WorkOrder>();
     public DbSet<AssetLoan> AssetLoans => Set<AssetLoan>();
@@ -54,6 +52,34 @@ public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> option
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Department>().Property(x => x.Revision).IsConcurrencyToken();
+        modelBuilder.Entity<OperationalOutboxMessage>().Property(x => x.Kind).HasMaxLength(30);
+        modelBuilder.Entity<OperationalOutboxMessage>().HasIndex(x => new { x.ProcessedAt, x.CreatedAt });
+        modelBuilder.Entity<Department>().Property(x => x.Name).HasMaxLength(100);
+        modelBuilder.Entity<Department>().HasIndex(x => new { x.OrganizationId, x.Name }).IsUnique();
+        modelBuilder.Entity<Department>().HasAlternateKey(x => new { x.OrganizationId, x.Id });
+        modelBuilder.Entity<Policy>().HasAlternateKey(x => new { x.OrganizationId, x.Id });
+        modelBuilder.Entity<User>().HasOne<Department>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.DepartmentId }).HasPrincipalKey(x => new { x.OrganizationId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Device>().HasOne<Department>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.DepartmentId }).HasPrincipalKey(x => new { x.OrganizationId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Department>().HasOne<Policy>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.PolicyId }).HasPrincipalKey(x => new { x.OrganizationId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<User>().HasIndex(x => new { x.OrganizationId, x.DepartmentId });
+        modelBuilder.Entity<Device>().HasIndex(x => new { x.OrganizationId, x.DepartmentId });
+        modelBuilder.Entity<OrganizationMonitoringSettings>().HasIndex(x => x.OrganizationId).IsUnique();
+        modelBuilder.Entity<OrganizationMonitoringSettings>().Property(x => x.Revision).IsConcurrencyToken();
+        modelBuilder.Entity<AdministrativeRequestNonce>().HasIndex(x => new { x.OrganizationId, x.Nonce }).IsUnique();
+        modelBuilder.Entity<AdministrativeRequestNonce>().HasIndex(x => x.ExpiresAt);
+        modelBuilder.Entity<AdministrativeRequestNonce>().Property(x => x.Operation).HasMaxLength(80);
+        modelBuilder.Entity<PreventiveMaintenanceRun>().HasIndex(x => new { x.OrganizationId, x.Day }).IsUnique();
+        modelBuilder.Entity<AgentRequestNonce>().HasIndex(x => new { x.DeviceId, x.Nonce }).IsUnique();
+        modelBuilder.Entity<AgentRequestNonce>().HasIndex(x => x.ExpiresAt);
+        modelBuilder.Entity<ProhibitedSoftwareRule>().Property(x => x.Revision).IsConcurrencyToken();
+        modelBuilder.Entity<DeviceSoftwareObservation>().HasIndex(x => new { x.OrganizationId, x.DeviceId, x.RuleId, x.Source }).IsUnique();
+        modelBuilder.Entity<DeviceSoftwareObservation>().Property(x => x.Source).HasMaxLength(20);
+        modelBuilder.Entity<DeviceSoftwareObservation>().Property(x => x.Detection).HasMaxLength(20);
+        modelBuilder.Entity<DeviceSoftwareObservation>().Property(x => x.InstalledVersion).HasMaxLength(60);
+        modelBuilder.Entity<DeviceSoftwareObservation>().HasIndex(x => x.CapturedAt);
+        modelBuilder.Entity<DeviceCredential>().Property(x => x.RequestKeyRevision).IsConcurrencyToken();
+        modelBuilder.Entity<WorkOrder>().HasIndex(x => new { x.OrganizationId, x.AutomaticKey }).IsUnique().HasFilter("\"AutomaticKey\" IS NOT NULL");
         SelfServiceModelConfiguration.Configure(modelBuilder);
         if (dataCipher is not null)
         {
@@ -113,9 +139,6 @@ public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> option
             .IsRequired()
             .IsConcurrencyToken()
             .ValueGeneratedNever();
-        modelBuilder.Entity<VpsNode>().HasIndex(x => x.Name).IsUnique();
-        modelBuilder.Entity<VpsNode>().HasIndex(x => x.Host);
-        modelBuilder.Entity<VpsActionReservation>().HasIndex(x => x.Nonce).IsUnique();
         modelBuilder.Entity<IncidentTicket>().HasIndex(x => new { x.OrganizationId, x.DeviceId });
         modelBuilder.Entity<IncidentTicket>()
             .HasIndex(x => new { x.OrganizationId, x.ReportedByUserId, x.IdempotencyKey })
@@ -152,10 +175,16 @@ public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> option
 
     private void UpdateConcurrencyRowVersions()
     {
+        foreach (var entry in ChangeTracker.Entries<DeviceCommand>().Where(e => e.State == EntityState.Added).ToArray())
+            Add(new OperationalOutboxMessage { OrganizationId = entry.Entity.OrganizationId, DeviceId = entry.Entity.DeviceId, EntityId = entry.Entity.Id, Kind = "CommandQueued" });
+        foreach (var entry in ChangeTracker.Entries<Alert>().Where(e => e.State == EntityState.Added || e.State == EntityState.Modified && e.Property(a => a.IsOpen).IsModified).ToArray())
+            Add(new OperationalOutboxMessage { OrganizationId = entry.Entity.OrganizationId, DeviceId = entry.Entity.DeviceId, EntityId = entry.Entity.Id, Kind = "AlertChanged" });
         if (ChangeTracker.Entries<AuditLog>().Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
             throw new InvalidOperationException("Audit entries are append-only.");
         foreach (var entry in ChangeTracker.Entries<Device>().Where(entry => entry.State is EntityState.Added or EntityState.Modified))
             entry.Property(device => device.RowVersion).CurrentValue = Guid.NewGuid().ToByteArray();
+        foreach (var entry in ChangeTracker.Entries<DeviceCredential>().Where(entry => entry.State is EntityState.Added or EntityState.Modified))
+            entry.Property(credential => credential.RequestKeyRevision).CurrentValue = Guid.NewGuid();
         foreach (var entry in ChangeTracker.Entries<AccountActivationToken>().Where(entry => entry.State is EntityState.Added or EntityState.Modified))
             entry.Property(token => token.RowVersion).CurrentValue = Guid.NewGuid().ToByteArray();
         foreach (var entry in ChangeTracker.Entries<DeviceQrLabel>().Where(entry => entry.State is EntityState.Added or EntityState.Modified))

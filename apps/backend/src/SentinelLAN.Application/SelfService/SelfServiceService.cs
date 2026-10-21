@@ -7,13 +7,16 @@ namespace SentinelLAN.Application;
 
 public sealed partial class SelfServiceService(ISelfServiceStore store, ISelfServiceDirectory directory,
     ISelfServiceCommands commands, ISelfServiceAudit audit, IMaintenanceCodeProtector codes,
-    SelfServiceSettings settings, TimeProvider timeProvider)
+    SelfServiceSettings settings, TimeProvider timeProvider, IAdministrativeRequestJournal administrativeJournal,
+    IMonitoringSettingsStore? monitoringSettings = null, ISoftwareDetectionQuota? softwareQuota = null, IAttachmentObjectStore? attachmentObjects = null) : IOperationalNotificationSink
 {
     private static readonly HashSet<string> Kinds = ["Incident", "InstallApp", "Privilege", "Panic", "PauseAgent", "UninstallAgent", "Appointment"];
     private static readonly HashSet<string> Categories = ["Network", "Printer", "Slow", "Application", "Suspicious", "Other"];
     private static readonly HashSet<string> States = ["Open", "InProgress", "AwaitingEmployee", "Approved", "Rejected", "Resolved", "Closed"];
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private DateTimeOffset Now => timeProvider.GetUtcNow();
+    public async Task NotifyAdminsAsync(Guid organizationId, string title, string message, string deduplicationKey, CancellationToken ct) =>
+        await MutateAsync(organizationId, async () => { await NotifyItAsync(organizationId, title, message, null, deduplicationKey, ct); return true; }, ct);
     private static bool IsIt(ActorContext actor) => actor.Role is Roles.Admin;
     private static bool IsMaintenance(SelfServiceRequest request) => request.Kind is "PauseAgent" or "UninstallAgent";
     private static void Require(bool condition, int status, string message)
@@ -275,13 +278,14 @@ public sealed partial class SelfServiceService(ISelfServiceStore store, ISelfSer
                 return (Request: (SupportRequestDto?)null, WrongCode: true);
             }
             request.MaintenanceCodeUsedAt = Now;
+            var pauseMinutes = MonitoringSettingsService.ToDto(monitoringSettings is null ? null : await monitoringSettings.FindAsync(organizationId, ct)).MaintenancePauseMinutes;
             var expiresAt = request.ApprovalExpiresAt!.Value;
             var command = commands.Queue(organizationId, request.DeviceId, request.ApprovedByUserId!.Value, request.Kind,
-                "Bảo trì đã được IT duyệt và mã xác nhận đã được sử dụng", JsonSerializer.Serialize(new { requestId = request.Id, maintenanceExpiresAt = expiresAt, pauseMinutes = 15 }, JsonOptions), Now, expiresAt);
+                "Bảo trì đã được IT duyệt và mã xác nhận đã được sử dụng", JsonSerializer.Serialize(new { requestId = request.Id, maintenanceExpiresAt = expiresAt, pauseMinutes }, JsonOptions), Now, expiresAt);
             request.CommandId = command.Id;
             request.CommandStatus = "Pending";
             request.CommandMessage = "Mã đã được xác nhận. Đang chờ máy thực hiện thao tác.";
-            request.MaintenanceUntil = request.Kind == "PauseAgent" ? Now.AddMinutes(15) : expiresAt;
+            request.MaintenanceUntil = request.Kind == "PauseAgent" ? Now.AddMinutes(pauseMinutes) : expiresAt;
             request.UpdatedAt = Now;
             audit.Record(organizationId, request.UserId, request.DeviceId, "MaintenanceCodeRedeemed", "Xác nhận bảo trì có phê duyệt", "CommandPending");
             await NotifyAsync(organizationId, request.UserId, "Đã xác nhận yêu cầu bảo trì", "Đang chờ máy báo kết quả; việc phê duyệt chưa có nghĩa thao tác đã hoàn tất.", request.Id, $"request:{id}:redeemed", ct);

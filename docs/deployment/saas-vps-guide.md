@@ -1,5 +1,3 @@
-> Cập nhật 2026-09-29: stack chạy ba web `platform`, `company`, `employee`. Cần thêm `PLATFORM_OWNER_EMAIL` và `PLATFORM_OWNER_PASSWORD` trong môi trường VPS; tài khoản này đăng nhập `/platform/login`, độc lập với Admin bootstrap của công ty. Không tự nâng quyền tài khoản cũ. Xem [hướng dẫn luồng và biến môi trường](../guides/flow-audit-2026-09-29.md).
-
 # Triển khai SentinelLAN trên VPS
 
 Đọc [README](../../README.md) để xem luồng khởi tạo và kiểm thử. Stack Production ở `deploy/vps/docker-compose.prod.yaml`: PostgreSQL nội bộ, API, web và Nginx TLS. Redis đã bỏ vì ứng dụng hiện không dùng; command Pending và audit nằm trong PostgreSQL. Không có demo seed ở Production.
@@ -35,7 +33,7 @@ docker compose --env-file deploy/vps/.env -f deploy/vps/docker-compose.prod.yaml
 
 ## Backup và cập nhật
 
-Quản lý trạng thái host, dịch vụ/container, tự khởi động và reboot từ portal chủ hệ thống theo [hướng dẫn vận hành VPS](vps-operations.md). [ADR 0010](../adr/0010-vps-monitoring-and-fixed-operations.md) mô tả lịch kiểm tra trong trình duyệt admin và giới hạn quyền/lệnh.
+Giám sát host tùy chọn dùng [collector và JSON snapshot cục bộ](vps-operations.md), theo [ADR 0025](../adr/0025-host-vps-snapshot.md). API không quản trị/restart/reboot VPS qua SSH; bảo trì host thực hiện ngoài ứng dụng.
 
 ```bash
 bash scripts/backup-postgres.sh deploy/vps/docker-compose.prod.yaml deploy/vps/.env
@@ -44,3 +42,13 @@ docker compose --env-file deploy/vps/.env -f deploy/vps/docker-compose.prod.yaml
 ```
 
 Lưu dump mã hóa ở vị trí tách khỏi VPS, giữ riêng khóa vault/cert và ghi hạn lưu theo quy định. Thử restore trên database tạm trước cập nhật lớn. Script deploy không dừng toàn bộ stack trước khi cập nhật, nhưng migration có thể cần cửa sổ bảo trì và backup đã xác minh. Cấu hình reverse proxy/nginx dùng chứng chỉ đã cấp; không có bước xin chứng chỉ tự động. Khi nghi ngờ xâm nhập, dùng [runbook sự cố](../security/incident-workflow.md).
+
+## Proxy tin cậy
+
+Middleware xử lý X-Forwarded-For và X-Forwarded-Proto trước authentication/rate limit. Compose cấp IP cố định cho Nginx (`SENTINELLAN_PROXY_IP`, mặc định 172.30.10.10) trong `SENTINELLAN_PROXY_SUBNET` (mặc định 172.30.10.0/24); API chỉ tin peer này. Chọn subnet chưa dùng trên host; đổi subnet cần cập nhật IP proxy tương ứng và có thể cần tái tạo mạng Compose trong cửa sổ bảo trì.
+
+Ngoài Compose, cấu hình `SENTINELLAN_KNOWN_PROXIES` bằng các IP phân cách dấu phẩy; `SENTINELLAN_KNOWN_NETWORKS` nhận CIDR dành riêng cho proxy nếu cần. Mặc định ứng dụng chỉ tin loopback. Không để cả hai danh sách rỗng hoặc khai báo /0; cấu hình sai làm startup thất bại. .NET 10 dùng KnownIPNetworks thay cho KnownNetworks đã lỗi thời.
+
+Chỉ một hop được tiêu thụ, hai header cần cùng số phần tử. Nginx ngoài cùng phải ghi đè header client gửi; các proxy nội bộ chỉ chuyển tiếp giá trị đã chuẩn hóa. Không bật trust mọi nguồn bằng ASPNETCORE_FORWARDEDHEADERS_ENABLED; không publish API trực tiếp. X-Forwarded-Host không được dùng. Xem [tài liệu Microsoft](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/proxy-load-balancer?view=aspnetcore-10.0).
+
+Migration AttachmentMetadataSize bổ sung kích thước ảnh gốc và backfill ảnh plaintext/mã hóa; sao lưu và kiểm tra migration trên PostgreSQL trước nâng cấp production. API list ảnh giữ nguyên DTO, chỉ Select metadata; giới hạn số ảnh dùng COUNT.

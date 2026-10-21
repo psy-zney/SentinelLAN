@@ -78,8 +78,11 @@ if (builder.Environment.IsProduction())
     builder.Services.AddSingleton<IPendingCommandResultStore>(new ProtectedPendingCommandResultStore(
         Path.Combine(dataDir, "pending-command-result.dat"), builder.Configuration["SENTINELLAN_AGENT_STORE_KEY"]));
 builder.Services.AddSingleton<ITelemetryCollector, SystemTelemetryCollector>();
+var observations = new EndpointObservationCollector(new EndpointPlatformProbe());
+builder.Services.AddSingleton<IEndpointObservationCollector>(observations);
+builder.Services.AddSingleton<IHardwareInventoryCollector>(observations);
 var msiPlatform = new WindowsMsiOperations();
-builder.Services.AddSingleton<ICommandExecutor>(new WindowsCommandExecutor(executionOptions, apiUrl,
+builder.Services.AddSingleton<ICommandExecutor>(OperatingSystem.IsLinux() ? new LinuxCommandExecutor(executionOptions, apiUrl, new LinuxCommandPlatform()) : new WindowsCommandExecutor(executionOptions, apiUrl,
     new ApprovedAppInstaller(executionOptions, Path.Combine(dataDir, "packages"), msiPlatform),
     new AgentMaintenanceExecutor(executionOptions, maintenanceStore, msiPlatform)));
 builder.Services.AddSingleton<IAgentPolicyApplier>(new WindowsPolicyApplier(executionOptions));
@@ -93,7 +96,10 @@ var enrollmentAttempts = new FileEnrollmentAttemptStore(enrollmentAttemptPath,
     builder.Environment.IsProduction()
         ? new ProtectedDeviceIdentityStore(enrollmentAttemptPath, builder.Configuration["SENTINELLAN_AGENT_STORE_KEY"])
         : new DevelopmentIdentityStore(enrollmentAttemptPath));
-builder.Services.AddSingleton<IAgentApi>(new AgentApi(new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { BaseAddress = apiUrl, Timeout = TimeSpan.FromSeconds(20) }, Environment.MachineName, enrollmentAttempts));
+var agentApi = new AgentApi(new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { BaseAddress = apiUrl, Timeout = TimeSpan.FromSeconds(20) }, Environment.MachineName, enrollmentAttempts, observations);
+builder.Services.AddSingleton<IAgentApi>(agentApi);
+builder.Services.AddSingleton<IAgentWakeSignal>(new AgentWakeSignal(apiUrl));
+builder.Services.AddSingleton<ISoftwareObservationCollector>(new SoftwareObservationCollector(agentApi, new SoftwareProductProbe()));
 builder.Services.AddHostedService<Worker>();
 if (OperatingSystem.IsWindows()) builder.Services.AddHostedService<MaintenanceBridgeWorker>();
 await builder.Build().RunAsync();

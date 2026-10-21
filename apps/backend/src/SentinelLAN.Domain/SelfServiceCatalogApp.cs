@@ -12,4 +12,7 @@ public sealed class SelfServiceCatalogApp : Entity, ITenantOwned
     public required string PublisherThumbprint { get; set; }
     public bool IsActive { get; set; }
     public bool RequiresApproval { get; set; }
+    public Guid? ProductCode { get; set; }
+    public Guid? UpgradeCode { get; set; }
+    public Guid DetectionRevision { get; set; } = Guid.NewGuid();
 }

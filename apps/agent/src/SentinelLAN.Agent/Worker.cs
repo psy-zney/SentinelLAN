@@ -2,7 +2,7 @@ using SentinelLAN.Agent.Core;
 
 namespace SentinelLAN.Agent;
 
-public sealed class Worker(ILogger<Worker> logger, IDeviceIdentityStore identityStore, ITelemetryCollector telemetry, IAgentApi api, CommandVerifier verifier, ICommandSignatureVerifier signatureVerifier, IConfiguration configuration, ICommandExecutor executor, IAgentPolicyApplier policyApplier, ResilientOfflineQueue<QueuedTelemetry>? offlineQueue = null, IPendingCommandResultStore? pendingResultStore = null, IAgentMaintenanceStateStore? maintenanceStateStore = null, IAgentEnrollmentProgress? enrollmentProgress = null) : BackgroundService
+public sealed class Worker(ILogger<Worker> logger, IDeviceIdentityStore identityStore, ITelemetryCollector telemetry, IAgentApi api, CommandVerifier verifier, ICommandSignatureVerifier signatureVerifier, IConfiguration configuration, ICommandExecutor executor, IAgentPolicyApplier policyApplier, ResilientOfflineQueue<QueuedTelemetry>? offlineQueue = null, IPendingCommandResultStore? pendingResultStore = null, IAgentMaintenanceStateStore? maintenanceStateStore = null, IAgentEnrollmentProgress? enrollmentProgress = null, IEndpointObservationCollector? observations = null, ISoftwareObservationCollector? software = null, IAgentWakeSignal? wake = null) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -31,35 +31,64 @@ public sealed class Worker(ILogger<Worker> logger, IDeviceIdentityStore identity
             logger.LogInformation("Device enrollment completed; identity persisted by the configured store.");
         }
 
+        while (identity.RequestSigningKey is null && !stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                var upgraded = await api.UpgradeIdentityAsync(identity, stoppingToken);
+                if (upgraded.RequestSigningKey is null) throw new HttpRequestException("Request signing is unavailable on this server.");
+                await identityStore.SaveAsync(upgraded, stoppingToken);
+                identity = upgraded;
+            }
+            catch (Exception error) when (!stoppingToken.IsCancellationRequested && error is HttpRequestException or IOException or TaskCanceledException)
+            {
+                logger.LogWarning("Agent request signing is not yet provisioned; retrying the credential transition.");
+                await Task.Delay(TimeSpan.FromSeconds(15), stoppingToken);
+            }
+        }
         try { await api.ConfirmEnrollmentStoredAsync(stoppingToken); }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         { logger.LogWarning("Identity is persisted but enrollment recovery file cleanup failed; ask IT to check storage permissions."); }
         if (!signatureVerifier.IsConfigured) logger.LogWarning("Command polling is disabled until a command verification key is configured. Telemetry remains active.");
         logger.LogInformation("Agent uses real system telemetry and OS adapters. Unavailable or unauthorized actions return failed receipts; simulation is limited to Simulate command types.");
-        var cycle = new AgentCycle(identity, telemetry, api, verifier, signatureVerifier, TimeProvider.System, offlineQueue, pendingResultStore, executor, policyApplier, maintenanceStateStore);
+        var cycle = new AgentCycle(identity, telemetry, api, verifier, signatureVerifier, TimeProvider.System, offlineQueue, pendingResultStore, executor, policyApplier, maintenanceStateStore, observations, software);
         var delay = TimeSpan.FromSeconds(5);
         var connected = false;
-        while (!stoppingToken.IsCancellationRequested)
+        var collectTelemetry = true;
+        var nextTelemetry = DateTimeOffset.MinValue;
+        using var wakeLifetime = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+        var wakeTask = wake?.RunAsync(identity, wakeLifetime.Token) ?? Task.CompletedTask;
+        try
         {
-            try
+            while (!stoppingToken.IsCancellationRequested)
             {
-                var rejection = await cycle.RunAsync(stoppingToken);
-                if (rejection is not null) logger.LogWarning("Rejected command: {Reason}", rejection);
-                if (!connected)
+                try
                 {
-                    await ReportAsync("Connected", stoppingToken);
-                    connected = true;
+                    collectTelemetry |= DateTimeOffset.UtcNow >= nextTelemetry;
+                    if (collectTelemetry) nextTelemetry = DateTimeOffset.UtcNow.AddSeconds(5);
+                    var rejection = await cycle.RunAsync(stoppingToken, collectTelemetry);
+                    if (rejection is not null) logger.LogWarning("Rejected command: {Reason}", rejection);
+                    if (!connected)
+                    {
+                        await ReportAsync("Connected", stoppingToken);
+                        connected = true;
+                    }
+                    delay = TimeSpan.FromSeconds(5);
                 }
-                delay = TimeSpan.FromSeconds(5);
+                catch (Exception exception) when (!stoppingToken.IsCancellationRequested && exception is HttpRequestException or TaskCanceledException or IOException or System.ComponentModel.Win32Exception)
+                {
+                    var jitterMs = Random.Shared.Next(-500, 500);
+                    var nextSeconds = Math.Clamp(delay.TotalSeconds * 2 + (jitterMs / 1000.0), 2, 60);
+                    delay = TimeSpan.FromSeconds(nextSeconds);
+                    logger.LogWarning(exception, "Agent offline (queue: {QueueCount}); retrying in {DelaySeconds:F1}s", cycle.OfflineQueueCount, delay.TotalSeconds);
+                }
+                collectTelemetry = wake is null || !await wake.WaitAsync(delay, stoppingToken);
             }
-            catch (Exception exception) when (!stoppingToken.IsCancellationRequested && exception is HttpRequestException or TaskCanceledException or IOException or System.ComponentModel.Win32Exception)
-            {
-                var jitterMs = Random.Shared.Next(-500, 500);
-                var nextSeconds = Math.Clamp(delay.TotalSeconds * 2 + (jitterMs / 1000.0), 2, 60);
-                delay = TimeSpan.FromSeconds(nextSeconds);
-                logger.LogWarning(exception, "Agent offline (queue: {QueueCount}); retrying in {DelaySeconds:F1}s", cycle.OfflineQueueCount, delay.TotalSeconds);
-            }
-            await Task.Delay(delay, stoppingToken);
+        }
+        finally
+        {
+            await wakeLifetime.CancelAsync();
+            try { await wakeTask; } catch (OperationCanceledException) when (wakeLifetime.IsCancellationRequested) { }
         }
     }
 

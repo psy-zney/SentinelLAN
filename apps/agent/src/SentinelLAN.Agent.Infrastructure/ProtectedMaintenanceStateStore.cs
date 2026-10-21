@@ -23,7 +23,7 @@ public sealed class ProtectedMaintenanceStateStore(string path, string? nonWindo
                 ?? throw new InvalidDataException("Maintenance state is invalid.");
             Validate(state);
             if (state.MaintenanceUntil <= now) return null;
-            if (state.MaintenanceUntil > now.AddMinutes(30)) throw new InvalidDataException("Maintenance state exceeds its bounded duration.");
+            if (state.MaintenanceUntil > now.AddMinutes(61)) throw new InvalidDataException("Maintenance state exceeds its bounded duration.");
             return state;
         }
     }
@@ -54,7 +54,7 @@ public sealed class ProtectedMaintenanceStateStore(string path, string? nonWindo
     private static void Validate(AgentMaintenanceState state)
     {
         if (state.CommandId == Guid.Empty || state.RequestId == Guid.Empty || state.Action is not ("PauseAgent" or "UninstallAgent") ||
-            state.MaintenanceUntil > state.AuthorizationExpiresAt.AddMinutes(15) ||
+            state.MaintenanceUntil > state.AuthorizationExpiresAt.AddMinutes(60) ||
             (state.Authorization is not null && (state.Authorization.Id != state.CommandId || state.Authorization.Type != state.Action)))
             throw new InvalidDataException("Maintenance authorization is invalid.");
     }

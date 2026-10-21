@@ -115,9 +115,19 @@ public sealed class SelfServiceIntegrationTests(SentinelApiFactory factory) : IC
             new { fileName = "error.png", contentType = "image/png", base64 = Convert.ToBase64String(png) });
         Assert.Equal(HttpStatusCode.OK, upload.StatusCode);
         var attachmentId = (await upload.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        var metadata = Assert.Single((await technician.GetFromJsonAsync<SupportAttachmentDto[]>($"{Root}/requests/{id}/attachments"))!);
+        Assert.Equal(attachmentId, metadata.Id);
+        Assert.Equal("error.png", metadata.FileName);
+        Assert.Equal(png.Length, metadata.Size);
         var download = await technician.GetAsync($"{Root}/requests/{id}/attachments/{attachmentId}");
         Assert.Equal(HttpStatusCode.OK, download.StatusCode);
         Assert.Equal(png, await download.Content.ReadAsByteArrayAsync());
+        for (var index = 1; index < 10; index++)
+            Assert.Equal(HttpStatusCode.OK, (await employee.PostAsJsonAsync($"{Root}/requests/{id}/attachments",
+                new { fileName = $"error-{index}.png", contentType = "image/png", base64 = Convert.ToBase64String(png) })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await employee.PostAsJsonAsync($"{Root}/requests/{id}/attachments",
+            new { fileName = "too-many.png", contentType = "image/png", base64 = Convert.ToBase64String(png) })).StatusCode);
+        Assert.Equal(10, (await employee.GetFromJsonAsync<SupportAttachmentDto[]>($"{Root}/requests/{id}/attachments"))!.Length);
         var notifications = await employee.GetFromJsonAsync<JsonElement>($"{Root}/notifications");
         Assert.Contains(notifications.EnumerateArray(), item => item.GetProperty("requestId").ValueKind == JsonValueKind.String && item.GetProperty("requestId").GetGuid() == id);
     }
@@ -131,6 +141,8 @@ public sealed class SelfServiceIntegrationTests(SentinelApiFactory factory) : IC
         var app = new
         {
             name = "Máy in văn phòng",
+            nonce = Guid.NewGuid(),
+            expiresAt = DateTimeOffset.UtcNow.AddMinutes(2),
             description = "Trình điều khiển đã được IT duyệt",
             version = "1.0",
             packageUrl = "https://packages.example.test/printer.msi",

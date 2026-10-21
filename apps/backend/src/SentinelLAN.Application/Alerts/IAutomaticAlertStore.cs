@@ -7,5 +7,6 @@ public interface IAutomaticAlertStore
     Task<IReadOnlyList<Alert>> GetRecentAsync(Guid organizationId, Guid deviceId, DateTimeOffset since, CancellationToken cancellationToken);
     void Add(Alert alert);
     void AddAudit(AuditLog audit);
+    void AddSecurityEvent(SecurityEvent securityEvent);
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

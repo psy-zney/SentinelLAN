@@ -4,11 +4,16 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import type { CommandType, Device } from "@/types/api";
 import { useTranslation } from "@/lib/i18n";
+import { useCurrentSession } from "@/components/app-shell";
 import { ApiClient } from "@/lib/api-client";
 
 export function DeviceTable({ initialDevices }: { initialDevices: Device[] }) {
   const { t, lang } = useTranslation();
   const devices = initialDevices;
+  const admin = useCurrentSession()?.role === "Admin";
+  const [checked, setChecked] = useState<string[]>([]); const [bulkType, setBulkType] = useState<"RefreshPolicy" | "CollectTelemetryNow">("CollectTelemetryNow"); const [bulkReason, setBulkReason] = useState(""); const [bulkConfirm, setBulkConfirm] = useState(false); const [bulkBusy, setBulkBusy] = useState(false); const [bulkMessage, setBulkMessage] = useState("");
+  async function sendBulk(e: React.FormEvent) { e.preventDefault(); if (!bulkConfirm || bulkBusy) return; setBulkBusy(true); try { const results = await new ApiClient().bulkCommands(checked, bulkType, bulkReason); setBulkMessage(results.map(r => `${devices.find(d => d.id === r.deviceId)?.name ?? r.deviceId}: ${r.outcome === "Queued" ? "Đã xếp hàng" : "Không khả dụng"}`).join("; ")); setChecked([]); } catch (cause) { setBulkMessage(cause instanceof Error ? cause.message : "Không thể gửi lệnh"); } finally { setBulkBusy(false); } }
+
 
   // Modals state
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
@@ -110,10 +115,11 @@ export function DeviceTable({ initialDevices }: { initialDevices: Device[] }) {
           {lang === "vi" ? "Xem tất cả" : "View inventory →"}
         </Link>
       </div>
+      {admin && <form onSubmit={e => void sendBulk(e)} className="bulk-command-form"><p>Đã chọn {checked.length}/100 máy</p><select aria-label="Lệnh cho các máy đã chọn" value={bulkType} onChange={e => setBulkType(e.target.value as typeof bulkType)}><option value="CollectTelemetryNow">Cập nhật thông tin máy</option><option value="RefreshPolicy">Cập nhật chính sách</option></select><input aria-label="Lý do gửi hàng loạt" required minLength={3} maxLength={1000} value={bulkReason} onChange={e => setBulkReason(e.target.value)} placeholder="Lý do" /><label><input type="checkbox" checked={bulkConfirm} onChange={e => setBulkConfirm(e.target.checked)} /> Tôi xác nhận gửi đến các máy đã chọn</label><button className="action" disabled={!checked.length || !bulkConfirm || bulkBusy}>Gửi lệnh</button>{bulkMessage && <p role="status">{bulkMessage}</p>}</form>}
       <table>
         <thead>
           <tr>
-            <th>{t("deviceName")}</th>
+            {admin && <th>Chọn</th>}<th>{t("deviceName")}</th>
             <th>{t("status")}</th>
             <th>{lang === "vi" ? "Người sử dụng" : "Assignment"}</th>
             <th>{t("osVersion")}</th>
@@ -124,7 +130,7 @@ export function DeviceTable({ initialDevices }: { initialDevices: Device[] }) {
         <tbody>
           {devices.map((device) => {
             return (
-              <tr key={device.id}>
+              <tr key={device.id}>{admin && <td><input type="checkbox" aria-label={`Chọn ${device.name}`} disabled={device.isRevoked || (!checked.includes(device.id) && checked.length >= 100)} checked={checked.includes(device.id)} onChange={e => setChecked(e.target.checked ? [...checked, device.id] : checked.filter(id => id !== device.id))} /></td>}
                 <td>
                   <Link href={`/devices/${device.id}`} style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
                     <span></span>

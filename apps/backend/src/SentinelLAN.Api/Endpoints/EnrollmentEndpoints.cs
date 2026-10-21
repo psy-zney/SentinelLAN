@@ -12,6 +12,20 @@ public static class EnrollmentEndpoints
 {
     public static void MapEnrollmentEndpoints(this RouteGroupBuilder v1)
     {
+        v1.MapPost("/enrollment-packages", async (EnrollmentBatchRequest request, HttpContext http, IConfiguration config, EnrollmentBatchService service, CancellationToken ct) =>
+        {
+            http.Response.Headers.CacheControl = "no-store";
+            if (request.Count is < 1 or > 50 || request.Platform is not ("Windows" or "Linux")) return Results.BadRequest();
+            try
+            {
+                var settings = EnrollmentBootstrap.Read(config, request.Platform);
+                var tokens = await service.CreateAsync(http.User.ToActorContext()!.Value, request, ct);
+                return Results.Ok(tokens.Select((token, index) => EnrollmentBootstrap.Create(settings, token.Token, token.ExpiresAt, request.Platform, index + 1)).ToArray());
+            }
+            catch (OrganizationConfigurationException error) { return Results.Problem(error.Message, statusCode: error.StatusCode); }
+            catch (Exception error) when (error is FormatException or ArgumentException or System.Security.Cryptography.CryptographicException or InvalidOperationException)
+            { return Results.Problem("IT cần cấu hình địa chỉ máy chủ, khóa RSA và bản phát hành được kiểm chứng trước khi cấp gói cài.", statusCode: 503); }
+        }).RequireAuthorization(AuthorizationPolicies.Admin).RequireRateLimiting("sensitive").Produces<IReadOnlyList<EnrollmentBootstrapPackage>>();
         v1.MapPost("/enrollment-tokens", async (EnrollmentTokenRequest request, HttpContext http, SentinelDbContext db, EnrollmentTokenService tokens, IConfiguration configuration, IHostEnvironment environment, CancellationToken ct) =>
         {
             // Never derive the bootstrap destination from an untrusted Host/Forwarded header.

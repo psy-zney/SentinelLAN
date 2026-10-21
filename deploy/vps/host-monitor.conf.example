@@ -1,0 +1,6 @@
+# Install outside the release at /opt/sentinellan/shared/host-monitor.conf (root-owned 0600).
+SENTINELLAN_HOST_NAME=sentinellan-host
+SENTINELLAN_HOST_ADDRESS=192.0.2.10
+SENTINELLAN_HOST_SERVICES=nginx,docker,ssh,cron,systemd-resolved,sentinellan-host-monitor.timer
+# Optional extra directories, grouped by Compose project name. Compose labels also discover checkouts.
+SENTINELLAN_HOST_STORAGE_TARGETS='{"sentinellan-prod":{"paths":["/opt/sentinellan"],"category":"repo"}}'

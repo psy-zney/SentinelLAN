@@ -19,6 +19,7 @@ import { spacing, typography, radii } from '../../theme/tokens';
 import { parseScannedQrContent } from './qr-parser';
 import { useAuth } from '../auth/auth-context';
 import { ApiError } from '../../lib/api/client';
+import { parseEnrollmentCode, type EnrollmentPreview } from './enrollment-code';
 
 export function ScannerView({ isActiveScreen = true }: { isActiveScreen?: boolean }) {
   const { t } = useI18n();
@@ -29,6 +30,7 @@ export function ScannerView({ isActiveScreen = true }: { isActiveScreen?: boolea
   const [permission, requestPermission] = useCameraPermissions();
   const [manualModalOpen, setManualModalOpen] = useState(false);
   const [manualCode, setManualCode] = useState('');
+  const [enrollment, setEnrollment] = useState<EnrollmentPreview | null>(null);
   const [resolving, setResolving] = useState(false);
   const [imageScanning, setImageScanning] = useState(false);
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
@@ -42,10 +44,14 @@ export function ScannerView({ isActiveScreen = true }: { isActiveScreen?: boolea
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       setAppState(nextAppState);
+      if (nextAppState !== 'active') setEnrollment(null);
     });
     return () => subscription.remove();
   }, []);
 
+
+  useEffect(() => { if (!isActiveScreen) setEnrollment(null); }, [isActiveScreen]);
+  useEffect(() => { if (!enrollment) return; const timer = setTimeout(() => setEnrollment(null), Math.max(0, Date.parse(enrollment.expiresAt) - Date.now())); return () => clearTimeout(timer); }, [enrollment]);
 
   // Debounce & deduplication mechanism
   const lastScannedCodeRef = useRef<string | null>(null);
@@ -55,6 +61,12 @@ export function ScannerView({ isActiveScreen = true }: { isActiveScreen?: boolea
     async (rawScanned: string) => {
       setErrorNotice(null);
 
+      if (rawScanned.trim().startsWith('SL1.')) {
+        if (user?.role !== 'Admin') { setErrorNotice('Mã cài đặt chỉ dành cho Admin phụ trách IT.'); return; }
+        try { setEnrollment(parseEnrollmentCode(rawScanned.trim(), apiClient.serverOrigin)); }
+        catch (error) { setErrorNotice(error instanceof Error ? error.message : 'Mã đăng ký không hợp lệ.'); }
+        return;
+      }
       // Parse and validate code origin/format
       const parseResult = parseScannedQrContent(rawScanned);
       if (!parseResult.valid || !parseResult.code) {
@@ -91,7 +103,7 @@ export function ScannerView({ isActiveScreen = true }: { isActiveScreen?: boolea
 
   const handleBarcodeScanned = useCallback(
     ({ data }: BarcodeScanningResult) => {
-      if (resolving || !isActiveScreen || appState !== 'active') return;
+      if (enrollment || resolving || !isActiveScreen || appState !== 'active') return;
 
       const now = Date.now();
       if (lastScannedCodeRef.current === data && now - lastScannedTimeRef.current < 2500) {
@@ -103,7 +115,7 @@ export function ScannerView({ isActiveScreen = true }: { isActiveScreen?: boolea
 
       handleResolveCode(data);
     },
-    [resolving, isActiveScreen, appState, handleResolveCode]
+    [enrollment, resolving, isActiveScreen, appState, handleResolveCode]
   );
 
   const handlePickImage = async () => {
@@ -148,7 +160,7 @@ export function ScannerView({ isActiveScreen = true }: { isActiveScreen?: boolea
             value={manualCode}
             onChangeText={setManualCode}
             placeholder="QR-..."
-            autoCapitalize="characters"
+            autoCapitalize="none"
           />
           <View style={styles.modalActions}>
             <AppButton
@@ -175,6 +187,8 @@ export function ScannerView({ isActiveScreen = true }: { isActiveScreen?: boolea
   );
 
   // State 1: Permission not determined or requested
+  if (enrollment) return <View style={[styles.permissionContainer, { backgroundColor: colors.background }]}><AppCard><Text style={[styles.modalTitle, { color: colors.ink }]}>Mã cài Agent cho một máy</Text><Text style={[styles.bodyText, { color: colors.ink }]}>Máy chủ: {enrollment.serverUrl}{'\n'}Hết hạn: {new Date(enrollment.expiresAt).toLocaleString('vi-VN')}{'\n'}Mở bộ cài công ty trên máy được phép và dán mã này. Mã là bí mật, chỉ dùng cho một máy; không gửi cho người khác hoặc dịch vụ QR công cộng.</Text><Text selectable style={[styles.bodyText, { color: colors.ink }]}>{enrollment.connectionCode}</Text><AppButton title="Ẩn mã và quét tiếp" onPress={() => setEnrollment(null)} /></AppCard></View>;
+
   if (!permission) {
     return (
       <View style={[styles.centered, { backgroundColor: colors.background }]}>
@@ -231,6 +245,8 @@ export function ScannerView({ isActiveScreen = true }: { isActiveScreen?: boolea
       </View>
     );
   }
+
+
 
   const isCameraActive = isActiveScreen && appState === 'active';
 

@@ -1,25 +1,20 @@
 # Use cases và ranh giới hành vi
 
-Các use case lõi cùng phục vụ vòng đời một thiết bị đầu cuối được tổ chức cho phép. [Phạm vi sản phẩm](../project-overview.md) là nguồn thống nhất cho việc ưu tiên và đánh giá tính năng.
+Đối chiếu mã nguồn 21/10/2026. Admin và Employee là hai role người dùng đang được chấp nhận; Agent có scheme riêng. Technician/PlatformOwner đã nghỉ và bị khóa qua migration, không phải role có thể đăng nhập hiện tại.
 
 | Vai trò | Luồng đang hỗ trợ |
 |---|---|
-| PlatformOwner | Cấp công ty và tài khoản Admin qua link kích hoạt, theo dõi số tài khoản/thiết bị, tạm ngưng/mở lại công ty |
-| Admin | Quản lý user, enrollment token, gán/thu hồi thiết bị, xem telemetry/audit, phát command có lý do và xác nhận |
-| Technician | Xem thiết bị theo quyền, xử lý alert/incident/work order, thực hiện hành động được phân quyền trong tenant |
-| Employee | Xem `/my-device` của máy được gán, telemetry được công bố, chính sách và incident liên quan; báo sự cố cho máy đó |
-| Agent | Đăng ký bằng token một lần, gửi heartbeat idempotent, nhận command có chữ ký và gửi biên lai |
-
-Quản trị VPS qua SSH là use case mở rộng chỉ dành cho PlatformOwner: kết nối, theo dõi tài nguyên/dịch vụ/container, cấu hình tự chạy và reboot VPS. Portal chủ hệ thống kiểm tra theo chu kỳ khi mở tab Hạ tầng; xem [hướng dẫn vận hành VPS](../deployment/vps-operations.md).
+| Admin | Quản lý người dùng/thiết bị/phòng ban, cấp mã một lần hoặc lô QR/script, policy mặc định, bulk hai lệnh an toàn, ngưỡng cảnh báo/bảo trì, catalog/quy tắc MSI, hỗ trợ/WorkOrder/audit; xem host snapshot khi đúng đơn vị vận hành |
+| Employee | Máy được giao, inventory/posture/phần mềm được công bố, yêu cầu hỗ trợ và ảnh chủ động gửi, thông báo, phản hồi và mã bảo trì đã duyệt |
+| Agent | Enrollment/recovery, request ký HMAC, heartbeat tối thiểu, baseline phần mềm đã cấu hình, poll/lease/xác minh RSA, biên lai và SignalR wake-up |
 
 ## Kịch bản cần kiểm tra
 
-1. Admin tạo tài khoản Employee, cấp token enrollment, Agent đăng ký, Admin gán máy; Employee chỉ xem được máy được gán. Sau thu hồi, Agent credential cũ bị từ chối.
-2. Token enrollment đã dùng hoặc hết hạn bị từ chối. Command sai chữ ký, hết hạn, sai thiết bị hoặc nonce đã nhận không được thực hiện. Biên lai gửi lại không tạo kết quả thứ hai.
-3. Lệnh `SimulateLock`, `SimulateNetworkIsolation` chỉ mô phỏng. `RestartService` dùng adapter Windows thật khi có allow-list và quyền; thiếu điều kiện trả Failed. Khóa/cô lập thật cần lab flag và device allow-list.
-4. User/thiết bị thuộc tenant khác không được đọc hoặc sửa; QR công khai chỉ trả dữ liệu tối thiểu, giải mã có xác thực phải theo tenant và assignment.
-5. Audit ghi actor, target, lý do, thời gian UTC và outcome mà không lưu token, mật khẩu hoặc khóa. Bảo vệ ở tầng EF chưa thay cho kiểm soát DB và lưu trữ WORM.
+1. Admin cấp mã riêng từng máy, Agent đăng ký có inventory, Admin gán máy/phòng ban. Employee chỉ xem máy của mình; tenant khác không đọc/sửa được. Token dùng lại/hết hạn và credential thu hồi bị từ chối.
+2. HMAC sai method/path/body/device, timestamp quá hạn, nonce lặp và downgrade secret sau xác nhận đều bị từ chối. RSA command sai chữ ký/hạn/máy/nonce không thực hiện; receipt idempotent.
+3. Chỉnh CPU xuống 20%, duy trì 0 với mẫu mới đủ ngưỡng: alert, outbox và thông báo Admin xuất hiện. Unknown không tự đóng cảnh báo bảo vệ/phần mềm. Preventive chỉ tạo một phiếu khi đến kỳ/sắp hết bảo hành.
+4. Policy máy ưu tiên policy phòng ban; mặc định mới xếp RefreshPolicy. Bulk chỉ RefreshPolicy/CollectTelemetryNow, tối đa 100 máy và có kết quả từng máy. Gói enrollment chứa token khác nhau cho lô tối đa 50 máy.
+5. Simulate luôn mô phỏng; RestartService Windows/Linux chỉ dùng allow-list và quyền. Lock/isolation cần lab/device opt-in; Linux phải xác nhận rollback timer trước apply nftables. Không có API shell tùy ý hay SSH/reboot VPS.
+6. Danh sách ảnh chỉ metadata; ảnh S3 vẫn xác thực tenant/request và AAD khi tải. Redis/MinIO, TLS, restore và hành động OS thật cần nghiệm thu riêng.
 
-Use case mở rộng VPS: restart dịch vụ, reboot có lịch và đổi cấu hình tự chạy qua SSH yêu cầu host-key pin, quyền PlatformOwner, lý do, xác nhận, nonce dùng một lần, hạn tối đa 5 phút và allow-list; đây là thao tác thật trên máy chủ được đăng ký riêng.
-
-Các bước demo và checklist thực thi nằm trong [kịch bản demo](../demo/demo-script.md). [Thương lượng lệnh](../architecture/command-delivery.md) và [threat model](../security/threat-model.md) giải thích giới hạn bảo mật.
+Xem [demo](../demo/demo-script.md), [hướng dẫn nâng cấp](../guides/product-upgrade.md), [giao lệnh](../architecture/command-delivery.md) và [threat model](../security/threat-model.md).

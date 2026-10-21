@@ -91,19 +91,29 @@ def parse_size_str(val):
 
 
 def storage_targets(inspected, warnings):
-    targets = {
-        "BeatSync": (["/opt/beatsync", "/home/ubuntu/beatsync"], "repo"),
-        "Unified Monitor Agent": (["/opt/unified-monitoring-agent"], "service"),
-        "SentinelLAN": (["/opt/sentinellan"], "repo"),
-        "Kitchen Explore": (["/home/ubuntu/exxplore-kittens", "/var/www/exxplore-kittens"], "repo"),
-        "Monopoly (mpoly)": (["/opt/monopoly", "/var/www/monopoly"], "repo"),
-        "LiveKit": (["/home/ubuntu/livekit"], "service"),
-        "Go SDK / Build Cache": (["/home/ubuntu/go"], "system"),
-    }
-    project_names = {"sentinellan-prod": "SentinelLAN", "sentinellan": "SentinelLAN",
-                     "exxplore-kittens": "Kitchen Explore", "monopoly": "Monopoly (mpoly)",
-                     "mot-me-banh": "Mọt Mê Bánh", "livekit": "LiveKit", "beatsync": "BeatSync"}
-    allowed_roots = ("/opt", "/srv", "/var/www", "/home/ubuntu")
+    configured = json.loads(os.environ.get("SENTINELLAN_HOST_STORAGE_TARGETS", "{}"))
+    if not isinstance(configured, dict):
+        raise ValueError("SENTINELLAN_HOST_STORAGE_TARGETS must be a JSON object.")
+    targets = {}
+    for name, target in configured.items():
+        if (not name or not isinstance(target, dict) or
+                not isinstance(target.get("paths"), list) or
+                not all(isinstance(path, str) for path in target["paths"]) or
+                target.get("category", "repo") not in ("repo", "service", "system")):
+            raise ValueError("Storage targets require a name, paths array and repo/service/system category.")
+        targets[name] = (list(target["paths"]), target.get("category", "repo"))
+    allowed_roots = ("/opt", "/srv", "/var/www", "/home")
+
+    def approved_path(path, name):
+        if not path.startswith("/") or any(ord(char) < 32 for char in path):
+            warnings.append("Đường dẫn thư mục dự án không hợp lệ: " + name + ".")
+            return None
+        path = os.path.realpath(path)
+        if not any(path.startswith(root + "/") for root in allowed_roots):
+            warnings.append("Thư mục dự án nằm ngoài phạm vi được phép đo: " + name + ".")
+            return None
+        return path
+
     seen = set()
     for container in inspected:
         labels = container.get("Labels") or {}
@@ -114,15 +124,11 @@ def storage_targets(inspected, warnings):
         if (project, directory) in seen:
             continue
         seen.add((project, directory))
-        name = project_names.get(project, project)
-        if not directory.startswith("/") or "\n" in directory or "\x00" in directory:
-            warnings.append("Đường dẫn thư mục dự án không hợp lệ: " + name + ".")
+        name = project
+        directory = approved_path(directory, name)
+        if directory is None:
             continue
-        directory = os.path.realpath(directory)
-        root = next((root for root in allowed_roots if directory.startswith(root + "/")), None)
-        if root is None:
-            warnings.append("Thư mục dự án nằm ngoài phạm vi được phép đo: " + name + ".")
-            continue
+        root = next(root for root in allowed_roots if directory.startswith(root + "/"))
         if not os.path.isdir(directory):
             warnings.append("Chưa đọc được thư mục đang triển khai của " + name + ".")
             continue
@@ -139,7 +145,8 @@ def storage_targets(inspected, warnings):
 
     resolved = []
     for name, (paths, category) in targets.items():
-        existing = sorted({os.path.realpath(path) for path in paths if os.path.isdir(path)}, key=len)
+        approved = [approved_path(path, name) for path in paths]
+        existing = sorted({path for path in approved if path is not None and os.path.isdir(path)}, key=len)
         unique = []
         for path in existing:
             if not any(path == parent or path.startswith(parent + "/") for parent in unique):
@@ -218,7 +225,11 @@ def collect(name, host):
         uptime = float(file.read().split()[0])
     system_state = run(["/usr/bin/systemctl", "is-system-running"])[1].strip() or "unknown"
     services = []
-    for service in ("nginx", "docker", "ssh", "beatsync", "cron", "systemd-resolved", "sentinellan-host-monitor.timer"):
+    service_names = os.environ.get("SENTINELLAN_HOST_SERVICES",
+        "nginx,docker,ssh,cron,systemd-resolved,sentinellan-host-monitor.timer")
+    for service in dict.fromkeys(value.strip() for value in service_names.split(",") if value.strip()):
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.@:-]{0,255}", service):
+            raise ValueError("SENTINELLAN_HOST_SERVICES must contain comma-separated systemd unit names.")
         services.append({"name": service, "activeState": run(["/usr/bin/systemctl", "is-active", service])[1].strip() or "unknown",
                          "startupState": run(["/usr/bin/systemctl", "is-enabled", service])[1].strip() or "unknown"})
     host_sockets = socket_rows(run(["/usr/bin/ss", "-H", "-lntup"])[1])
@@ -249,24 +260,8 @@ def collect(name, host):
         for row in rows:
             info = details.get(row["ID"], {})
             labels = info.get("Labels") or {}
-            c_name = row.get("Names", "")
             compose_proj = labels.get("com.docker.compose.project")
-            if compose_proj:
-                proj = compose_proj
-            elif "sentinellan" in c_name:
-                proj = "sentinellan-prod"
-            elif "monopoly" in c_name or "mpoly" in c_name:
-                proj = "monopoly"
-            elif "kitten" in c_name or "exxplore" in c_name:
-                proj = "exxplore-kittens"
-            elif "banh" in c_name:
-                proj = "mot-me-banh"
-            elif "livekit" in c_name:
-                proj = "livekit"
-            elif "beat" in c_name or "sync" in c_name:
-                proj = "beatsync"
-            else:
-                proj = "other"
+            proj = compose_proj if isinstance(compose_proj, str) and compose_proj else "other"
             usage = stats.get(row["ID"], {})
             running = row.get("State") == "running"
             listeners = None

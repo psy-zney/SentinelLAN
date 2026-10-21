@@ -44,43 +44,62 @@ class HostStatusTests(unittest.TestCase):
                            "com.docker.compose.project.working_dir": directory}}
 
     def test_compose_discovers_missing_and_new_projects_and_finds_git_root(self):
-        inspected = [self.inspected("mot-me-banh", "/opt/apps/bep-du-banh/repo"),
+        inspected = [self.inspected("office-app", "/opt/apps/office/repo"),
                      self.inspected("new-project", "/srv/new-project/deploy")]
-        directories = {"/opt/apps/bep-du-banh/repo", "/srv/new-project/deploy", "/srv/new-project"}
+        directories = {"/opt/apps/office/repo", "/srv/new-project/deploy", "/srv/new-project"}
         warnings = []
         with patch.object(collector.os.path, "realpath", side_effect=lambda value: value), \
                 patch.object(collector.os.path, "isdir", side_effect=lambda value: value in directories), \
                 patch.object(collector.os.path, "exists", side_effect=lambda value: value == "/srv/new-project/.git"):
             targets = collector.storage_targets(inspected, warnings)
-        self.assertIn(("Mọt Mê Bánh", ["/opt/apps/bep-du-banh/repo"], "repo"), targets)
+        self.assertIn(("office-app", ["/opt/apps/office/repo"], "repo"), targets)
         self.assertIn(("new-project", ["/srv/new-project"], "repo"), targets)
         self.assertEqual([], warnings)
 
     def test_active_home_checkouts_and_old_copies_are_both_measured(self):
-        directories = {"/home/ubuntu/exxplore-kittens", "/var/www/exxplore-kittens", "/home/ubuntu/livekit"}
-        inspected = [self.inspected("exxplore-kittens", "/home/ubuntu/exxplore-kittens"),
-                     self.inspected("livekit", "/home/ubuntu/livekit")]
-        with patch.object(collector.os.path, "realpath", side_effect=lambda value: value), \
+        directories = {"/home/operator/office", "/var/www/office", "/srv/media"}
+        inspected = [self.inspected("office", "/home/operator/office"),
+                     self.inspected("media", "/srv/media")]
+        config = {"office": {"paths": ["/var/www/office"]}}
+        with patch.dict(collector.os.environ, {"SENTINELLAN_HOST_STORAGE_TARGETS": json.dumps(config)}), \
+                patch.object(collector.os.path, "realpath", side_effect=lambda value: value), \
                 patch.object(collector.os.path, "isdir", side_effect=lambda value: value in directories), \
                 patch.object(collector.os.path, "exists", return_value=False):
             targets = {name: paths for name, paths, _ in collector.storage_targets(inspected, [])}
-        self.assertEqual(directories - {"/home/ubuntu/livekit"}, set(targets["Kitchen Explore"]))
-        self.assertEqual(["/home/ubuntu/livekit"], targets["LiveKit"])
+        self.assertEqual(directories - {"/srv/media"}, set(targets["office"]))
+        self.assertEqual(["/srv/media"], targets["media"])
 
     def test_same_checkout_and_nested_release_are_not_counted_twice(self):
         inspected = [self.inspected("sentinellan-prod", "/opt/sentinellan/releases/current/deploy/vps")] * 2
-        with patch.object(collector.os.path, "realpath", side_effect=lambda value: value), \
+        config = {"sentinellan-prod": {"paths": ["/opt/sentinellan"]}}
+        with patch.dict(collector.os.environ, {"SENTINELLAN_HOST_STORAGE_TARGETS": json.dumps(config)}), \
+                patch.object(collector.os.path, "realpath", side_effect=lambda value: value), \
                 patch.object(collector.os.path, "isdir", side_effect=lambda value: value.startswith("/opt/sentinellan")), \
                 patch.object(collector.os.path, "exists", return_value=False):
             targets = collector.storage_targets(inspected, [])
-        self.assertEqual([("SentinelLAN", ["/opt/sentinellan"], "repo")], targets)
+        self.assertEqual([("sentinellan-prod", ["/opt/sentinellan"], "repo")], targets)
 
     def test_aliased_directories_are_not_counted_twice(self):
-        with patch.object(collector.os.path, "isdir", side_effect=lambda value: value in
-                          {"/var/www/exxplore-kittens", "/home/ubuntu/exxplore-kittens"}), \
-                patch.object(collector.os.path, "realpath", return_value="/home/ubuntu/exxplore-kittens"):
+        config = {"office": {"paths": ["/var/www/office", "/home/operator/office"]}}
+        with patch.dict(collector.os.environ, {"SENTINELLAN_HOST_STORAGE_TARGETS": json.dumps(config)}), \
+                patch.object(collector.os.path, "isdir", return_value=True), \
+                patch.object(collector.os.path, "realpath", return_value="/home/operator/office"):
             targets = collector.storage_targets([], [])
-        self.assertEqual([("Kitchen Explore", ["/home/ubuntu/exxplore-kittens"], "repo")], targets)
+        self.assertEqual([("office", ["/home/operator/office"], "repo")], targets)
+
+    def test_configured_paths_cannot_escape_the_allowed_roots(self):
+        config = {"office": {"paths": ["/etc", "--exclude=/", "/srv/link"]}}
+        warnings = []
+        with patch.dict(collector.os.environ, {"SENTINELLAN_HOST_STORAGE_TARGETS": json.dumps(config)}), \
+                patch.object(collector.os.path, "realpath", side_effect=lambda value: "/etc" if value == "/srv/link" else value):
+            self.assertEqual([], collector.storage_targets([], warnings))
+        self.assertEqual(3, len(warnings))
+
+    def test_invalid_storage_configuration_is_rejected(self):
+        for value in ("[]", '{"office":{"paths":"/srv/office"}}', '{"office":{"paths":["/srv/office"],"category":"unknown"}}'):
+            with self.subTest(value=value), patch.dict(collector.os.environ, {"SENTINELLAN_HOST_STORAGE_TARGETS": value}):
+                with self.assertRaises(ValueError):
+                    collector.storage_targets([], [])
 
     def test_unapproved_or_inaccessible_compose_paths_warn_without_being_scanned(self):
         inspected = [self.inspected("private", "/etc"), self.inspected("missing", "/srv/missing"),
@@ -147,12 +166,28 @@ class HostStatusTests(unittest.TestCase):
         self.assertEqual(1, len(warnings))
 
     def test_storage_timeout_still_returns_a_fresh_host_snapshot(self):
+        container_rows = [
+            {"ID": "a" * 64, "Names": "office-backend", "State": "exited"},
+            {"ID": "b" * 64, "Names": "unlabelled-service", "State": "exited"},
+        ]
+        container_details = [
+            {"Id": "a" * 64, "Labels": {"com.docker.compose.project": "office"}},
+            {"Id": "b" * 64, "Labels": {}},
+        ]
+
         def run(args, timeout=8):
             if "df" in args:
                 raise subprocess.TimeoutExpired(args, timeout)
+            if "ps" in args:
+                return 0, "\n".join(json.dumps(row) for row in container_rows)
+            if "inspect" in args:
+                return 0, "\n".join(json.dumps(row) for row in container_details)
+            if "stats" in args:
+                return 0, ""
             return (0, "") if "ps" in args or "/usr/bin/ss" in args else (0, "active\n")
 
-        with patch.object(collector, "run", side_effect=run), \
+        with patch.dict(collector.os.environ, {"SENTINELLAN_HOST_SERVICES": "nginx, office.service,nginx"}), \
+                patch.object(collector, "run", side_effect=run), \
                 patch.object(collector, "cpu_times", side_effect=[(100, 30), (200, 40)]), \
                 patch.object(collector.platform, "platform", return_value="Linux lab-host"), \
                 patch.object(collector.time, "sleep"), \
@@ -165,6 +200,8 @@ class HostStatusTests(unittest.TestCase):
         self.assertEqual(75, snapshot["ramPercent"])
         self.assertEqual(40, snapshot["diskPercent"])
         self.assertTrue(snapshot["runtime"]["dockerAvailable"])
+        self.assertEqual(["nginx", "office.service"], [row["name"] for row in snapshot["runtime"]["services"]])
+        self.assertEqual(["office", "other"], [row["project"] for row in snapshot["runtime"]["containers"]])
         self.assertEqual([], snapshot["runtime"]["storageBreakdown"])
         self.assertIn("Docker", snapshot["warnings"][0])
         self.assertTrue(snapshot["capturedAtUtc"])

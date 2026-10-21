@@ -201,8 +201,11 @@ internal static class NonWindowsIdentityCipher
 }
 
 
-public sealed class AgentApi(HttpClient httpClient, string deviceName, IEnrollmentAttemptStore? enrollmentAttempts = null) : IAgentApi
+public sealed class AgentApi(HttpClient httpClient, string deviceName, IEnrollmentAttemptStore? enrollmentAttempts = null,
+    IHardwareInventoryCollector? inventoryCollector = null) : IAgentApi, IDisposable
 {
+    private readonly SemaphoreSlim signingGate = new(1, 1);
+    private readonly Dictionary<Guid, string> requestKeys = [];
     private string? volatileSecret;
     private string? volatileToken;
     public async Task<DeviceIdentity> EnrollAsync(string token, CancellationToken cancellationToken)
@@ -211,7 +214,8 @@ public sealed class AgentApi(HttpClient httpClient, string deviceName, IEnrollme
         var deviceSecret = enrollmentAttempts is null
             ? volatileSecret ??= Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
             : await enrollmentAttempts.GetOrCreateSecretAsync(token, httpClient.BaseAddress!.AbsoluteUri, cancellationToken);
-        using var response = await httpClient.PostAsJsonAsync("/api/v1/agent/enroll", new { token, deviceName, deviceSecret, osVersion = RuntimeInformation.OSDescription, agentVersion = "0.1.0" }, cancellationToken);
+        var inventory = inventoryCollector is null ? null : await inventoryCollector.GetInventoryAsync(cancellationToken);
+        using var response = await httpClient.PostAsJsonAsync("/api/v1/agent/enroll", new { token, deviceName, deviceSecret, osVersion = RuntimeInformation.OSDescription, agentVersion = "0.1.0", inventory }, cancellationToken);
         if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
         {
             var code = "EnrollmentRejected";
@@ -230,7 +234,8 @@ public sealed class AgentApi(HttpClient httpClient, string deviceName, IEnrollme
         try { identity = await response.Content.ReadFromJsonAsync<DeviceIdentity>(cancellationToken); }
         catch (JsonException) { throw new HttpRequestException("The enrollment response could not be confirmed."); }
         if (identity is null || identity.DeviceId == Guid.Empty || string.IsNullOrEmpty(identity.DeviceSecret) ||
-            identity.DeviceSecret.Length != 64 || identity.DeviceSecret.Any(c => !char.IsAsciiHexDigit(c)))
+            identity.DeviceSecret.Length != 64 || identity.DeviceSecret.Any(c => !char.IsAsciiHexDigit(c)) ||
+            identity.RequestSigningKey is not null && !AgentRequestSigner.IsValidKey(identity.RequestSigningKey))
             throw new HttpRequestException("The enrollment response could not be confirmed.");
         return identity;
     }
@@ -244,15 +249,15 @@ public sealed class AgentApi(HttpClient httpClient, string deviceName, IEnrollme
     public async Task SendHeartbeatAsync(DeviceIdentity identity, TelemetrySnapshot telemetry, string? idempotencyKey, CancellationToken cancellationToken)
     {
         using var request = CreateAuthenticatedRequest(HttpMethod.Post, "/api/v1/agent/heartbeat", identity);
-        request.Content = JsonContent.Create(new { idempotencyKey = idempotencyKey ?? Guid.NewGuid().ToString("N"), telemetry.CpuPercent, telemetry.RamPercent, telemetry.DiskPercent, telemetry.OsVersion, telemetry.AgentVersion, telemetry.MaintenanceUntil, telemetry.MaintenanceAction, telemetry.CollectedAt });
-        using var response = await httpClient.SendAsync(request, cancellationToken);
+        request.Content = JsonContent.Create(new { idempotencyKey = idempotencyKey ?? Guid.NewGuid().ToString("N"), telemetry.CpuPercent, telemetry.RamPercent, telemetry.DiskPercent, telemetry.OsVersion, telemetry.AgentVersion, telemetry.MaintenanceUntil, telemetry.MaintenanceAction, telemetry.CollectedAt, telemetry.Inventory, telemetry.Security, telemetry.Software });
+        using var response = await SendAuthenticatedAsync(request, identity, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
 
     public async Task<RemoteCommand?> PollCommandAsync(DeviceIdentity identity, CancellationToken cancellationToken)
     {
         using var request = CreateAuthenticatedRequest(HttpMethod.Post, "/api/v1/agent/commands/poll", identity);
-        using var response = await httpClient.SendAsync(request, cancellationToken);
+        using var response = await SendAuthenticatedAsync(request, identity, cancellationToken);
         if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<RemoteCommand>(cancellationToken);
@@ -262,14 +267,14 @@ public sealed class AgentApi(HttpClient httpClient, string deviceName, IEnrollme
     {
         using var request = CreateAuthenticatedRequest(HttpMethod.Post, $"/api/v1/agent/commands/{commandId}/result", identity);
         request.Content = JsonContent.Create(new { result.Succeeded, result.Message });
-        using var response = await httpClient.SendAsync(request, cancellationToken);
+        using var response = await SendAuthenticatedAsync(request, identity, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
 
     public async Task<AgentPolicySnapshot?> GetPolicyAsync(DeviceIdentity identity, CancellationToken cancellationToken)
     {
         using var request = CreateAuthenticatedRequest(HttpMethod.Get, "/api/v1/agent/policy", identity);
-        using var response = await httpClient.SendAsync(request, cancellationToken);
+        using var response = await SendAuthenticatedAsync(request, identity, cancellationToken);
         if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<AgentPolicySnapshot>(cancellationToken);
@@ -281,15 +286,58 @@ public sealed class AgentApi(HttpClient httpClient, string deviceName, IEnrollme
             throw new ArgumentException("Maintenance requires a valid request ID and eight decimal digits.");
         using var request = CreateAuthenticatedRequest(HttpMethod.Post, "/api/v1/agent/self-service/maintenance/redeem", identity);
         request.Content = JsonContent.Create(new { requestId, code });
-        using var response = await httpClient.SendAsync(request, cancellationToken);
+        using var response = await SendAuthenticatedAsync(request, identity, cancellationToken);
         response.EnsureSuccessStatusCode();
+    }
+
+    public async Task<IReadOnlyList<SoftwareDetectionRule>> GetSoftwareRulesAsync(DeviceIdentity identity, CancellationToken ct)
+    {
+        using var request = CreateAuthenticatedRequest(HttpMethod.Get, "/api/v1/agent/software-rules", identity);
+        using var response = await SendAuthenticatedAsync(request, identity, ct);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<SoftwareDetectionRule[]>(ct) ?? [];
     }
 
     private static HttpRequestMessage CreateAuthenticatedRequest(HttpMethod method, string path, DeviceIdentity identity)
     {
         var request = new HttpRequestMessage(method, path);
-        request.Headers.Add("X-SentinelLAN-Device-Id", identity.DeviceId.ToString());
-        request.Headers.Add("X-SentinelLAN-Device-Secret", identity.DeviceSecret);
         return request;
     }
+
+    public async Task<DeviceIdentity> UpgradeIdentityAsync(DeviceIdentity identity, CancellationToken ct)
+    {
+        if (identity.RequestSigningKey is not null) return identity;
+        await signingGate.WaitAsync(ct);
+        try
+        {
+            if (requestKeys.TryGetValue(identity.DeviceId, out var existing)) return identity with { RequestSigningKey = existing };
+            using var response = await httpClient.PostAsJsonAsync("/api/v1/agent/auth/upgrade", new { identity.DeviceId, identity.DeviceSecret }, ct);
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<SigningKeyResponse>(ct);
+            if (result?.RequestSigningKey is not { } encoded || !AgentRequestSigner.IsValidKey(encoded))
+                throw new HttpRequestException("The request-signing bootstrap response is invalid.");
+            requestKeys[identity.DeviceId] = encoded;
+            return identity with { RequestSigningKey = encoded };
+        }
+        finally { signingGate.Release(); }
+    }
+
+    private async Task<HttpResponseMessage> SendAuthenticatedAsync(HttpRequestMessage request, DeviceIdentity identity, CancellationToken ct)
+    {
+        var signedIdentity = await UpgradeIdentityAsync(identity, ct);
+        var body = request.Content is null ? [] : await request.Content.ReadAsByteArrayAsync(ct);
+        if (request.Content is not null)
+        {
+            var contentType = request.Content.Headers.ContentType;
+            request.Content.Dispose();
+            request.Content = new ByteArrayContent(body);
+            request.Content.Headers.ContentType = contentType;
+        }
+        var target = new Uri(httpClient.BaseAddress!, request.RequestUri!).PathAndQuery;
+        foreach (var (name, value) in AgentRequestSigner.Headers(signedIdentity, request.Method.Method, target, body)) request.Headers.Add(name, value);
+        return await httpClient.SendAsync(request, ct);
+    }
+
+    public void Dispose() => signingGate.Dispose();
+    private sealed record SigningKeyResponse(string RequestSigningKey);
 }

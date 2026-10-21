@@ -10,7 +10,7 @@ public sealed record SupportRequestDto(Guid Id, Guid DeviceId, string DeviceName
 public sealed record SupportMessageDto(Guid Id, Guid RequestId, Guid AuthorId, string AuthorName, string Body, DateTimeOffset CreatedAt);
 public sealed record SupportAttachmentDto(Guid Id, Guid RequestId, string FileName, string ContentType, int Size, DateTimeOffset CreatedAt);
 public sealed record CatalogAppDto(Guid Id, string Name, string Description, string Version, string PackageUrl,
-    string Sha256, string PublisherThumbprint, bool IsActive, bool RequiresApproval, DateTimeOffset CreatedAt);
+    string Sha256, string PublisherThumbprint, bool IsActive, bool RequiresApproval, DateTimeOffset CreatedAt, Guid? ProductCode = null, Guid? UpgradeCode = null);
 public sealed record AnnouncementDto(Guid Id, string Title, string Body, bool IsOutage, bool RequiresAcknowledgement,
     DateTimeOffset StartsAt, DateTimeOffset EndsAt, bool Acknowledged, bool Affected, DateTimeOffset CreatedAt);
 public sealed record EmployeeNotificationDto(Guid Id, string Title, string Body, Guid? RequestId, DateTimeOffset? ReadAt, DateTimeOffset CreatedAt);
@@ -26,7 +26,8 @@ public sealed record SupportDecisionDto(SupportRequestDto Request, string? Otp, 
 public sealed record RedeemMaintenanceRequest(string Code, bool Confirmed);
 public sealed record AgentRedeemMaintenanceRequest(Guid RequestId, string Code);
 public sealed record SaveCatalogApp(string Name, string Description, string Version, string PackageUrl,
-    string Sha256, string PublisherThumbprint, bool IsActive, bool RequiresApproval, string Reason, bool Confirmed);
+    string Sha256, string PublisherThumbprint, bool IsActive, bool RequiresApproval, string Reason, bool Confirmed, Guid? ProductCode = null, Guid? UpgradeCode = null,
+    Guid? Nonce = null, DateTimeOffset? ExpiresAt = null);
 public sealed record CreateAnnouncement(string Title, string Body, bool IsOutage, bool RequiresAcknowledgement,
     DateTimeOffset StartsAt, DateTimeOffset EndsAt, string Reason, bool Confirmed);
 public sealed record RegisterPushDevice(string Token, string Platform);
@@ -47,7 +48,8 @@ public interface ISelfServiceStore
     Task<SelfServiceRequest?> FindRequestAsync(Guid organizationId, Guid id, CancellationToken cancellationToken);
     Task<SelfServiceRequest?> FindIdempotentRequestAsync(Guid organizationId, Guid userId, string key, CancellationToken cancellationToken);
     Task<IReadOnlyList<SelfServiceMessage>> GetMessagesAsync(Guid organizationId, Guid requestId, CancellationToken cancellationToken);
-    Task<IReadOnlyList<SelfServiceAttachment>> GetAttachmentsAsync(Guid organizationId, Guid requestId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<SupportAttachmentDto>> GetAttachmentsAsync(Guid organizationId, Guid requestId, CancellationToken cancellationToken);
+    Task<int> CountAttachmentsAsync(Guid organizationId, Guid requestId, CancellationToken cancellationToken);
     Task<SelfServiceAttachment?> FindAttachmentAsync(Guid organizationId, Guid requestId, Guid id, CancellationToken cancellationToken);
     Task<IReadOnlyList<SelfServiceCatalogApp>> GetCatalogAsync(Guid organizationId, CancellationToken cancellationToken);
     Task<SelfServiceCatalogApp?> FindCatalogAppAsync(Guid organizationId, Guid id, CancellationToken cancellationToken);

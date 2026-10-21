@@ -67,6 +67,7 @@ function getBaseUrl(): string {
 
 export class MobileApiClient {
   private readonly baseUrl: string;
+  get serverOrigin(): string { return new URL(this.baseUrl).origin; }
 
   constructor(customBaseUrl?: string) {
     this.baseUrl = customBaseUrl ? customBaseUrl.replace(/\/+$/, '') : getBaseUrl();

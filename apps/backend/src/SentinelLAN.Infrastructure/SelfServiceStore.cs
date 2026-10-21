@@ -33,7 +33,14 @@ public sealed class SelfServiceStore(SentinelDbContext db) : ISelfServiceStore
     public Task<SelfServiceRequest?> FindRequestAsync(Guid org, Guid id, CancellationToken ct) => db.Set<SelfServiceRequest>().SingleOrDefaultAsync(x => x.OrganizationId == org && x.Id == id, ct);
     public Task<SelfServiceRequest?> FindIdempotentRequestAsync(Guid org, Guid user, string key, CancellationToken ct) => db.Set<SelfServiceRequest>().SingleOrDefaultAsync(x => x.OrganizationId == org && x.UserId == user && x.IdempotencyKey == key, ct);
     public async Task<IReadOnlyList<SelfServiceMessage>> GetMessagesAsync(Guid org, Guid requestId, CancellationToken ct) => await db.Set<SelfServiceMessage>().Where(x => x.OrganizationId == org && x.RequestId == requestId).ToListAsync(ct);
-    public async Task<IReadOnlyList<SelfServiceAttachment>> GetAttachmentsAsync(Guid org, Guid requestId, CancellationToken ct) => await db.Set<SelfServiceAttachment>().Where(x => x.OrganizationId == org && x.RequestId == requestId).ToListAsync(ct);
+    public async Task<IReadOnlyList<SupportAttachmentDto>> GetAttachmentsAsync(Guid org, Guid requestId, CancellationToken ct) =>
+        await db.Set<SelfServiceAttachment>().AsNoTracking()
+            .Where(x => x.OrganizationId == org && x.RequestId == requestId)
+            .OrderBy(x => x.CreatedAt).ThenBy(x => x.Id)
+            .Select(x => new SupportAttachmentDto(x.Id, x.RequestId, x.FileName, x.ContentType, x.Size, x.CreatedAt))
+            .ToListAsync(ct);
+    public Task<int> CountAttachmentsAsync(Guid org, Guid requestId, CancellationToken ct) =>
+        db.Set<SelfServiceAttachment>().CountAsync(x => x.OrganizationId == org && x.RequestId == requestId, ct);
     public Task<SelfServiceAttachment?> FindAttachmentAsync(Guid org, Guid requestId, Guid id, CancellationToken ct) => db.Set<SelfServiceAttachment>().SingleOrDefaultAsync(x => x.OrganizationId == org && x.RequestId == requestId && x.Id == id, ct);
     public async Task<IReadOnlyList<SelfServiceCatalogApp>> GetCatalogAsync(Guid org, CancellationToken ct) => await db.Set<SelfServiceCatalogApp>().Where(x => x.OrganizationId == org).ToListAsync(ct);
     public Task<SelfServiceCatalogApp?> FindCatalogAppAsync(Guid org, Guid id, CancellationToken ct) => db.Set<SelfServiceCatalogApp>().SingleOrDefaultAsync(x => x.OrganizationId == org && x.Id == id, ct);

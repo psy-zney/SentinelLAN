@@ -11,5 +11,6 @@ public sealed class AutomaticAlertStore(SentinelDbContext db) : IAutomaticAlertS
             (a.IsOpen || a.CreatedAt >= since)).ToListAsync(cancellationToken);
     public void Add(Alert alert) => db.Alerts.Add(alert);
     public void AddAudit(AuditLog audit) => db.AuditLogs.Add(audit);
+    public void AddSecurityEvent(SecurityEvent securityEvent) => db.SecurityEvents.Add(securityEvent);
     public Task SaveChangesAsync(CancellationToken cancellationToken) => db.SaveChangesAsync(cancellationToken);
 }

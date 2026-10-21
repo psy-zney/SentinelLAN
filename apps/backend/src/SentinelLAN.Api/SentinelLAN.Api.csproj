@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -15,9 +16,16 @@
   </ItemGroup>
 
   <PropertyGroup>
+    <AssemblyName>SentinelLAN.Api</AssemblyName>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="../../../../deploy/agent/configure-windows-agent.ps1" LogicalName="SentinelLAN.Bootstrap.configure-windows-agent.ps1" />
+    <EmbeddedResource Include="../../../../deploy/agent/bootstrap-windows.ps1" LogicalName="SentinelLAN.Bootstrap.bootstrap-windows.ps1" />
+    <EmbeddedResource Include="../../../../deploy/agent/bootstrap-linux.sh" LogicalName="SentinelLAN.Bootstrap.bootstrap-linux.sh" />
+  </ItemGroup>
 
 </Project>

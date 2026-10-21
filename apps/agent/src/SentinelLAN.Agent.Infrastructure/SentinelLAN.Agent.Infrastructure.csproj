@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
     <ProjectReference Include="..\SentinelLAN.Agent.Core\SentinelLAN.Agent.Core.csproj" />
   </ItemGroup>
 

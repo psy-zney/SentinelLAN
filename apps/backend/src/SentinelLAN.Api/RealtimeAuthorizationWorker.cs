@@ -1,6 +1,6 @@
 namespace SentinelLAN.Api;
 
-public sealed class RealtimeAuthorizationWorker(RealtimeConnectionGuard connections, TimeProvider clock,
+public sealed class RealtimeAuthorizationWorker(RealtimeConnectionGuard connections, AgentWakeConnectionGuard agents, TimeProvider clock,
     ILogger<RealtimeAuthorizationWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -8,10 +8,11 @@ public sealed class RealtimeAuthorizationWorker(RealtimeConnectionGuard connecti
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5), clock);
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
-            try { await connections.RevalidateAsync(stoppingToken); }
+            try { await connections.RevalidateAsync(stoppingToken); await agents.RevalidateAsync(stoppingToken); }
             catch (Exception exception) when (!stoppingToken.IsCancellationRequested)
             {
                 connections.AbortAll();
+                agents.AbortAll();
                 logger.LogError(exception, "Realtime authorization could not be verified; connections closed");
             }
         }

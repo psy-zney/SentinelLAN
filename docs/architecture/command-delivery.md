@@ -1,5 +1,7 @@
 # Agent command delivery and recovery
 
+Production commands use RSA-PSS/SHA-256 with keys of at least 3072 bits and the versioned `R2.<keyId>.<signature>` envelope. The server holds the private key; Agents receive only the corresponding public key and key ID. The signature covers command/tenant/device/actor IDs, type, reason, UTC issue/expiry timestamps, nonce and parameter. HMAC remains a Development fallback when no RSA private key is configured; non-Development API startup requires RSA. Rotate keys together with Agent verification configuration.
+
 The Agent polls `POST /api/v1/agent/commands/poll`. The server claims an eligible command and returns its original signed envelope. A claim sets `Status = Delivered` and a 30-second `DeliveryLeaseExpiresAt`. The lease timestamp is a database concurrency token, so simultaneous polls cannot claim the same pending command or expired lease twice.
 
 If the poll response is lost, the command remains eligible after the lease expires. The server redelivers the same command ID, nonce, signature, issue time, and expiry; it does not create or sign a replacement command. The Agent's persistent nonce store rejects a command it has already accepted. Before polling again, the Agent retries its durable pending result receipt. The result endpoint is idempotent by command ID.
@@ -11,3 +13,9 @@ The Agent retains and retries its durable receipt for seven days after execution
 The lease provides recovery from a lost poll response; it does not promise exactly-once execution across arbitrary process or hardware failure. The Agent records the nonce before execution and stores the result after execution. A crash between those steps can leave the command without a receipt, while the persistent nonce prevents a second execution. This favors at-most-once handling over silently repeating a command. Real Windows adapters produce verified success or explicit failure; simulation is limited to the two Simulate command types. Real lock/isolation requires explicit local lab/device authorization. See [ADR 0007](../adr/0007-real-windows-agent-actions.md).
 
 The production migration backfills active legacy `Delivered` rows with a short initial lease so they can re-enter this recovery flow. No database cleanup job is required: polling expires stale rows for the authenticated device.
+
+## Hybrid wake and poll
+
+The Agent maintains an HMAC-authenticated WebSocket at /hubs/agent-wake. A database outbox entry is saved atomically with each new command. Its dispatcher sends only wake-up to the authenticated tenant/device group; payloads and permission remain in the signed HTTP poll/lease flow. Wakes coalesce and Agent cycles execute serially; an ordinary poll runs about every five seconds when no wake arrives. Connection revocation is checked every five seconds, and network errors keep the existing backoff. Sub-second wake latency is a healthy-network demonstration target, not a guaranteed execution SLA.
+
+Request HMAC S1, replay storage and credential transition are separate from RSA command signatures; see [ADR 0029](../adr/0029-agent-request-signatures.md). Redis backplane, sticky sessions, Linux rollback and deployment limits are described in [the upgrade guide](../guides/product-upgrade.md).

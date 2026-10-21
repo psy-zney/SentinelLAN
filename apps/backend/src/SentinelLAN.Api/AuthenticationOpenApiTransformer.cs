@@ -10,7 +10,9 @@ public sealed class AuthenticationOpenApiTransformer : IOpenApiDocumentTransform
     private const string RefreshCookieScheme = "refreshCookie";
     private const string CsrfScheme = "csrfHeader";
     private const string AgentIdScheme = "agentDeviceId";
-    private const string AgentSecretScheme = "agentDeviceSecret";
+    private const string AgentSignatureScheme = "agentRequestSignature";
+    private const string AgentTimestampScheme = "agentRequestTimestamp";
+    private const string AgentNonceScheme = "agentRequestNonce";
     private const string BearerScheme = "bearerAuth";
 
     public Task TransformAsync(OpenApiDocument document, OpenApiDocumentTransformerContext context, CancellationToken cancellationToken)
@@ -21,7 +23,9 @@ public sealed class AuthenticationOpenApiTransformer : IOpenApiDocumentTransform
         document.Components.SecuritySchemes[RefreshCookieScheme] = ApiKey(ParameterLocation.Cookie, AuthCookieManager.RefreshCookieName, "Rotating HttpOnly browser refresh cookie.");
         document.Components.SecuritySchemes[CsrfScheme] = ApiKey(ParameterLocation.Header, AuthCookieManager.CsrfHeaderName, "Required with value 1 on state-changing cookie requests.");
         document.Components.SecuritySchemes[AgentIdScheme] = ApiKey(ParameterLocation.Header, AgentAuthenticationDefaults.DeviceIdHeader, "Enrolled device identifier.");
-        document.Components.SecuritySchemes[AgentSecretScheme] = ApiKey(ParameterLocation.Header, AgentAuthenticationDefaults.DeviceSecretHeader, "Per-device secret; never place it in a URL or request body.");
+        document.Components.SecuritySchemes[AgentSignatureScheme] = ApiKey(ParameterLocation.Header, SentinelLAN.Application.AgentRequestSignature.SignatureHeader, "S1 HMAC-SHA256 over device ID, method, original escaped path/query, timestamp, nonce and exact body hash; never transmit the signing key.");
+        document.Components.SecuritySchemes[AgentTimestampScheme] = ApiKey(ParameterLocation.Header, SentinelLAN.Application.AgentRequestSignature.TimestampHeader, "Unix seconds within 60 seconds of server UTC.");
+        document.Components.SecuritySchemes[AgentNonceScheme] = ApiKey(ParameterLocation.Header, SentinelLAN.Application.AgentRequestSignature.NonceHeader, "Fresh random UUID in lowercase N format; accepted once per device across replicas.");
         document.Components.SecuritySchemes[BearerScheme] = new OpenApiSecurityScheme
         {
             Type = SecuritySchemeType.Http,
@@ -40,7 +44,7 @@ public sealed class AuthenticationOpenApiTransformer : IOpenApiDocumentTransform
         var method = context.Description.HttpMethod ?? HttpMethods.Get;
         if (authorization.Any(item => item.Policy == SentinelLAN.Application.AuthorizationPolicies.Agent))
         {
-            AddRequirement(operation, context.Document!, AgentIdScheme, AgentSecretScheme);
+            AddRequirement(operation, context.Document!, AgentIdScheme, AgentSignatureScheme, AgentTimestampScheme, AgentNonceScheme);
             return Task.CompletedTask;
         }
 

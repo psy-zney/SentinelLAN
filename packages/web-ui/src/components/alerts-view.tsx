@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { useLiveQuery } from "@/hooks/use-live-query";
 import { ApiClient } from "@/lib/api-client";
 import { useTranslation } from "@/lib/i18n";
+import { MonitoringSettingsPanel } from "@/components/monitoring-settings-panel";
 import type { AlertItem, Device } from "@/types/api";
 
 const loadAlerts = () => new ApiClient().alerts();
@@ -112,6 +113,7 @@ export function AlertsView() {
 
   return (
     <>
+      <MonitoringSettingsPanel />
       <section className="metrics" aria-label="Security alert metrics">
         <div className="metric">
           <span>{lang === "vi" ? "Cảnh báo đang mở" : "Active Open Alerts"}</span>

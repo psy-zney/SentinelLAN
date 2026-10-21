@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import { DepartmentPanel } from "@/components/department-panel";
+import { EnrollmentPackagesPanel } from "@/components/enrollment-packages-panel";
 import { DeviceTable } from "@/components/device-table";
 import { useLiveQuery } from "@/hooks/use-live-query";
 import { ApiClient, ApiError } from "@/lib/api-client";
@@ -25,6 +27,7 @@ export function DevicesView() {
   const visible = devices.filter((device: Device) => { const matches = `${device.name} ${device.osVersion}`.toLowerCase().includes(query.toLowerCase()); const status = filter === "all" || filter === (device.isRevoked ? "revoked" : device.isOnline ? "online" : "offline"); return matches && status; });
   return <>
     <div className="panel" style={{ marginBottom: 18 }}><div className="filter-bar"><label htmlFor="device-search" className="sr-only">{lang === "vi" ? "Tìm thiết bị" : "Search devices"}</label><input id="device-search" className="form-input" style={{ maxWidth: 340 }} placeholder={t("search")} value={query} onChange={e => setQuery(e.target.value)} /><label htmlFor="device-filter" className="sr-only">{t("filter")}</label><select id="device-filter" className="form-select" style={{ maxWidth: 180 }} value={filter} onChange={e => setFilter(e.target.value)}><option value="all">{t("all")}</option><option value="online">{t("online")}</option><option value="offline">{t("offline")}</option><option value="revoked">{lang === "vi" ? "Đã thu hồi" : "Revoked"}</option></select>{session?.role === "Admin" && <button className="action" onClick={() => { setTokenOpen(true); setToken(null); setMessage(""); }}>{lang === "vi" ? "+ Tạo mã kết nối thiết bị" : "+ Issue enrollment token"}</button>}</div></div>
+    {session?.role === "Admin" && <><DepartmentPanel /><EnrollmentPackagesPanel /></>}
     {visible.length ? <DeviceTable initialDevices={visible} /> : <div className="panel empty-state"><p>{lang === "vi" ? "Không có thiết bị phù hợp bộ lọc." : "No devices match the current filter."}</p></div>}
     {tokenOpen && <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="token-title"><div className="modal"><div className="modal-header"><h3 id="token-title">{lang === "vi" ? "Tạo mã kết nối thiết bị" : "Issue connection code"}</h3><button className="modal-close" onClick={() => { setTokenOpen(false); setToken(null); }} aria-label={t("cancel")}>×</button></div>{token ? <>
       <p className="subtitle">{lang === "vi" ? "Sao chép mã trước khi đóng cửa sổ. Nhân viên mở bộ cài và dán mã; không cần nhập địa chỉ máy chủ hay chạy lệnh." : "Copy this code before closing. Paste it into the installer; no server address or command is needed."}</p>

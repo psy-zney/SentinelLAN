@@ -17,6 +17,7 @@ export interface SupportAttachment { id: string; requestId: string; fileName: st
 export interface CatalogApp {
   id: string; name: string; description: string; version: string; packageUrl: string; sha256: string;
   publisherThumbprint: string; isActive: boolean; requiresApproval: boolean; createdAt: string;
+  productCode?: string | null; upgradeCode?: string | null;
 }
 export type SaveCatalogApp = Omit<CatalogApp, "id" | "createdAt"> & { reason: string; confirmed: boolean };
 export interface Announcement {

@@ -1,3 +1,5 @@
+> Ghi chú lịch sử; địa chỉ hạ tầng đã thay bằng ví dụ. Trạng thái hiện hành xem [tổng quan](../project-overview.md) và [giám sát host](../deployment/vps-operations.md).
+
 # Cấu hình manager.zney295.id.vn và kiểm thử
 
 ## Đã triển khai trên VPS-Cong
@@ -20,20 +22,20 @@ Bản cũ ở /opt/sentinellan/releases/20261002-vps-monitor-220227. Trạng th�
 
 Các phần dưới đây ghi lại hiện trạng trước triển khai và kế hoạch ban đầu.
 
-Ngày kiểm tra SSH: 2026-10-09. VPS-Cong: 149.118.50.176, alias vps-cong, user ubuntu.
+Ngày kiểm tra SSH: 2026-10-09. VPS-Cong: 192.0.2.10, alias vps-cong, user ubuntu.
 
 ## Hiện trạng đã đọc trên VPS
 
 Docker Engine 26.1.3, Compose 2.27.1; Docker/Nginx đang hoạt động. Nginx host và gateway đều qua nginx -t. PostgreSQL khỏe; các container SentinelLAN chạy bằng user ít quyền, root filesystem chỉ đọc. API và PostgreSQL không có host port được publish. API thực tế nghe TLS 8443; port 8080 trong docker inspect là metadata của image. Gateway publish 127.0.0.1:3180 -> 8443 và kiểm tra health/ready trả ready với xác minh CA.
 
-Bản chạy hiện tại vẫn có platform và platform-tls, route /platform, khóa platform owner và chữ ký HMAC cũ. Chưa có biến SENTINELLAN_DATA_ENCRYPTION_KEY và COMMAND_PRIVATE_KEY_PEM. Hostname đang chạy là sentinellan.149.118.50.176.sslip.io. Cổng 9001/9002 đã dùng, 9003 chưa có listener tại thời điểm kiểm tra. Không thay cấu hình hoặc khởi động lại dịch vụ trong lượt kiểm tra SSH này.
+Bản chạy hiện tại vẫn có platform và platform-tls, route /platform, khóa platform owner và chữ ký HMAC cũ. Chưa có biến SENTINELLAN_DATA_ENCRYPTION_KEY và COMMAND_PRIVATE_KEY_PEM. Hostname đang chạy là sentinel.example.com. Cổng 9001/9002 đã dùng, 9003 chưa có listener tại thời điểm kiểm tra. Không thay cấu hình hoặc khởi động lại dịch vụ trong lượt kiểm tra SSH này.
 
 ## Chuẩn bị triển khai
 
 1. Sao lưu PostgreSQL và cấu hình bằng quy trình backup-encrypted hiện có; kiểm tra khả năng khôi phục và giữ khóa riêng ngoài checkout. Không dùng down -v hoặc xóa dữ liệu.
 2. Dùng deploy/vps/manager.env.example làm danh sách cấu hình, bảo quản file thật ở /opt/sentinellan/shared/.env, quyền 600. PUBLIC_DOMAIN=manager.zney295.id.vn; HOST_PROXY_PORT=9003. Giữ khóa access/vault hiện tại khi nâng cấp. Tạo RSA 3072 cho COMMAND_PRIVATE_KEY_PEM và key ID riêng, cung cấp public key tương ứng trong bộ cài Agent công ty. Tạo khóa dữ liệu bằng openssl rand -base64 32; không dùng khóa demo, không gửi khóa vào chat. Đưa public key vào bộ cài đã ký và kiểm thử Agent trước khi đổi signer trên VPS.
 3. Có thể giữ CA nội bộ đang dùng nếu chưa hết hạn. Script generate-internal-tls.sh tạo một thư mục mới, chứng thư có hạn 90 ngày, user/cert phù hợp cho từng container. Đổi TLS_DIRECTORY và nginx CA path cùng nhau. Không ghi đè thư mục TLS cũ.
-4. Cloudflare: tạo A manager -> 149.118.50.176, bật proxy màu cam; SSL/TLS Full (strict), Always Use HTTPS và minimum TLS 1.2. Cấp Origin CA certificate cho đúng hostname, lưu cert/key ngoài Git theo đường dẫn trong nginx.manager.conf.template. Bật Authenticated Origin Pulls và đặt CA origin-pull chính thức vào file cloudflare-origin-pull-ca.pem; site mới yêu cầu client cert nên phải hoàn tất bước này trước khi bật site.
+4. Cloudflare: tạo A manager -> 192.0.2.10, bật proxy màu cam; SSL/TLS Full (strict), Always Use HTTPS và minimum TLS 1.2. Cấp Origin CA certificate cho đúng hostname, lưu cert/key ngoài Git theo đường dẫn trong nginx.manager.conf.template. Bật Authenticated Origin Pulls và đặt CA origin-pull chính thức vào file cloudflare-origin-pull-ca.pem; site mới yêu cầu client cert nên phải hoàn tất bước này trước khi bật site.
 5. Thêm site Nginx riêng từ nginx.manager.conf.template, thay TLS_DIRECTORY. nginx.auth-limit.conf chỉ được include một lần ở http context. Không thay default site hoặc cấu hình của dự án khác. Không sử dụng origin rule ép manager về gateway HTTP 9000. WebSocket phải được phép; không áp CAPTCHA/interactive challenge hoặc Cloudflare Access trình duyệt cho đường dẫn Agent/mobile.
 6. Cache Rule cho hostname manager.zney295.id.vn: Bypass cache cho toàn hostname khi kiểm thử để tránh cache phiên, nội dung hỗ trợ và token. Sau kiểm thử chỉ cân nhắc cache static assets; API và HTML cá nhân vẫn bypass. Đây là quy tắc phía Cloudflare, repo không tự cập nhật tài khoản Cloudflare.
 7. Validate Compose bằng prod + host-proxy + encrypted và --env-file /opt/sentinellan/shared/.env. Các service chỉ còn postgres, api, company, employee, company-tls, employee-tls, nginx. Sau khi kiểm thử bản mới và duyệt triển khai, nâng cấp riêng project sentinellan-prod; remove-orphans chỉ ở project này để gỡ platform cũ, không dùng prune toàn Docker. nginx -t trước reload. Việc thay database/crypto cần lịch triển khai và phương án phục hồi.

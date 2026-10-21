@@ -1,5 +1,7 @@
 "use client";
 import { portalBaseUrl } from "@/lib/portal";
+import { EndpointObservationPanel } from "@/components/endpoint-observation-panel";
+import { SoftwareCompliancePanel } from "@/components/software-compliance-panel";
 
 import { useCallback, useRef, useState } from "react";
 import { useLiveQuery } from "@/hooks/use-live-query";
@@ -402,6 +404,8 @@ export function DeviceDetail({ id }: { id: string }) {
       {/* ========================================================================= */}
       {activeTab === "overview" && (
         <>
+          <EndpointObservationPanel deviceId={id} technical={isAdmin} />
+          <SoftwareCompliancePanel deviceId={id} />
           {/* Health Score & Key Metrics Banner */}
           <section className="metrics" aria-label="Device health metrics">
             <div className="metric">

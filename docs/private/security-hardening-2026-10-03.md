@@ -1,6 +1,8 @@
+> Ghi chú lịch sử; địa chỉ hạ tầng đã thay bằng ví dụ. Trạng thái hiện hành xem [tổng quan](../project-overview.md) và [giám sát host](../deployment/vps-operations.md).
+
 # SentinelLAN — mã hóa và bảo vệ triển khai
 
-Triển khai tại `vps-cong`, origin `https://sentinellan.149.118.50.176.sslip.io`, release `/opt/sentinellan/releases/20261002-security-180831`. Thay đổi giới hạn trong hệ thống SentinelLAN, site Nginx tương ứng và cấu hình đăng nhập SSH; các container ứng dụng khác vẫn giữ nguyên ID và tiếp tục chạy.
+Triển khai tại `vps-cong`, origin `https://sentinel.example.com`, release `/opt/sentinellan/releases/20261002-security-180831`. Thay đổi giới hạn trong hệ thống SentinelLAN, site Nginx tương ứng và cấu hình đăng nhập SSH; các container ứng dụng khác vẫn giữ nguyên ID và tiếp tục chạy.
 
 ## Đã triển khai
 

@@ -14,7 +14,13 @@ public sealed class Organization : Entity
     public required string Name { get; init; }
     public bool IsSuspended { get; set; }
 }
-public sealed class Department : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public required string Name { get; init; } }
+public sealed class Department : Entity, ITenantOwned
+{
+    public Guid OrganizationId { get; init; }
+    public required string Name { get; set; }
+    public Guid? PolicyId { get; set; }
+    public Guid Revision { get; set; } = Guid.NewGuid();
+}
 public static class UserStatuses
 {
     public const string PendingActivation = "PendingActivation";
@@ -24,6 +30,7 @@ public static class UserStatuses
 
 public sealed class User : Entity, ITenantOwned
 {
+    public Guid? DepartmentId { get; set; }
     public Guid OrganizationId { get; init; }
     public required string Email { get; init; }
     public required string DisplayName { get; init; }
@@ -87,6 +94,7 @@ public sealed class DeviceQrLabel : Entity, ITenantOwned
 
 public sealed class Device : Entity, ITenantOwned
 {
+    public Guid? DepartmentId { get; set; }
     public Guid OrganizationId { get; init; }
     public required string Name { get; set; }
     public required string OsVersion { get; set; }
@@ -113,6 +121,7 @@ public sealed class Device : Entity, ITenantOwned
     public DateTimeOffset? WarrantyExpiresAt { get; set; }
     public string? VendorName { get; set; }
     public string? SpecificationsJson { get; set; }
+    public DateTimeOffset? InventoryCapturedAt { get; set; }
 
     public bool IsOnline(DateTimeOffset now) => !IsRevoked && LastSeenAt is not null && now - LastSeenAt < TimeSpan.FromMinutes(2);
 }
@@ -138,9 +147,33 @@ public sealed class DeviceEnrollmentToken : Entity, ITenantOwned
     }
 }
 
-public sealed class DeviceCredential : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public Guid DeviceId { get; init; } public required string SecretHash { get; init; } public DateTimeOffset? RevokedAt { get; set; } }
+public sealed class DeviceCredential : Entity, ITenantOwned
+{
+    public Guid OrganizationId { get; init; }
+    public Guid DeviceId { get; init; }
+    public required string SecretHash { get; init; }
+    public DateTimeOffset? RevokedAt { get; set; }
+    public byte[]? RequestSigningKeyEnvelope { get; set; }
+    public DateTimeOffset? RequestSigningConfirmedAt { get; set; }
+    public Guid RequestKeyRevision { get; set; } = Guid.NewGuid();
+}
 public sealed class DeviceHeartbeat : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public Guid DeviceId { get; init; } public required string IdempotencyKey { get; init; } public DateTimeOffset RecordedAt { get; init; } }
-public sealed class TelemetrySnapshot : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public Guid DeviceId { get; init; } public double CpuPercent { get; init; } public double RamPercent { get; init; } public double DiskPercent { get; init; } public DateTimeOffset? CollectedAt { get; init; } }
+public sealed class TelemetrySnapshot : Entity, ITenantOwned
+{
+    public Guid OrganizationId { get; init; }
+    public Guid DeviceId { get; init; }
+    public double CpuPercent { get; init; }
+    public double RamPercent { get; init; }
+    public double DiskPercent { get; init; }
+    public DateTimeOffset? CollectedAt { get; init; }
+    public DateTimeOffset? ProtectionCollectedAt { get; init; }
+    public string AntivirusStatus { get; init; } = EndpointProtection.Unknown;
+    public string AntivirusProvider { get; init; } = "Unknown";
+    public string FirewallDomainStatus { get; init; } = EndpointProtection.Unknown;
+    public string FirewallPrivateStatus { get; init; } = EndpointProtection.Unknown;
+    public string FirewallPublicStatus { get; init; } = EndpointProtection.Unknown;
+    public string DiskEncryptionStatus { get; init; } = EndpointProtection.Unknown;
+}
 public sealed class Policy : Entity, ITenantOwned
 {
     public Guid OrganizationId { get; init; }
@@ -206,31 +239,6 @@ public sealed class Alert : Entity, ITenantOwned
 public sealed class SecurityEvent : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public Guid? DeviceId { get; init; } public required string Type { get; init; } public required string Summary { get; init; } }
 public sealed class AuditLog : Entity, ITenantOwned { public Guid OrganizationId { get; init; } public required Guid ActorId { get; init; } public Guid? DeviceId { get; init; } public required string Action { get; init; } public required string Reason { get; init; } public required string Outcome { get; set; } }
 
-public sealed class VpsNode : Entity
-{
-    private static readonly HashSet<string> AllowedServices = ["nginx", "docker", "sentinellan-agent", "cron", "systemd-resolved"];
-    public required string Name { get; set; }
-    public required string Host { get; set; }
-    public int Port { get; set; } = 22;
-    public required string Username { get; set; }
-    public required string EncryptedPrivateKey { get; set; }
-    public string? HostKeyFingerprint { get; set; }
-    public string Status { get; set; } = "Offline";
-    public double? CpuPercent { get; set; }
-    public double? RamPercent { get; set; }
-    public double? DiskPercent { get; set; }
-    public int? DockerContainersCount { get; set; }
-    public string? Uptime { get; set; }
-    public string? OsInfo { get; set; }
-    public DateTimeOffset? LastCheckedAt { get; set; }
-    public string? ErrorMessage { get; set; }
-
-    public static bool IsAllowedService(string serviceName) =>
-        !string.IsNullOrWhiteSpace(serviceName) && AllowedServices.Contains(serviceName.Trim().ToLowerInvariant());
-
-    public static IReadOnlyCollection<string> GetAllowedServices() => AllowedServices;
-}
-
 public sealed class IncidentTicket : Entity, ITenantOwned
 {
     public Guid OrganizationId { get; init; }
@@ -271,6 +279,7 @@ public sealed class WorkOrder : Entity, ITenantOwned
     public decimal LaborCost { get; set; }
     public decimal TotalCost => PartsCost + LaborCost;
     public string? ChecklistJson { get; set; }
+    public string? AutomaticKey { get; init; }
     public string? Notes { get; set; }
     public Guid? AssignedTechnicianId { get; set; }
 

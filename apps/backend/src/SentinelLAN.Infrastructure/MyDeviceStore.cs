@@ -5,7 +5,7 @@ using SentinelLAN.Domain;
 
 namespace SentinelLAN.Infrastructure;
 
-public sealed class MyDeviceStore(SentinelDbContext db) : IMyDeviceStore
+public sealed class MyDeviceStore(SentinelDbContext db, IDepartmentPolicyReader? departments = null) : IMyDeviceStore
 {
     public Task<Device?> FindAssignedDeviceAsync(Guid organizationId, Guid userId, CancellationToken cancellationToken) =>
         db.Devices.FirstOrDefaultAsync(
@@ -24,10 +24,11 @@ public sealed class MyDeviceStore(SentinelDbContext db) : IMyDeviceStore
             .Where(pa => pa.OrganizationId == organizationId && pa.DeviceId == deviceId)
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (assignment is null) return null;
+        var policyId = assignment?.PolicyId ?? (departments is null ? null : await departments.GetPolicyIdAsync(organizationId, deviceId, cancellationToken));
+        if (policyId is null) return null;
 
         var policy = await db.Policies
-            .Where(p => p.OrganizationId == organizationId && p.Id == assignment.PolicyId)
+            .Where(p => p.OrganizationId == organizationId && p.Id == policyId)
             .FirstOrDefaultAsync(cancellationToken);
 
         return policy?.Name;

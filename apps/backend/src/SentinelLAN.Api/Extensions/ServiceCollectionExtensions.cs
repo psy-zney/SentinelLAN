@@ -19,7 +19,17 @@ public static class ServiceCollectionExtensions
             options.AddDocumentTransformer<AuthenticationOpenApiTransformer>();
             options.AddOperationTransformer<AuthenticationOpenApiTransformer>();
         });
-        services.AddSignalR();
+        var realtime = services.AddSignalR();
+        if (!string.IsNullOrWhiteSpace(configuration["SENTINELLAN_REDIS_CONNECTION"]))
+        {
+            var prefix = configuration["SENTINELLAN_REDIS_CHANNEL_PREFIX"];
+            if (string.IsNullOrWhiteSpace(prefix) || prefix.Length > 80 || prefix.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not '-' and not '_'))
+                throw new InvalidOperationException("Redis requires a unique SENTINELLAN_REDIS_CHANNEL_PREFIX (letters, digits, dash, underscore).");
+            realtime.AddStackExchangeRedis(configuration["SENTINELLAN_REDIS_CONNECTION"]!, options => options.Configuration.ChannelPrefix = StackExchange.Redis.RedisChannel.Literal(prefix));
+        }
+        services.AddSingleton<AgentWakeConnectionGuard>();
+        services.AddHostedService<OperationalOutboxWorker>();
+        services.AddScoped<IOperationalNotificationSink>(provider => provider.GetRequiredService<SelfServiceService>());
         services.AddSingleton<RealtimeConnectionGuard>();
         services.AddHostedService<RealtimeAuthorizationWorker>();
         services.AddHostedService<DeviceStatusPublisher>();
@@ -59,6 +69,12 @@ public static class ServiceCollectionExtensions
         if (dataEncryptionKey == accessTokenSigningKey || dataEncryptionKey == serverVaultKey || dataEncryptionKey == signingKey)
             throw new InvalidOperationException("The data encryption key must be distinct from authentication and command keys.");
         services.AddSingleton(new SensitiveDataCipher(dataEncryptionKey));
+        var attachmentMode = configuration["SENTINELLAN_ATTACHMENT_STORAGE"] ?? "Database";
+        if (attachmentMode is not ("Database" or "S3")) throw new InvalidOperationException("SENTINELLAN_ATTACHMENT_STORAGE must be Database or S3.");
+        services.AddSingleton(new AttachmentObjectStoreOptions(attachmentMode == "S3", configuration["SENTINELLAN_S3_ENDPOINT"], configuration["SENTINELLAN_S3_REGION"],
+            configuration["SENTINELLAN_S3_BUCKET"], configuration["SENTINELLAN_S3_ACCESS_KEY"], configuration["SENTINELLAN_S3_SECRET_KEY"], configuration.GetValue<bool>("SENTINELLAN_S3_FORCE_PATH_STYLE")));
+        services.AddSingleton<IAttachmentObjectStore, AttachmentObjectStore>();
+        services.AddHostedService<AttachmentOffloadWorker>();
         var privateCommandKey = configuration["SENTINELLAN_COMMAND_PRIVATE_KEY_PEM"];
         var useRsaCommands = !string.IsNullOrWhiteSpace(privateCommandKey);
         if (!environment.IsDevelopment() && !useRsaCommands)
@@ -90,6 +106,26 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IRefreshTokenProtector, RefreshTokenProtector>();
         services.AddSingleton(new AuthenticationSettings(TimeSpan.FromMinutes(15), TimeSpan.FromDays(7)));
         services.AddSingleton(TimeProvider.System);
+        services.AddSingleton(AgentRequestAuthenticationSettings.FromConfiguration(configuration, environment));
+        services.AddScoped<AgentCredentialProvisioner>();
+        services.AddScoped<IMonitoringSettingsStore, MonitoringSettingsStore>();
+        services.AddScoped<MonitoringSettingsService>();
+        services.AddScoped<IAdministrativeRequestJournal, AdministrativeRequestJournal>();
+        services.AddScoped<ISoftwareCatalogDetectionReader, SoftwareCatalogDetectionReader>();
+        services.AddScoped<ISoftwareComplianceStore, SoftwareComplianceStore>();
+        services.AddScoped<ISoftwareDetectionQuota, SoftwareDetectionQuota>();
+        services.AddScoped<DepartmentService>();
+        services.AddScoped<EnrollmentBatchService>();
+        services.AddScoped<IDepartmentStore, DepartmentStore>();
+        services.AddScoped<IDepartmentPolicyReader, DepartmentStore>();
+        services.AddScoped<SoftwareComplianceService>();
+        services.AddScoped<IPreventiveDeviceReader, PreventiveDeviceReader>();
+        services.AddScoped<IPreventiveMaintenanceStore, PreventiveMaintenanceStore>();
+        services.AddScoped<PreventiveMaintenanceService>();
+        services.AddScoped<IEndpointObservationReader, EndpointObservationReader>();
+        services.AddScoped<EndpointObservationService>();
+        services.AddSingleton<MonitoringChangeSignal>();
+        services.AddSingleton<IMonitoringChangeSignal>(provider => provider.GetRequiredService<MonitoringChangeSignal>());
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentTenantProvider, HttpCurrentTenantProvider>();
         services.AddScoped<IAuthenticationStore, AuthenticationStore>();

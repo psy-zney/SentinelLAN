@@ -11,14 +11,16 @@ public sealed class DeviceHealthReader(SentinelDbContext db) : IDeviceHealthRead
     public async Task<IReadOnlyList<DeviceHealthObservation>> GetDevicesAsync(Guid organizationId, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var devices = await db.Devices.AsNoTracking().Where(d => d.OrganizationId == organizationId && !d.IsRevoked).ToListAsync(cancellationToken);
-        var since = now.AddMinutes(-10);
+        var since = now.AddMinutes(-32);
         var observations = new List<DeviceHealthObservation>();
         foreach (var device in devices)
         {
             var samples = await db.Telemetry.AsNoTracking().Where(t => t.OrganizationId == organizationId && t.DeviceId == device.Id &&
                     (t.CollectedAt ?? t.CreatedAt) >= since && (t.CollectedAt ?? t.CreatedAt) <= now)
-                .OrderByDescending(t => t.CollectedAt ?? t.CreatedAt).Take(100)
-                .Select(t => new HealthMeasurement(t.CollectedAt ?? t.CreatedAt, t.CpuPercent, t.RamPercent, t.DiskPercent)).ToListAsync(cancellationToken);
+                .OrderByDescending(t => t.CollectedAt ?? t.CreatedAt).Take(1024)
+                .Select(t => new HealthMeasurement(t.CollectedAt ?? t.CreatedAt, t.CpuPercent, t.RamPercent, t.DiskPercent,
+                    t.ProtectionCollectedAt, t.AntivirusStatus, t.FirewallDomainStatus, t.FirewallPrivateStatus,
+                    t.FirewallPublicStatus, t.DiskEncryptionStatus)).ToListAsync(cancellationToken);
             observations.Add(new(organizationId, device.Id, device.Name, device.LastSeenAt, device.MaintenanceUntil, samples));
         }
         return observations;

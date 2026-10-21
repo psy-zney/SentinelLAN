@@ -87,6 +87,20 @@ tbody tr:hover td { background: #fafbfc; }
 .login-submit { width: 100%; margin-top: 8px; min-height: 42px; }
 .field { display: grid; gap: 7px; margin: 16px 0; font-size: 13px; font-weight: 600; }
 .field small { color: var(--muted); font-weight: 400; }
+.management-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 16px; margin: 18px 0; align-items: end; }
+.management-form > label, .upgrade-panel > label { display: grid; gap: 7px; font-size: 13px; font-weight: 600; }
+.management-form > label:has(input[type="checkbox"]) { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font-weight: 400; }
+.management-form > p { grid-column: 1 / -1; }
+.management-form > button { width: fit-content; }
+.upgrade-panel { margin-bottom: 18px; }
+.upgrade-panel > summary { font-weight: 700; cursor: pointer; }
+.upgrade-panel > p { color: var(--muted); line-height: 1.6; }
+.upgrade-panel > label { max-width: 460px; margin: 16px 0; }
+.upgrade-panel details { margin-top: 16px; }
+.upgrade-panel details > label { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.bulk-command-form { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 20px; }
+.bulk-command-form > p { flex-basis: 100%; margin: 0; }
+.bulk-command-form > label { display: inline-flex; align-items: center; gap: 8px; }
 input:not([type="checkbox"]):not([type="radio"]), textarea, select { min-width: 0; max-width: 100%; border: 1px solid #cdd3d9; border-radius: 6px; background: #fff; padding: 10px 12px; color: var(--ink); }
 textarea { resize: vertical; }
 input::placeholder, textarea::placeholder { color: #7d8791; font-weight: 400; }

@@ -16,7 +16,7 @@ public interface IPolicyStore
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }
 
-public sealed class PolicyService(IPolicyStore store)
+public sealed class PolicyService(IPolicyStore store, IDepartmentPolicyReader? departments = null)
 {
     private static readonly HashSet<string> AllowedUsbModes = ["Blocked", "ReadOnly", "FullAccess"];
 
@@ -26,8 +26,9 @@ public sealed class PolicyService(IPolicyStore store)
     public async Task<AgentPolicyDto?> GetAssignedPolicyAsync(AgentContext agent, CancellationToken cancellationToken)
     {
         var assignment = await store.FindAssignmentAsync(agent.OrganizationId, agent.DeviceId, cancellationToken);
-        if (assignment is null) return null;
-        var policy = await store.FindPolicyAsync(agent.OrganizationId, assignment.PolicyId, cancellationToken);
+        var policyId = assignment?.PolicyId ?? (departments is null ? null : await departments.GetPolicyIdAsync(agent.OrganizationId, agent.DeviceId, cancellationToken));
+        if (policyId is null) return null;
+        var policy = await store.FindPolicyAsync(agent.OrganizationId, policyId.Value, cancellationToken);
         return policy is null ? null : new AgentPolicyDto(policy.Id, policy.IdleTimeoutMinutes, policy.UsbMode);
     }
 

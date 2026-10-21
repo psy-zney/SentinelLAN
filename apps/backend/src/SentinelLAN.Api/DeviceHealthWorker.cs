@@ -2,15 +2,30 @@ using SentinelLAN.Application;
 
 namespace SentinelLAN.Api;
 
-public sealed class DeviceHealthWorker(IServiceScopeFactory scopes, TimeProvider clock, ILogger<DeviceHealthWorker> logger) : BackgroundService
+public sealed class DeviceHealthWorker(IServiceScopeFactory scopes, TimeProvider clock, ILogger<DeviceHealthWorker> logger,
+    MonitoringChangeSignal signal) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1), clock);
-        while (await timer.WaitForNextTickAsync(stoppingToken))
+        var scheduled = timer.WaitForNextTickAsync(stoppingToken).AsTask();
+        var requested = signal.ReadAsync(stoppingToken);
+        while (!stoppingToken.IsCancellationRequested)
         {
-            await RunAsync<TechnicalDataRetentionService>((service, ct) => service.RunAsync(ct), stoppingToken);
-            await RunAsync<DeviceHealthMonitoringService>((service, ct) => service.RunAsync(ct), stoppingToken);
+            if (await Task.WhenAny(scheduled, requested) == requested)
+            {
+                var organizationId = await requested;
+                requested = signal.ReadAsync(stoppingToken);
+                await RunAsync<DeviceHealthMonitoringService>((service, ct) => service.RunOrganizationAsync(organizationId, ct), stoppingToken);
+            }
+            else
+            {
+                if (!await scheduled) break;
+                scheduled = timer.WaitForNextTickAsync(stoppingToken).AsTask();
+                await RunAsync<TechnicalDataRetentionService>((service, ct) => service.RunAsync(ct), stoppingToken);
+                await RunAsync<DeviceHealthMonitoringService>((service, ct) => service.RunAsync(ct), stoppingToken);
+                await RunAsync<PreventiveMaintenanceService>((service, ct) => service.RunAsync(ct), stoppingToken);
+            }
         }
     }
 

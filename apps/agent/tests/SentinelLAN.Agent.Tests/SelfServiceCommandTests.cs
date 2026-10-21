@@ -193,6 +193,27 @@ public sealed class SelfServiceCommandTests
         finally { DeleteTempDirectory(path); }
     }
 
+    [Theory]
+    [InlineData(5)]
+    [InlineData(60)]
+    public async Task ConfiguredPauseWithinBoundsSurvivesProtectedStateReload(int minutes)
+    {
+        var path = TempDirectory();
+        try
+        {
+            var filename = Path.Combine(path, "maintenance.dat");
+            var store = new ProtectedMaintenanceStateStore(filename, "unit-test-only-maintenance-secret-32-bytes");
+            var executor = new AgentMaintenanceExecutor(new(AllowAgentMaintenance: true), store, new MsiFake(), new TestClock(_now));
+            var command = MaintenanceCommand("PauseAgent") with
+            { Parameter = JsonSerializer.Serialize(new { requestId = Guid.NewGuid(), maintenanceExpiresAt = _now.AddMinutes(5), pauseMinutes = minutes }) };
+            Assert.True((await executor.ExecuteAsync(command, default)).Succeeded);
+            var loaded = new ProtectedMaintenanceStateStore(filename, "unit-test-only-maintenance-secret-32-bytes");
+            Assert.Equal(_now.AddMinutes(minutes), loaded.Load(_now)!.MaintenanceUntil);
+            Assert.Null(loaded.Load(_now.AddMinutes(minutes)));
+        }
+        finally { DeleteTempDirectory(path); }
+    }
+
     [Fact]
     public async Task UninstallRequiresRegisteredSentinelMsiAndPersistsAuthorizationBeforeStarting()
     {
@@ -238,10 +259,11 @@ public sealed class SelfServiceCommandTests
         using var client = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.test") };
         var api = new AgentApi(client, "fixture-device");
         var requestId = Guid.NewGuid();
-        await api.RedeemMaintenanceAsync(new(DeviceId, "fixture-secret"), requestId, "12345678", default);
+        await api.RedeemMaintenanceAsync(new(DeviceId, "fixture-secret", Convert.ToBase64String(new byte[32])), requestId, "12345678", default);
         Assert.Equal("/api/v1/agent/self-service/maintenance/redeem", handler.Path);
         Assert.Equal(DeviceId.ToString(), handler.Device);
-        Assert.Equal("fixture-secret", handler.Secret);
+        Assert.Null(handler.Secret);
+        Assert.StartsWith("S1.", handler.Signature);
         Assert.DoesNotContain("fixture-secret", handler.Body);
         using var body = JsonDocument.Parse(handler.Body!);
         Assert.Equal(requestId, body.RootElement.GetProperty("requestId").GetGuid());
@@ -291,9 +313,9 @@ public sealed class SelfServiceCommandTests
     }
     private sealed class RedeemHandler : HttpMessageHandler
     {
-        public string? Path, Device, Secret, Body;
+        public string? Path, Device, Secret, Body, Signature;
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        { Path = request.RequestUri!.AbsolutePath; Device = request.Headers.GetValues("X-SentinelLAN-Device-Id").Single(); Secret = request.Headers.GetValues("X-SentinelLAN-Device-Secret").Single(); Body = await request.Content!.ReadAsStringAsync(cancellationToken); return new(HttpStatusCode.OK); }
+        { Path = request.RequestUri!.AbsolutePath; Device = request.Headers.GetValues("X-SentinelLAN-Device-Id").Single(); Secret = request.Headers.TryGetValues("X-SentinelLAN-Device-Secret", out var secrets) ? secrets.Single() : null; Signature = request.Headers.GetValues("X-SentinelLAN-Signature").Single(); Body = await request.Content!.ReadAsStringAsync(cancellationToken); return new(HttpStatusCode.OK); }
     }
     private sealed class Collector : ITelemetryCollector { public TelemetrySnapshot Collect() => new(1, 2, 3, "fixture", "test"); }
     private sealed class Signatures : ICommandSignatureVerifier { public bool IsConfigured => true; public bool Verify(RemoteCommand command) => true; }

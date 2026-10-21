@@ -75,6 +75,83 @@ namespace SentinelLAN.Infrastructure.Migrations
                     b.ToTable("AccountActivationTokens");
                 });
 
+            modelBuilder.Entity("SentinelLAN.Domain.AdministrativeRequestNonce", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("Nonce")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Operation")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "Nonce")
+                        .IsUnique();
+
+                    b.ToTable("AdministrativeRequestNonce");
+                });
+
+            modelBuilder.Entity("SentinelLAN.Domain.AgentRequestNonce", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("Nonce")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("DeviceId", "Nonce")
+                        .IsUnique();
+
+                    b.ToTable("AgentRequestNonce");
+                });
+
             modelBuilder.Entity("SentinelLAN.Domain.Alert", b =>
                 {
                     b.Property<Guid>("Id")
@@ -271,9 +348,17 @@ namespace SentinelLAN.Infrastructure.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PolicyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("Revision")
+                        .IsConcurrencyToken()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
@@ -282,6 +367,11 @@ namespace SentinelLAN.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "Name")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "PolicyId");
 
                     b.ToTable("Departments");
                 });
@@ -307,6 +397,12 @@ namespace SentinelLAN.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("InventoryCapturedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsRevoked")
@@ -383,6 +479,8 @@ namespace SentinelLAN.Infrastructure.Migrations
                     b.HasIndex("OrganizationId", "AssignedUserId")
                         .IsUnique()
                         .HasFilter("\"AssignedUserId\" IS NOT NULL AND \"IsRevoked\" = FALSE");
+
+                    b.HasIndex("OrganizationId", "DepartmentId");
 
                     b.ToTable("Devices");
                 });
@@ -467,6 +565,16 @@ namespace SentinelLAN.Infrastructure.Migrations
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
+
+                    b.Property<Guid>("RequestKeyRevision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("RequestSigningConfirmedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte[]>("RequestSigningKeyEnvelope")
+                        .HasColumnType("bytea");
 
                     b.Property<DateTimeOffset?>("RevokedAt")
                         .HasColumnType("timestamp with time zone");
@@ -616,6 +724,59 @@ namespace SentinelLAN.Infrastructure.Migrations
                     b.ToTable("DeviceQrLabels");
                 });
 
+            modelBuilder.Entity("SentinelLAN.Domain.DeviceSoftwareObservation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CapturedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Detection")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("InstalledVersion")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RuleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RuleRevision")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CapturedAt");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "DeviceId", "RuleId", "Source")
+                        .IsUnique();
+
+                    b.ToTable("DeviceSoftwareObservation");
+                });
+
             modelBuilder.Entity("SentinelLAN.Domain.IncidentTicket", b =>
                 {
                     b.Property<Guid>("Id")
@@ -680,6 +841,44 @@ namespace SentinelLAN.Infrastructure.Migrations
                     b.ToTable("Incidents");
                 });
 
+            modelBuilder.Entity("SentinelLAN.Domain.OperationalOutboxMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("EntityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("ProcessedAt", "CreatedAt");
+
+                    b.ToTable("OperationalOutboxMessage");
+                });
+
             modelBuilder.Entity("SentinelLAN.Domain.Organization", b =>
                 {
                     b.Property<Guid>("Id")
@@ -713,6 +912,60 @@ namespace SentinelLAN.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Organizations");
+                });
+
+            modelBuilder.Entity("SentinelLAN.Domain.OrganizationMonitoringSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CpuThresholdPercent")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DiskThresholdPercent")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaintenancePauseMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OfflineMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("PreventiveIntervalMonths")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RamThresholdPercent")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("SecurityAlertsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("SustainedMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("WarrantyNoticeDays")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId")
+                        .IsUnique();
+
+                    b.ToTable("OrganizationMonitoringSettings");
                 });
 
             modelBuilder.Entity("SentinelLAN.Domain.Permission", b =>
@@ -824,6 +1077,73 @@ namespace SentinelLAN.Infrastructure.Migrations
                     b.HasIndex("OrganizationId");
 
                     b.ToTable("PolicyAssignments");
+                });
+
+            modelBuilder.Entity("SentinelLAN.Domain.PreventiveMaintenanceRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "Day")
+                        .IsUnique();
+
+                    b.ToTable("PreventiveMaintenanceRun");
+                });
+
+            modelBuilder.Entity("SentinelLAN.Domain.ProhibitedSoftwareRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ProductCode")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpgradeCode")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("ProhibitedSoftwareRule");
                 });
 
             modelBuilder.Entity("SentinelLAN.Domain.RefreshSession", b =>
@@ -1051,11 +1371,17 @@ namespace SentinelLAN.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("ObjectKey")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("RequestId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("Size")
+                        .HasColumnType("integer");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1085,6 +1411,9 @@ namespace SentinelLAN.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<Guid>("DetectionRevision")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
@@ -1098,6 +1427,9 @@ namespace SentinelLAN.Infrastructure.Migrations
                     b.Property<string>("PackageUrl")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<Guid?>("ProductCode")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("PublishedByUserId")
                         .HasColumnType("uuid");
@@ -1115,6 +1447,9 @@ namespace SentinelLAN.Infrastructure.Migrations
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpgradeCode")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Version")
                         .IsRequired()
@@ -1433,6 +1768,14 @@ namespace SentinelLAN.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AntivirusProvider")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AntivirusStatus")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<DateTimeOffset?>("CollectedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1445,11 +1788,30 @@ namespace SentinelLAN.Infrastructure.Migrations
                     b.Property<Guid>("DeviceId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("DiskEncryptionStatus")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<double>("DiskPercent")
                         .HasColumnType("double precision");
 
+                    b.Property<string>("FirewallDomainStatus")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FirewallPrivateStatus")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FirewallPublicStatus")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ProtectionCollectedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<double>("RamPercent")
                         .HasColumnType("double precision");
@@ -1474,6 +1836,9 @@ namespace SentinelLAN.Infrastructure.Migrations
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("DisplayName")
                         .IsRequired()
@@ -1508,114 +1873,12 @@ namespace SentinelLAN.Infrastructure.Migrations
 
                     b.HasIndex("OrganizationId");
 
+                    b.HasIndex("OrganizationId", "DepartmentId");
+
                     b.HasIndex("OrganizationId", "Email")
                         .IsUnique();
 
                     b.ToTable("Users");
-                });
-
-            modelBuilder.Entity("SentinelLAN.Domain.VpsActionReservation", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ActorId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("Nonce")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("VpsNodeId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Nonce")
-                        .IsUnique();
-
-                    b.ToTable("VpsActionReservations");
-                });
-
-            modelBuilder.Entity("SentinelLAN.Domain.VpsNode", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<double?>("CpuPercent")
-                        .HasColumnType("double precision");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<double?>("DiskPercent")
-                        .HasColumnType("double precision");
-
-                    b.Property<int?>("DockerContainersCount")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("EncryptedPrivateKey")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Host")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("HostKeyFingerprint")
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset?>("LastCheckedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("OsInfo")
-                        .HasColumnType("text");
-
-                    b.Property<int>("Port")
-                        .HasColumnType("integer");
-
-                    b.Property<double?>("RamPercent")
-                        .HasColumnType("double precision");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Uptime")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Username")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Host");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("VpsNodes");
                 });
 
             modelBuilder.Entity("SentinelLAN.Domain.WorkOrder", b =>
@@ -1626,6 +1889,9 @@ namespace SentinelLAN.Infrastructure.Migrations
 
                     b.Property<Guid?>("AssignedTechnicianId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("AutomaticKey")
+                        .HasColumnType("text");
 
                     b.Property<string>("ChecklistJson")
                         .HasColumnType("text");
@@ -1687,12 +1953,34 @@ namespace SentinelLAN.Infrastructure.Migrations
 
                     b.HasIndex("OrganizationId");
 
+                    b.HasIndex("OrganizationId", "AutomaticKey")
+                        .IsUnique()
+                        .HasFilter("\"AutomaticKey\" IS NOT NULL");
+
                     b.HasIndex("OrganizationId", "DeviceId");
 
                     b.HasIndex("OrganizationId", "WorkOrderNumber")
                         .IsUnique();
 
                     b.ToTable("WorkOrders");
+                });
+
+            modelBuilder.Entity("SentinelLAN.Domain.Department", b =>
+                {
+                    b.HasOne("SentinelLAN.Domain.Policy", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "PolicyId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("SentinelLAN.Domain.Device", b =>
+                {
+                    b.HasOne("SentinelLAN.Domain.Department", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "DepartmentId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("SentinelLAN.Domain.SelfServiceAnnouncementReceipt", b =>
@@ -1726,6 +2014,15 @@ namespace SentinelLAN.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("FK_SSMessage_Request");
+                });
+
+            modelBuilder.Entity("SentinelLAN.Domain.User", b =>
+                {
+                    b.HasOne("SentinelLAN.Domain.Department", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "DepartmentId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 #pragma warning restore 612, 618
         }

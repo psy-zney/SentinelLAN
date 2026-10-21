@@ -1,6 +1,8 @@
+> Ghi chú lịch sử; địa chỉ hạ tầng đã thay bằng ví dụ. Trạng thái hiện hành xem [tổng quan](../project-overview.md) và [giám sát host](../deployment/vps-operations.md).
+
 # Giao diện SentinelLAN — 03/10/2026
 
-Đã cập nhật ba giao diện web tại https://sentinellan.149.118.50.176.sslip.io.
+Đã cập nhật ba giao diện web tại https://sentinel.example.com.
 
 - Dùng nền sáng, chữ vừa phải, bảng đơn giản và nút có tên rõ việc cần làm.
 - Thống nhất kiểu giao diện trong company, employee và platform qua `packages/web-ui/src/styles/app.css`.

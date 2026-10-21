@@ -12,7 +12,7 @@ public static class AgentEndpoints
 {
     public static void MapAgentEndpoints(this RouteGroupBuilder v1)
     {
-        v1.MapPost("/agent/enroll", async (EnrollRequest request, HttpContext http, SentinelDbContext db, IHubContext<UpdatesHub> hub, CancellationToken ct) =>
+        v1.MapPost("/agent/enroll", async (EnrollRequest request, HttpContext http, SentinelDbContext db, IHubContext<UpdatesHub> hub, SensitiveDataCipher cipher, CancellationToken ct) =>
         {
             http.Response.Headers.CacheControl = "no-store";
             using var developmentWrite = db.Database.IsRelational() ? null : await DevelopmentWriteGate.EnterAsync(ct);
@@ -32,7 +32,7 @@ public static class AgentEndpoints
                 return Results.BadRequest(new ProblemDetails { Title = "Organization unavailable", Status = 400 });
             if (!token.TryUse(now))
             {
-                var recovered = await TryRecoverEnrollmentAsync(db, token, request, now, ct);
+                var recovered = await TryRecoverEnrollmentAsync(db, token, request, now, cipher, ct);
                 if (recovered is not null) return Results.Ok(recovered);
                 var failureReason = token.UsedAt is not null ? "Token already used" : "Token expired";
                 db.Add(new AuditLog
@@ -52,9 +52,11 @@ public static class AgentEndpoints
 
             var secret = request.DeviceSecret ?? Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
             var device = new Device { OrganizationId = token.OrganizationId, Name = request.DeviceName, OsVersion = request.OsVersion, AgentVersion = request.AgentVersion };
+            EndpointObservationMapping.Apply(device, request.Inventory, now);
             token.CompleteRegistration(device.Id);
             db.Add(device);
-            db.Add(new DeviceCredential { OrganizationId = token.OrganizationId, DeviceId = device.Id, SecretHash = SecretHash.Create(secret) });
+            var envelope = AgentRequestKey.Create(cipher, token.OrganizationId, device.Id, out var requestSigningKey);
+            db.Add(new DeviceCredential { OrganizationId = token.OrganizationId, DeviceId = device.Id, SecretHash = SecretHash.Create(secret), RequestSigningKeyEnvelope = envelope });
             db.Add(new AuditLog
             {
                 OrganizationId = token.OrganizationId,
@@ -69,27 +71,29 @@ public static class AgentEndpoints
             {
                 db.ChangeTracker.Clear();
                 var committedToken = await db.EnrollmentTokens.SingleAsync(x => x.TokenHash == hash, ct);
-                var recovered = await TryRecoverEnrollmentAsync(db, committedToken, request, now, ct);
+                var recovered = await TryRecoverEnrollmentAsync(db, committedToken, request, now, cipher, ct);
                 if (recovered is not null) return Results.Ok(recovered);
                 db.Add(new AuditLog { OrganizationId = token.OrganizationId, ActorId = token.Id, Action = "AgentEnrollmentFailed", Reason = "Token already used", Outcome = "Failed" });
                 await db.SaveChangesAsync(ct);
                 return EnrollmentError("TokenUsed", "Mã kết nối đã được sử dụng. Vui lòng liên hệ IT để cấp mã mới.");
             }
             await hub.Clients.Group(TenantGroup.Name(token.OrganizationId)).SendAsync("device-status", new { device.Id, online = false, device.LastSeenAt }, ct);
-            return Results.Ok(new EnrollResponse(device.Id, secret));
+            return Results.Ok(new EnrollResponse(device.Id, secret, requestSigningKey));
         }).RequireRateLimiting("sensitive")
             .WithSummary("Register one device using an unused, unexpired enrollment token")
             .WithDescription("Consumes the token atomically with device creation. SelfHost requires a client-generated 32-byte DeviceSecret persisted before sending. Before token expiry, an identical device with proof of that secret can recover a lost response; other attempts return TokenUsed. Revoked devices cannot recover. HTTP 400 includes TokenUsed, TokenExpired or EnrollmentRejected.")
             .Produces<EnrollResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        v1.MapPost("/agent/heartbeat", async (HeartbeatRequest request, HttpContext http, SentinelDbContext db, IHubContext<UpdatesHub> hub, CancellationToken ct) =>
+        v1.MapPost("/agent/heartbeat", async (HeartbeatRequest request, HttpContext http, SentinelDbContext db, IHubContext<UpdatesHub> hub, SoftwareComplianceService software, CancellationToken ct) =>
         {
             using var developmentWrite = db.Database.IsRelational() ? null : await DevelopmentWriteGate.EnterAsync(ct);
             var agent = http.User.ToAgentContext()!.Value;
             if (!DeviceRequestValidation.IsValid(request)) return Results.BadRequest(new ProblemDetails { Title = "Valid idempotency key, 0-100 telemetry percentages, OS and Agent version are required", Status = 400 });
             if (await db.Heartbeats.AnyAsync(x => x.DeviceId == agent.DeviceId && x.OrganizationId == agent.OrganizationId && x.IdempotencyKey == request.IdempotencyKey, ct)) return Results.Ok(new { duplicate = true });
             var receivedAt = DateTimeOffset.UtcNow;
+            try { await software.ApplyAgentReportAsync(agent, request.Software, ct); }
+            catch (SoftwareComplianceException error) { return Results.Problem(error.Message, statusCode: error.StatusCode); }
             if (request.CollectedAt is { } collectedAt && (collectedAt > receivedAt.AddMinutes(2) || collectedAt < receivedAt.AddHours(-2)))
                 return Results.BadRequest(new ProblemDetails { Title = "Collection time must be within two hours before receipt and no more than two minutes in the future", Status = 400 });
             var device = await db.Devices.SingleAsync(x => x.Id == agent.DeviceId && x.OrganizationId == agent.OrganizationId, ct);
@@ -99,7 +103,27 @@ public static class AgentEndpoints
             device.MaintenanceUntil = request.MaintenanceUntil?.ToUniversalTime();
             device.MaintenanceAction = request.MaintenanceAction;
             db.Add(new DeviceHeartbeat { OrganizationId = device.OrganizationId, DeviceId = device.Id, IdempotencyKey = request.IdempotencyKey, RecordedAt = DateTimeOffset.UtcNow });
-            db.Add(new TelemetrySnapshot { OrganizationId = device.OrganizationId, DeviceId = device.Id, CpuPercent = request.CpuPercent, RamPercent = request.RamPercent, DiskPercent = request.DiskPercent, CollectedAt = request.CollectedAt?.ToUniversalTime(), CreatedAt = receivedAt });
+            EndpointObservationMapping.Apply(device, request.Inventory, receivedAt);
+            var security = request.Security;
+            if (security is not null && (security.CapturedAt > receivedAt.AddMinutes(2) || security.CapturedAt < receivedAt.AddHours(-2)))
+                return Results.BadRequest(new ProblemDetails { Title = "Security observation time is invalid", Status = 400 });
+            db.Add(new TelemetrySnapshot
+            {
+                OrganizationId = device.OrganizationId,
+                DeviceId = device.Id,
+                CpuPercent = request.CpuPercent,
+                RamPercent = request.RamPercent,
+                DiskPercent = request.DiskPercent,
+                CollectedAt = request.CollectedAt?.ToUniversalTime(),
+                CreatedAt = receivedAt,
+                ProtectionCollectedAt = security?.CapturedAt,
+                AntivirusStatus = security?.AntivirusStatus ?? EndpointProtection.Unknown,
+                AntivirusProvider = security?.AntivirusProvider ?? "Unknown",
+                FirewallDomainStatus = security?.FirewallDomainStatus ?? EndpointProtection.Unknown,
+                FirewallPrivateStatus = security?.FirewallPrivateStatus ?? EndpointProtection.Unknown,
+                FirewallPublicStatus = security?.FirewallPublicStatus ?? EndpointProtection.Unknown,
+                DiskEncryptionStatus = security?.DiskEncryptionStatus ?? EndpointProtection.Unknown
+            });
             try { await db.SaveChangesAsync(ct); }
             catch (DbUpdateException)
             {
@@ -185,7 +209,7 @@ public static class AgentEndpoints
     private static bool IsEnrollmentSecret(string value) => value.Length == 64 && value.All(char.IsAsciiHexDigit);
 
     private static async Task<EnrollResponse?> TryRecoverEnrollmentAsync(SentinelDbContext db,
-        DeviceEnrollmentToken token, EnrollRequest request, DateTimeOffset now, CancellationToken ct)
+        DeviceEnrollmentToken token, EnrollRequest request, DateTimeOffset now, SensitiveDataCipher cipher, CancellationToken ct)
     {
         if (token.UsedAt is null || token.EnrolledDeviceId is not Guid id || now >= token.ExpiresAt ||
             request.DeviceSecret is null || !IsEnrollmentSecret(request.DeviceSecret)) return null;
@@ -194,7 +218,7 @@ public static class AgentEndpoints
         if (device is null || device.Name != request.DeviceName) return null;
         var credential = await db.DeviceCredentials.AsNoTracking().SingleOrDefaultAsync(c =>
             c.DeviceId == id && c.OrganizationId == token.OrganizationId && c.RevokedAt == null, ct);
-        if (credential is null || !SecretHash.Matches(request.DeviceSecret, credential.SecretHash)) return null;
+        if (credential is null || credential.RequestSigningConfirmedAt is not null || !SecretHash.Matches(request.DeviceSecret, credential.SecretHash)) return null;
         db.Add(new AuditLog
         {
             OrganizationId = token.OrganizationId,
@@ -205,7 +229,9 @@ public static class AgentEndpoints
             Outcome = "Success"
         });
         await db.SaveChangesAsync(ct);
-        return new EnrollResponse(id, request.DeviceSecret);
+        var key = credential.RequestSigningKeyEnvelope is null ? null : AgentRequestKey.Read(cipher, credential.OrganizationId, id, credential.RequestSigningKeyEnvelope);
+        try { return new EnrollResponse(id, request.DeviceSecret, key is null ? null : Convert.ToBase64String(key)); }
+        finally { if (key is not null) CryptographicOperations.ZeroMemory(key); }
     }
 
     private static IResult EnrollmentError(string code, string detail) => Results.BadRequest(new ProblemDetails

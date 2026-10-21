@@ -42,17 +42,24 @@ public sealed partial class SelfServiceService
         return MessageDto(message);
     }, ct);
 
-    private static SupportAttachmentDto AttachmentDto(SelfServiceAttachment attachment) => new(attachment.Id, attachment.RequestId, attachment.FileName, attachment.ContentType, attachment.Content.Length, attachment.CreatedAt);
+    private static SupportAttachmentDto AttachmentDto(SelfServiceAttachment attachment) => new(attachment.Id, attachment.RequestId, attachment.FileName, attachment.ContentType, attachment.Size, attachment.CreatedAt);
     public async Task<IReadOnlyList<SupportAttachmentDto>> GetAttachmentsAsync(ActorContext actor, Guid id, CancellationToken ct)
     {
         await ScopedRequestAsync(actor, id, ct);
-        return (await store.GetAttachmentsAsync(actor.OrganizationId, id, ct)).OrderBy(a => a.CreatedAt).Select(AttachmentDto).ToArray();
+        return await store.GetAttachmentsAsync(actor.OrganizationId, id, ct);
     }
     public async Task<SelfServiceAttachment> DownloadAttachmentAsync(ActorContext actor, Guid id, Guid attachmentId, CancellationToken ct)
     {
         await ScopedRequestAsync(actor, id, ct);
         var attachment = await store.FindAttachmentAsync(actor.OrganizationId, id, attachmentId, ct);
         Require(attachment is not null, 404, "Không tìm thấy ảnh đính kèm.");
+        if (attachment!.ObjectKey is not null)
+        {
+            if (attachmentObjects is not { Enabled: true }) throw new SelfServiceException(503, "Kho ảnh tạm thời chưa khả dụng.");
+            try { attachment.Content = await attachmentObjects.GetAsync(actor.OrganizationId, id, attachment.Id, attachment.Size, ct); }
+            catch (IOException) { throw new SelfServiceException(503, "Chưa thể tải ảnh. Hãy thử lại sau."); }
+            catch (System.Security.Cryptography.CryptographicException) { throw new SelfServiceException(503, "Ảnh chưa thể được xác thực. Hãy liên hệ IT."); }
+        }
         return attachment!;
     }
     public Task<SupportAttachmentDto> AddAttachmentAsync(ActorContext actor, Guid id, CreateSupportAttachment input, CancellationToken ct) => MutateAsync(actor.OrganizationId, async () =>
@@ -66,7 +73,7 @@ public sealed partial class SelfServiceService
         var png = content.Length >= 8 && content.AsSpan(0, 8).SequenceEqual(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 });
         var jpeg = content.Length >= 4 && content[0] == 255 && content[1] == 216 && content[2] == 255;
         Require(content.Length is > 0 and <= 2 * 1024 * 1024 && (input.ContentType == "image/png" ? png : jpeg), 400, "Nội dung ảnh không đúng định dạng hoặc vượt quá 2 MiB.");
-        Require((await store.GetAttachmentsAsync(actor.OrganizationId, id, ct)).Count < 10, 400, "Mỗi yêu cầu nhận tối đa 10 ảnh.");
+        Require(await store.CountAttachmentsAsync(actor.OrganizationId, id, ct) < 10, 400, "Mỗi yêu cầu nhận tối đa 10 ảnh.");
         var attachment = new SelfServiceAttachment
         {
             OrganizationId = actor.OrganizationId,
@@ -74,6 +81,7 @@ public sealed partial class SelfServiceService
             UploadedByUserId = actor.UserId,
             FileName = input.FileName.Trim(),
             ContentType = input.ContentType,
+            Size = content.Length,
             Content = content,
             CreatedAt = Now
         };
@@ -82,7 +90,7 @@ public sealed partial class SelfServiceService
         return AttachmentDto(attachment);
     }, ct);
 
-    private static CatalogAppDto CatalogDto(SelfServiceCatalogApp app) => new(app.Id, app.Name, app.Description, app.Version, app.PackageUrl, app.Sha256, app.PublisherThumbprint, app.IsActive, app.RequiresApproval, app.CreatedAt);
+    private static CatalogAppDto CatalogDto(SelfServiceCatalogApp app) => new(app.Id, app.Name, app.Description, app.Version, app.PackageUrl, app.Sha256, app.PublisherThumbprint, app.IsActive, app.RequiresApproval, app.CreatedAt, app.ProductCode, app.UpgradeCode);
     public async Task<IReadOnlyList<CatalogAppDto>> GetCatalogAsync(ActorContext actor, CancellationToken ct)
     {
         Human(actor);
@@ -92,6 +100,9 @@ public sealed partial class SelfServiceService
     {
         Require(actor.Role == Roles.Admin, 403, "Chỉ quản trị viên được quản lý danh mục phần mềm.");
         Confirm(input.Reason, input.Confirmed);
+        Require(input.ProductCode != Guid.Empty && input.UpgradeCode != Guid.Empty, 400, "Mã ProductCode/UpgradeCode cần là UUID hợp lệ hoặc để trống.");
+        Require(input.Nonce is not null && input.Nonce != Guid.Empty && input.ExpiresAt > Now && input.ExpiresAt <= Now.AddMinutes(5), 400, "Thao tác công bố cần nonce mới và thời hạn tối đa 5 phút.");
+        Require(!await administrativeJournal.NonceExistsAsync(actor.OrganizationId, input.Nonce!.Value, ct), 409, "Thao tác công bố đã được xử lý.");
         Require(!string.IsNullOrWhiteSpace(input.Name) && input.Name.Length <= 120 && !string.IsNullOrWhiteSpace(input.Description) && input.Description.Length <= 1000 &&
             !string.IsNullOrWhiteSpace(input.Version) && input.Version.Length <= 60, 400, "Vui lòng nhập tên, mô tả và phiên bản phần mềm.");
         Require(input.PackageUrl is { Length: <= 2000 } && Uri.TryCreate(input.PackageUrl, UriKind.Absolute, out var url) && url.Scheme == Uri.UriSchemeHttps &&
@@ -122,9 +133,22 @@ public sealed partial class SelfServiceService
             };
             store.Add(app);
         }
+        if (app.ProductCode != input.ProductCode || app.UpgradeCode != input.UpgradeCode || app.Version != input.Version.Trim() || app.IsActive != input.IsActive)
+            app.DetectionRevision = Guid.NewGuid();
         app.Name = input.Name.Trim(); app.Description = input.Description.Trim(); app.Version = input.Version.Trim();
         app.PackageUrl = input.PackageUrl!; app.Sha256 = input.Sha256!.ToUpperInvariant(); app.PublisherThumbprint = input.PublisherThumbprint!.ToUpperInvariant();
         app.IsActive = input.IsActive; app.RequiresApproval = input.RequiresApproval; app.PublishedByUserId = actor.UserId; app.UpdatedAt = Now;
+        app.ProductCode = input.ProductCode; app.UpgradeCode = input.UpgradeCode;
+        Require(softwareQuota is null || await softwareQuota.CanUseAsync(actor.OrganizationId, app.Id, "Catalog", app.IsActive && (app.ProductCode is not null || app.UpgradeCode is not null), ct), 400, "Đơn vị chỉ có thể bật tối đa 256 quy tắc nhận diện phần mềm.");
+        administrativeJournal.Reserve(new AdministrativeRequestNonce
+        {
+            OrganizationId = actor.OrganizationId,
+            ActorId = actor.UserId,
+            Nonce = input.Nonce!.Value,
+            Operation = "CatalogAppSaved",
+            ExpiresAt = input.ExpiresAt!.Value,
+            CreatedAt = Now
+        });
         audit.Record(actor.OrganizationId, actor.UserId, null, id.HasValue ? "CatalogAppUpdated" : "CatalogAppPublished", input.Reason.Trim(), "Saved");
         return CatalogDto(app);
     }, ct);

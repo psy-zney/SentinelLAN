@@ -6,14 +6,16 @@ public sealed class AgentCycle(DeviceIdentity identity, ITelemetryCollector tele
     IPendingCommandResultStore? pendingResultStore = null,
     ICommandExecutor? executor = null,
     IAgentPolicyApplier? policyApplier = null,
-    IAgentMaintenanceStateStore? maintenanceStateStore = null)
+    IAgentMaintenanceStateStore? maintenanceStateStore = null,
+    IEndpointObservationCollector? observations = null,
+    ISoftwareObservationCollector? softwareObservations = null)
 {
     private PendingCommandResult? _result = pendingResultStore?.Load();
     private readonly ResilientOfflineQueue<QueuedTelemetry> _offlineQueue = offlineTelemetry ?? new(50);
 
     public int OfflineQueueCount => _offlineQueue.Count;
 
-    public async Task<string?> RunAsync(CancellationToken cancellationToken)
+    public async Task<string?> RunAsync(CancellationToken cancellationToken, bool collectTelemetry = true)
     {
         // Command receipts are time-sensitive and must not wait behind telemetry retries.
         if (_result is not null)
@@ -30,14 +32,24 @@ public sealed class AgentCycle(DeviceIdentity identity, ITelemetryCollector tele
         }
 
         var maintenance = maintenanceStateStore?.Load(clock.GetUtcNow());
-        var health = telemetry.Collect() with { MaintenanceUntil = maintenance?.MaintenanceUntil, MaintenanceAction = maintenance?.Action, CollectedAt = clock.GetUtcNow() };
-        _offlineQueue.Enqueue(new QueuedTelemetry(health, Guid.NewGuid().ToString("N")));
-        var sent = 0;
-        while (sent < 10 && _offlineQueue.TryPeek(TimeSpan.FromHours(1), out var queuedTelemetry))
+        if (collectTelemetry)
         {
-            await api.SendHeartbeatAsync(identity, queuedTelemetry!.Snapshot, queuedTelemetry.IdempotencyKey, cancellationToken);
-            _offlineQueue.TryDequeue(out _);
-            sent++;
+            var health = telemetry.Collect() with { MaintenanceUntil = maintenance?.MaintenanceUntil, MaintenanceAction = maintenance?.Action, CollectedAt = clock.GetUtcNow() };
+            if (observations is not null)
+            {
+                var details = await observations.CollectAsync(cancellationToken);
+                health = health with { Inventory = details.Inventory, Security = details.Security };
+            }
+            if (softwareObservations is not null) health = health with { Software = await softwareObservations.CollectAsync(identity, cancellationToken) };
+            _offlineQueue.Enqueue(new QueuedTelemetry(health, Guid.NewGuid().ToString("N")));
+            var sent = 0;
+            while (sent < 10 && _offlineQueue.TryPeek(TimeSpan.FromHours(1), out var queuedTelemetry))
+            {
+                await api.SendHeartbeatAsync(identity, queuedTelemetry!.Snapshot, queuedTelemetry.IdempotencyKey, cancellationToken);
+                _offlineQueue.TryDequeue(out _);
+                sent++;
+            }
+
         }
 
         // Keep collecting telemetry, but do not consume commands without a verification key.
@@ -55,6 +67,14 @@ public sealed class AgentCycle(DeviceIdentity identity, ITelemetryCollector tele
             else if (command.Type == "CollectTelemetryNow")
             {
                 var sample = telemetry.Collect() with { MaintenanceUntil = maintenance?.MaintenanceUntil, MaintenanceAction = maintenance?.Action, CollectedAt = clock.GetUtcNow() };
+                observations?.Invalidate();
+                if (observations is not null)
+                {
+                    var details = await observations.CollectAsync(cancellationToken);
+                    sample = sample with { Inventory = details.Inventory, Security = details.Security };
+                }
+                softwareObservations?.Invalidate();
+                if (softwareObservations is not null) sample = sample with { Software = await softwareObservations.CollectAsync(identity, cancellationToken) };
                 // Use a stable key so an ambiguous HTTP response cannot duplicate the measurement.
                 await api.SendHeartbeatAsync(identity, sample, $"command-{command.Id:N}", cancellationToken);
                 result = new(true, "Fresh system telemetry collected and acknowledged by the server");
@@ -80,6 +100,8 @@ public sealed class AgentCycle(DeviceIdentity identity, ITelemetryCollector tele
             result = new(false, $"Execution could not be confirmed: {exception.GetType().Name}");
         }
         var pending = new PendingCommandResult(command.Id, command.ExpiresAt, result);
+        if (command.Type == "InstallApprovedApp" && result.Succeeded) observations?.Invalidate();
+        if (command.Type == "InstallApprovedApp" && result.Succeeded) softwareObservations?.Invalidate();
         pendingResultStore?.Save(pending);
         _result = pending;
         await SendPendingResultAsync(cancellationToken);

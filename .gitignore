@@ -51,6 +51,7 @@ playwright-report/
 *.expo/
 
 # OS and temporary files
+/scratch/
 *.user
 *.suo
 *.log

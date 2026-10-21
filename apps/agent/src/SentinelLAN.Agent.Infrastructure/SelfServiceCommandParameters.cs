@@ -26,7 +26,7 @@ public static class SelfServiceCommandParameters
     public static bool TryReadMaintenance(RemoteCommand command, DateTimeOffset now, out MaintenanceParameters? parameters)
     {
         parameters = Read<MaintenanceParameters>(command.Parameter);
-        return parameters is not null && parameters.RequestId != Guid.Empty && parameters.PauseMinutes == 15 &&
+        return parameters is not null && parameters.RequestId != Guid.Empty && parameters.PauseMinutes is >= 5 and <= 60 &&
             parameters.MaintenanceExpiresAt > now && parameters.MaintenanceExpiresAt <= command.IssuedAt.AddMinutes(30);
     }
 

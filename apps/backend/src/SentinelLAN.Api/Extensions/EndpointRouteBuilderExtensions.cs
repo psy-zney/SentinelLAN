@@ -13,12 +13,17 @@ public static class EndpointRouteBuilderExtensions
         v1.MapSelfService();
         v1.MapAuthEndpoints();
         v1.MapHostMonitoringEndpoints();
+        v1.MapOrganizationSettingsEndpoints();
+        v1.MapEndpointObservationEndpoints();
+        v1.MapSoftwareComplianceEndpoints();
+        v1.MapDepartmentEndpoints();
         v1.MapMobileAuthEndpoints();
         v1.MapUserEndpoints();
         v1.MapEnrollmentEndpoints();
         v1.MapDeviceEndpoints();
         v1.MapMyDeviceEndpoints();
         v1.MapAgentEndpoints();
+        v1.MapAgentAuthenticationEndpoints();
         v1.MapCommandEndpoints();
         v1.MapPolicyEndpoints();
         v1.MapAlertEndpoints();
@@ -27,6 +32,7 @@ public static class EndpointRouteBuilderExtensions
         v1.MapQrEndpoints();
 
         app.MapHub<UpdatesHub>("/hubs/updates", options => options.CloseOnAuthenticationExpiration = true).RequireAuthorization(AuthorizationPolicies.ViewDevices);
+        app.MapHub<AgentWakeHub>("/hubs/agent-wake").RequireAuthorization(AuthorizationPolicies.Agent).RequireRateLimiting("sensitive");
         return app;
     }
 }

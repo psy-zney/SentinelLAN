@@ -31,13 +31,16 @@ public sealed class MyDeviceService(IMyDeviceStore store) : IMyDeviceService
             "Trạng thái kết nối trực tuyến (Online / Offline)",
             "Thời điểm nhận tín hiệu gần nhất (Last Seen UTC / Local)",
             "Thông số phần cứng kỹ thuật: % CPU, % RAM, % Dung lượng ổ đĩa",
+            "Cấu hình máy: số sê-ri, hãng, model, CPU, tổng RAM/đĩa và địa chỉ IP/MAC LAN",
+            "Trạng thái bảo vệ: chống mã độc, tường lửa và mã hóa ổ đĩa; có thể chưa xác định khi thiếu quyền",
+            "Trạng thái và phiên bản của các phần mềm IT đã cấu hình nhận diện; không gửi danh sách ứng dụng cá nhân",
             "Phiên bản hệ điều hành (OS Version) và phiên bản SentinelLAN Agent",
             "Chính sách bảo mật áp dụng (thời gian khóa màn hình khi không hoạt động, chế độ cổng USB)"
         ],
         StrictlyProhibitedData:
         [
             "TUYỆT ĐỐI KHÔNG ghi nhận phím gõ bàn phím (No Keylogger)",
-            "TUYỆT ĐỐI KHÔNG chụp ảnh hoặc quay màn hình máy tính (No Screen Capture)",
+            "Agent không tự chụp ảnh hoặc quay màn hình (No automatic Screen Capture); ảnh lỗi chỉ do nhân viên chọn và đồng ý gửi",
             "TUYỆT ĐỐI KHÔNG truy cập camera hoặc microphone máy tính (No Webcam/Microphone Access)",
             "TUYỆT ĐỐI KHÔNG đọc nội dung tệp tin hoặc dữ liệu cá nhân (No Personal File Access)",
             "TUYỆT ĐỐI KHÔNG theo dõi lịch sử duyệt web hoặc lưu lượng mạng cá nhân (No Web History / Traffic Sniffing)",

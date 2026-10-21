@@ -1,5 +1,7 @@
 # ADR 0010: Giám sát VPS theo phiên Super Admin và lệnh cố định
 
+> Quyết định lịch sử, được thay thế bởi [ADR 0025](0025-host-vps-snapshot.md): API hiện đọc JSON snapshot cục bộ, không có role PlatformOwner hoặc thao tác VPS qua SSH.
+
 Ngày: 2026-09-30. Trạng thái: Đã triển khai trong mã nguồn.
 
 ## Quyết định

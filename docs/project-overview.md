@@ -1,57 +1,57 @@
 # Tổng quan SentinelLAN
 
-SentinelLAN là hệ thống quản lý và giám sát thiết bị đầu cuối được tổ chức cho phép trên LAN. Agent gửi telemetry kỹ thuật tối thiểu (trạng thái online, CPU, RAM, dung lượng đĩa, phiên bản OS/Agent); Admin, Technician và Employee dùng web/mobile để xử lý cùng một vòng đời thiết bị. Không thu thập màn hình, phím gõ, tệp cá nhân hoặc lưu lượng mạng.
+Đối chiếu mã nguồn tháng 10/2026.
 
-## Phạm vi sản phẩm
+SentinelLAN quản lý các thiết bị đầu cuối được tổ chức cho phép trên LAN. Agent gửi telemetry kỹ thuật tối thiểu: trạng thái online, CPU, RAM, đĩa, phiên bản OS/Agent. Hai vai trò người dùng hiện hành là **Admin** và **Employee**; Agent là danh tính máy. Ảnh lỗi do nhân viên chủ động chọn, xem trước và đồng ý gửi; không chụp màn hình ngầm, ghi phím, đọc tệp cá nhân hay bắt lưu lượng mạng.
 
-**Luồng lõi:** Admin cấp tài khoản và token đăng ký một lần → Agent đăng ký trên máy được ủy quyền → gửi heartbeat/telemetry có khả năng retry → Admin gán máy → Employee xem máy được gán và báo sự cố → Technician/Admin xử lý trong tenant → audit ghi hành động. QR giúp xác minh tem thiết bị trong luồng này. Alert có thể được IT tạo thủ công hoặc sinh tự động khi máy mất kết nối kéo dài, đĩa hệ thống gần đầy hoặc CPU/RAM cao liên tục. [Quy tắc vận hành](architecture/device-health-monitoring.md) ghi ngưỡng, chống trùng và điều kiện tự đóng cảnh báo.
+## Phạm vi và luồng chính
 
-**Chức năng mở rộng đã có:** quản trị VPS Linux qua SSH từ API. Đây là luồng riêng, không cần cho demo hay nghiệm thu lõi endpoint. Triển khai chính API/web trên một VPS chỉ là lựa chọn hạ tầng, không biến quản trị VPS thành mục tiêu sản phẩm.
+Admin cấp tài khoản/token enrollment một lần → Agent đăng ký trên máy được ủy quyền → gửi heartbeat có retry → Admin gán máy → Employee xem máy và báo sự cố → Admin xử lý trong tenant → audit ghi hành động. QR xác minh tem thiết bị; alert tự động theo [quy tắc giám sát](architecture/device-health-monitoring.md).
 
-**Ngoài phạm vi hiện tại:** rà quét dải IP, bắt hoặc phân loại gói tin, IDS/IPS, remote desktop, lệnh tùy ý và cô lập/khóa máy thật. Mobile là giao diện Employee cho thiết bị được gán, không phải MDM quản lý điện thoại. Không mô tả các chức năng này như đã triển khai hoặc là điều kiện bắt buộc để bảo vệ đồ án.
+Migration `20261009065038_RetireLegacyRoles` khóa tài khoản có role ngoài Admin/Employee, đổi security stamp và thu hồi refresh session/token kích hoạt. `Technician`, `PlatformOwner` không có quyền hiện hành. Migration không tự cấp role thay thế hoặc tự mở khóa khi rollback.
 
-Ưu tiên phát triển tiếp theo là làm chắc luồng lõi và đo được kết quả: chạy Agent và PostgreSQL trên môi trường đích, kiểm tra mất mạng/khôi phục/idempotency, phân quyền tenant, độ trễ heartbeat và tài nguyên Agent. Chỉ mở rộng inventory hoặc cảnh báo tự động khi có use case, ranh giới dữ liệu và bài kiểm chứng rõ ràng; không gom mọi đề xuất bên ngoài thành backlog bắt buộc.
+**Giám sát host tùy chọn:** timer systemd chạy collector chỉ đọc tại host, ghi JSON cục bộ. API đọc file qua mount chỉ đọc; chỉ Admin thuộc đơn vị vận hành đã cấu hình được xem `/api/v1/host/status`. API không giữ SSH key, kết nối SSH, restart dịch vụ hay reboot VPS.
 
-## Tiêu chí nghiệm thu lõi
+**Ngoài phạm vi:** rà quét IP, IDS/IPS, remote desktop, lệnh tùy ý và khóa/cô lập máy production. Mobile là giao diện Employee, không phải MDM quản lý điện thoại.
 
-| Luồng | Bằng chứng cần có |
-|---|---|
-| Đăng ký và thu hồi | Token một lần đăng ký được Agent thử nghiệm; token đã dùng/hết hạn bị từ chối; sau thu hồi credential cũ không gửi được heartbeat. |
-| Telemetry và mất mạng | CPU/RAM/đĩa từ Agent xuất hiện trên web; ngắt mạng rồi nối lại không tạo heartbeat trùng; báo rõ giới hạn queue và thời gian mất dữ liệu nếu vượt giới hạn. |
-| Phân quyền và gán máy | Employee chỉ xem máy được gán; tài khoản khác tenant không đọc hoặc sửa được máy, incident hay QR có xác thực. |
-| Sự cố và audit | Employee tạo incident, Technician xử lý; hành động nhạy cảm có actor, target, thời gian UTC, lý do và kết quả, không chứa secret. |
-| Lệnh an toàn | Agent từ chối lệnh sai chữ ký, hết hạn hoặc nonce lặp; biên lai gửi lại không tạo kết quả thứ hai; lệnh mô phỏng không đổi hệ điều hành. |
-
-Kết quả unit/integration test cần đi kèm ít nhất một lần chạy trên PostgreSQL và Agent/thiết bị thử được ủy quyền trước khi tuyên bố nghiệm thu thực địa. Ứng dụng mobile cần xác nhận riêng trên Android/iOS đích cho camera, SecureStore, deep link và mạng. [Kịch bản demo](demo/demo-script.md) là trình tự trình bày các bằng chứng này; VPS qua SSH chỉ là demo mở rộng tùy chọn.
-
-## Thành phần và ranh giới
+## Thành phần
 
 | Thành phần | Vai trò |
 |---|---|
-| `apps/backend` | API ASP.NET Core, Application use cases, Domain và Infrastructure/EF Core |
-| `apps/agent` | Worker thu thập telemetry, lưu credential và nhận lệnh được ký |
-| `apps/company` | Dashboard Next.js, chỉ gọi backend qua typed API client |
-| `apps/mobile` | Ứng dụng Employee Expo; kiểm thử native cần thiết bị hoặc emulator riêng |
+| `apps/backend` | ASP.NET Core API, Application, Domain và Infrastructure/EF Core |
+| `apps/agent` | Worker telemetry, bảo vệ credential, xác minh lệnh bằng public key |
+| `apps/company` | Dashboard Admin Next.js, gọi typed API client |
+| `apps/employee`, `apps/mobile` | Giao diện Employee; mobile cần nghiệm thu native riêng |
 | PostgreSQL | Dữ liệu tenant, thiết bị, phiên, command và audit |
+| Collector host | Số liệu Linux/systemd/Docker, xuất snapshot JSON cục bộ |
 
-Domain không phụ thuộc Infrastructure; Application sở hữu use case và contract; Infrastructure triển khai các port; API là composition root. Module trao đổi qua Application contract/event, không truy vấn bảng của module khác. [Sơ đồ bối cảnh](architecture/context.md), [thành phần](architecture/components.md) và [các ADR](adr/0002-modular-monolith.md) ghi quyết định chi tiết.
+Domain không phụ thuộc Infrastructure; Application sở hữu use case/contract/quyền; Infrastructure triển khai port; API là composition root. Module trao đổi qua Application contract/event. Tenant scope có kiểm tra tường minh và EF global query filter, chưa có database row-level security.
 
-## Luồng chính
+## Kiểm soát và nghiệm thu
 
-1. Admin tạo tài khoản và token enrollment một lần. Agent đăng ký trên thiết bị được ủy quyền; server lưu hash của token/credential. Admin có thể gán hoặc thu hồi thiết bị.
-2. Agent gửi heartbeat và telemetry qua HTTPS. Production dùng file bảo vệ cho hàng đợi tối đa 50 mục trong một giờ; Development mặc định dùng RAM. Retry giữ nguyên idempotency key.
-3. Admin/Technician có quyền phù hợp tạo command với lý do, xác nhận, thời hạn và nonce. Agent kiểm tra chữ ký HMAC, hạn và nonce; server có delivery lease và nhận biên lai idempotent. Adapter Windows thực thi hành động có kiểm tra trạng thái; khóa/cô lập thật cần cấu hình lab/device ID. `SimulateLock` và `SimulateNetworkIsolation` vẫn chỉ mô phỏng. [Điều kiện và nghiệm thu](guides/real-agent-execution.md) phân biệt mã đã triển khai với vận hành production đã kiểm chứng.
-4. Employee xem máy được gán và gửi incident; Technician xử lý alert, incident và work order trong tenant.
-5. Trong phần mở rộng VPS, API dùng SSH với host-key pinning và khóa riêng được mã hóa tại server. Restart dịch vụ allow-list qua đường này là hành động thật, tách biệt với command của Agent.
+1. Token enrollment dùng một lần; server lưu hash token/credential. Sau thu hồi, credential cũ không gửi được heartbeat.
+2. Heartbeat qua HTTPS giữ nguyên idempotency key khi retry. Production bảo vệ queue file tối đa 50 mục trong một giờ; Development mặc định dùng RAM.
+3. Production ký lệnh bằng **RSA-PSS/SHA-256, khóa tối thiểu 3072 bit**, envelope `R2.<keyId>.<signature>`. Private key chỉ ở server; Agent nhận public key và key ID tương ứng. HMAC chỉ còn fallback Development khi chưa cấu hình RSA.
+4. Admin tạo command với lý do, xác nhận, hạn và nonce. Agent kiểm tra chữ ký, máy đích, allow-list, hạn và nonce. Delivery lease/biên lai idempotent không bảo đảm thực thi đúng một lần qua mọi sự cố.
+5. `SimulateLock`/`SimulateNetworkIsolation` luôn mô phỏng. Adapter Windows có hành động thật theo allow-list; khóa/cô lập thật cần lab flag và device ID được ủy quyền. Xem [nghiệm thu Agent](guides/real-agent-execution.md).
+6. Forwarded headers chạy trước authentication/rate limit, chỉ tin proxy/IP network khai báo. Danh sách ảnh chỉ Select metadata và kích thước ảnh gốc; tải nội dung là endpoint riêng có kiểm tra tenant/request.
+7. Nghiệm thu phải chứng minh Employee chỉ xem máy/yêu cầu của mình, tenant khác không đọc/sửa được dữ liệu, lệnh sai chữ ký/hạn/nonce bị từ chối và snapshot cũ được báo rõ.
+
+## Tính năng nâng cấp ngày 21 tháng 10 năm 2026
+
+Agent tự báo inventory Windows/Linux, posture bảo vệ Windows và đối chiếu MSI đã cấu hình; trang thiết bị và máy của tôi hiển thị dữ liệu cùng trạng thái chưa xác định/cũ. Admin cấu hình ngưỡng theo tổ chức, nhận cảnh báo và thông báo từ outbox; preventive CMMS tạo phiếu theo ngày khi sắp hết bảo hành hoặc đến chu kỳ.
+
+Phòng ban liên kết người dùng và thiết bị, cung cấp policy mặc định; lệnh cập nhật chính sách/thông tin có thể gửi cho tối đa 100 máy. Gói đăng ký QR/script cấp riêng từng máy trong lô 1–50, hạn 15 phút, ghim server/public key/hash/publisher. Request Agent dùng HMAC S1 riêng từng máy; lệnh server vẫn ký RSA-PSS. SignalR chỉ đánh thức, HTTP poll/lease giữ cơ chế giao nhận. Có Redis backplane và S3/MinIO tùy chọn; Linux có adapter systemd/loginctl/nftables với quyền và rollback được kiểm tra. Xem [cấu hình, hợp đồng và giới hạn](guides/product-upgrade.md).
 
 ## Giới hạn cần báo cáo
 
-Tenant scope là kiểm tra/truy vấn tường minh, chưa phải database row-level security. Audit chặn sửa/xóa qua EF, chưa có WORM độc lập. Khóa ký command dùng chung cho API/Agent; khóa vault được server giải mã khi SSH. Kết quả test InMemory không xác nhận PostgreSQL, TLS, SSH hay backup/restore trên môi trường triển khai. Không dùng tỷ lệ hoàn thành hoặc số test cũ làm trạng thái hiện tại.
+Audit chặn sửa/xóa qua EF, chưa có WORM độc lập. Bảo vệ private key ký lệnh, khóa mã hóa và khóa xác thực riêng biệt; phân phối public key trước khi xoay khóa. Snapshot không chứng minh host chưa bị xâm nhập. Test InMemory không xác nhận PostgreSQL/TLS, native mobile hoặc hành động Windows thật. Nghiệm thu cần chạy trên PostgreSQL và thiết bị thử được ủy quyền; không dùng số test/báo cáo triển khai cũ làm trạng thái hiện tại.
 
-## Tài liệu theo công việc
+Bản thảo khóa luận và dữ liệu tạm nằm ngoài bản nộp mã nguồn; `scratch/` được Git bỏ qua.
 
-- [Bản đồ hệ thống HTML](system-map.html) trình bày các chủ thể, bảo mật, dữ liệu truyền đi và database; [SQL PostgreSQL](database/schema.postgresql.sql) được sinh từ migrations.
-- [Chạy và cài đặt](../README.md), [VPS Production](deployment/saas-vps-guide.md), [LAN](deployment/self-hosted-guide.md), [đăng ký Agent](guides/agent-enrollment-guide.md).
-- [Luồng dữ liệu](architecture/data-flow.md), [giao lệnh và khôi phục](architecture/command-delivery.md), [từ điển dữ liệu](database/data-dictionary.md) và [ERD](database/erd.md).
-- [Use cases](use-cases/use-cases.md), [demo và nghiệm thu](demo/demo-script.md).
-- [Quyền riêng tư](security/privacy.md), [mô hình đe dọa](security/threat-model.md), [ứng phó sự cố](security/incident-workflow.md), [rủi ro phụ thuộc](security/dependency-risk-register.md).
+## Tài liệu liên quan
+
+- [Kiến trúc](architecture/context.md), [thành phần](architecture/components.md), [giao lệnh](architecture/command-delivery.md).
+- [Cài đặt](../README.md), [VPS](deployment/saas-vps-guide.md), [giám sát host](deployment/vps-operations.md), [enrollment](guides/agent-enrollment-guide.md).
+- [Use cases](use-cases/use-cases.md), [demo](demo/demo-script.md), [từ điển dữ liệu](database/data-dictionary.md).
+- [Quyền riêng tư](security/privacy.md), [threat model](security/threat-model.md), [ứng phó](security/incident-workflow.md).

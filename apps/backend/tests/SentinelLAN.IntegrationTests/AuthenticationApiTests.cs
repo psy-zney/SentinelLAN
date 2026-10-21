@@ -34,10 +34,13 @@ public sealed class AuthenticationApiTests(SentinelApiFactory factory) : IClassF
         Assert.True(schemes.TryGetProperty("refreshCookie", out _));
         Assert.True(schemes.TryGetProperty("csrfHeader", out _));
         Assert.True(schemes.TryGetProperty("agentDeviceId", out _));
-        Assert.True(schemes.TryGetProperty("agentDeviceSecret", out _));
+        Assert.True(schemes.TryGetProperty("agentRequestSignature", out _));
+        Assert.True(schemes.TryGetProperty("agentRequestTimestamp", out _));
+        Assert.True(schemes.TryGetProperty("agentRequestNonce", out _));
+        Assert.False(schemes.TryGetProperty("agentDeviceSecret", out _));
         AssertSecurityRequirement(json, "/api/v1/devices", "get", "accessCookie");
         AssertSecurityRequirement(json, "/api/v1/auth/refresh", "post", "refreshCookie", "csrfHeader");
-        AssertSecurityRequirement(json, "/api/v1/agent/heartbeat", "post", "agentDeviceId", "agentDeviceSecret");
+        AssertSecurityRequirement(json, "/api/v1/agent/heartbeat", "post", "agentDeviceId", "agentRequestSignature", "agentRequestTimestamp", "agentRequestNonce");
         var heartbeatSchema = json.RootElement.GetProperty("components").GetProperty("schemas").GetProperty("HeartbeatRequest").GetProperty("properties");
         Assert.True(heartbeatSchema.TryGetProperty("collectedAt", out _));
         var telemetrySchema = json.RootElement.GetProperty("components").GetProperty("schemas").GetProperty("TelemetrySnapshotDto").GetProperty("properties");

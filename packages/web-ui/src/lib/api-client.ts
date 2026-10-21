@@ -41,6 +41,7 @@ import type {
 } from "@/types/api";
 
 import type { Announcement, CatalogApp, CreateSupportRequest, EmployeeNotification, HelpArticle, SaveAnnouncement, SaveCatalogApp, SupportAttachment, SupportDecision, SupportMessage, SupportRequest, SupportStatus } from "@/types/self-service";
+import type { EndpointObservation, MonitoringSettings } from "@/types/endpoint";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -65,6 +66,18 @@ type MyDeviceApiResponse = {
 };
 
 export class ApiClient {
+  endpointObservations(deviceId?: string) {
+    return this.request<EndpointObservation>(deviceId ? `/api/v1/devices/${encodeURIComponent(deviceId)}/observations` : "/api/v1/my-device/observations");
+  }
+
+  monitoringSettings() { return this.request<MonitoringSettings>("/api/v1/organization/monitoring-settings"); }
+
+  saveMonitoringSettings(settings: MonitoringSettings, reason: string, confirmed: boolean) {
+    return this.request<MonitoringSettings>("/api/v1/organization/monitoring-settings", {
+      method: "PUT", body: JSON.stringify({ settings, reason, confirmed, nonce: crypto.randomUUID(), expiresAt: new Date(Date.now() + 120_000).toISOString() })
+    });
+  }
+
   private static refreshInFlight: Promise<boolean> | undefined;
 
   private async request<T>(path: string, init?: RequestInit, retryAfterRefresh = true): Promise<T> {
@@ -468,9 +481,28 @@ export class ApiClient {
     if (blob.size > 2 * 1024 * 1024) throw new Error("Ảnh vượt quá 2 MB.");
     return blob;
   }
+  softwareStatus(deviceId?: string) { return this.request<import("@/types/software").SoftwareStatus[]>(deviceId ? `/api/v1/devices/${encodeURIComponent(deviceId)}/software` : "/api/v1/my-device/software"); }
+  departments() { return this.request<import("@/types/departments").DepartmentDirectory>("/api/v1/departments"); }
+  enrollmentPackages(count: number, platform: "Windows" | "Linux", reason: string) {
+    return this.request<{ connectionCode: string; expiresAt: string; fileName: string; script: string }[]>("/api/v1/enrollment-packages", { method: "POST", body: JSON.stringify({ count, platform, confirmation: this.confirmation(reason) }) });
+  }
+  saveDepartment(data: { name: string; policyId: string | null; revision: string }, reason: string, id?: string) {
+    return this.request<void>(`/api/v1/departments${id ? `/${encodeURIComponent(id)}` : ""}`, { method: id ? "PUT" : "POST", body: JSON.stringify({ ...data, confirmation: this.confirmation(reason) }) });
+  }
+  assignDepartment(kind: "users" | "devices", id: string, departmentId: string | null, revision: string, reason: string) {
+    return this.request<void>(`/api/v1/departments/${kind}/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify({ departmentId, revision, confirmation: this.confirmation(reason) }) });
+  }
+  bulkCommands(deviceIds: string[], type: "RefreshPolicy" | "CollectTelemetryNow", reason: string) {
+    return this.request<{ deviceId: string; outcome: string; commandId: string | null }[]>("/api/v1/commands/bulk", { method: "POST", body: JSON.stringify({ deviceIds, type, confirmation: this.confirmation(reason) }) });
+  }
+  private confirmation(reason: string) { return { reason, confirmed: true, nonce: crypto.randomUUID(), expiresAt: new Date(Date.now() + 120000).toISOString() }; }
+  softwareRules() { return this.request<import("@/types/software").SoftwareRule[]>("/api/v1/software/prohibited-rules"); }
+  saveSoftwareRule(data: import("@/types/software").SaveSoftwareRule, id?: string) {
+    return this.request<import("@/types/software").SoftwareRule>(`/api/v1/software/prohibited-rules${id ? `/${encodeURIComponent(id)}` : ""}`, { method: id ? "PUT" : "POST", body: JSON.stringify({ ...data, nonce: crypto.randomUUID(), expiresAt: new Date(Date.now() + 120000).toISOString() }) });
+  }
   catalogApps() { return this.request<CatalogApp[]>("/api/v1/self-service/catalog"); }
   saveCatalogApp(data: SaveCatalogApp, id?: string) {
-    return this.request<CatalogApp>(`/api/v1/self-service/catalog${id ? `/${encodeURIComponent(id)}` : ""}`, { method: id ? "PATCH" : "POST", body: JSON.stringify(data) });
+    return this.request<CatalogApp>(`/api/v1/self-service/catalog${id ? `/${encodeURIComponent(id)}` : ""}`, { method: id ? "PATCH" : "POST", body: JSON.stringify({ ...data, nonce: crypto.randomUUID(), expiresAt: new Date(Date.now() + 120000).toISOString() }) });
   }
   announcements() { return this.request<Announcement[]>("/api/v1/self-service/announcements"); }
   createAnnouncement(data: SaveAnnouncement) { return this.request<Announcement>("/api/v1/self-service/announcements", { method: "POST", body: JSON.stringify(data) }); }
