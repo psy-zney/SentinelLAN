@@ -1,31 +1,11 @@
-bin/
-obj/
-publish/
-dist/
-.wix/
-.vs/
-.idea/
-.vscode/
-__pycache__/
-*.pyc
-node_modules/
-.next/
-coverage/
-TestResults/
-test-results/
-playwright-report/
-*.tsbuildinfo
-.expo/
-*.expo/
+# Secrets, keys, and credentials
 .env
 .env.*
 *.env
 *.env.*
 !.env.example
 !*.env.example
-*.user
-*.suo
-*.log
+!*.env.*.example
 *.pfx
 *.p12
 *.key
@@ -46,50 +26,38 @@ playwright-report/
 id_rsa*
 id_ed25519*
 agent-data/
-
-# Local notes and generated reports
-**/AGENTS.md
-**/CLAUDE.md
-aio/
-.aio/
-.agents/
-.claude/
-.codex/
-scratch/
 /backups/
-/docs/local/
-/docs/private/
 /deploy/vps/certs/
 
-# Documentation is private by default. Publish introduction and downloads only.
-*.md
-!/README.md
-!/docs/downloads.md
-/docs/*
-!/docs/downloads.md
-!/docs/site/
-/docs/site/*
-!/docs/site/index.html
-!/docs/site/site.css
-!/docs/site/downloads.js
-
-# Super Admin / Platform Owner private portal
-/apps/platform/
-
-# Office, document, and report formats
-*.docx
-*.doc
-*.pdf
-*.xlsx
-*.xls
-*.csv
-*.pptx
-*.ppt
+# Build artifacts, dependencies, and caches
+bin/
+obj/
+publish/
+dist/
+.wix/
+.vs/
+.idea/
+.vscode/
+__pycache__/
+*.pyc
+node_modules/
+.next/
+coverage/
+TestResults/
+test-results/
+playwright-report/
+*.tsbuildinfo
+.expo/
+*.expo/
 
 # OS and temporary files
+*.user
+*.suo
+*.log
 Thumbs.db
 Desktop.ini
 *.tmp
 *.bak
 *.swp
 .codegraph/
+

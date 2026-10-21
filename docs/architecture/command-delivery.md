@@ -1,0 +1,13 @@
+# Agent command delivery and recovery
+
+The Agent polls `POST /api/v1/agent/commands/poll`. The server claims an eligible command and returns its original signed envelope. A claim sets `Status = Delivered` and a 30-second `DeliveryLeaseExpiresAt`. The lease timestamp is a database concurrency token, so simultaneous polls cannot claim the same pending command or expired lease twice.
+
+If the poll response is lost, the command remains eligible after the lease expires. The server redelivers the same command ID, nonce, signature, issue time, and expiry; it does not create or sign a replacement command. The Agent's persistent nonce store rejects a command it has already accepted. Before polling again, the Agent retries its durable pending result receipt. The result endpoint is idempotent by command ID.
+
+The signed `ExpiresAt` is the deadline for accepting execution. A delivery lease is capped at that deadline, and the Agent rejects commands after it. An undelivered `Pending` command becomes `Expired`; a previously `Delivered` command becomes `ExecutionUnconfirmed`, since the endpoint may already have executed it. History derives these states even when the endpoint is offline and cannot poll. Commands with an existing result do not become eligible for delivery.
+
+The Agent retains and retries its durable receipt for seven days after execution expiry. The authenticated device's result endpoint accepts one receipt for a `Delivered` or `ExecutionUnconfirmed` command during that window, including after the execution deadline, and preserves duplicate-result idempotency. Pending or never-delivered expired commands cannot receive a result. This receipt window does not extend permission to begin execution. After it, the outcome remains unconfirmed and requires an operator check before repeating work.
+
+The lease provides recovery from a lost poll response; it does not promise exactly-once execution across arbitrary process or hardware failure. The Agent records the nonce before execution and stores the result after execution. A crash between those steps can leave the command without a receipt, while the persistent nonce prevents a second execution. This favors at-most-once handling over silently repeating a command. Real Windows adapters produce verified success or explicit failure; simulation is limited to the two Simulate command types. Real lock/isolation requires explicit local lab/device authorization. See [ADR 0007](../adr/0007-real-windows-agent-actions.md).
+
+The production migration backfills active legacy `Delivered` rows with a short initial lease so they can re-enter this recovery flow. No database cleanup job is required: polling expires stale rows for the authenticated device.

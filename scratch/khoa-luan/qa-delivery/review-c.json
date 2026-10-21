@@ -1,0 +1,25 @@
+{
+  "review_type": "Visual inspection of changed appendix pages in the 85-page delivery export",
+  "raster_dpi": 120,
+  "view_detail": "original",
+  "pages_reviewed": [76, 77, 78, 79, 80, 81, 82, 83, 84, 85],
+  "status": "pass",
+  "issues": [],
+  "checks": {
+    "blank_pages": "none; former blank page76 is now AppendixE",
+    "page_numbering": "76 through85 are visible in order and match PNG filenames",
+    "clipping": "none observed",
+    "overlap": "none observed",
+    "tables_outside_print_area": "none observed; AppendixE tables fit inside margins",
+    "vietnamese_glyph_corruption": "none observed",
+    "double_period_semicolon": "former '.;' combinations are removed in inspected guide paragraphs",
+    "image_guide_labels": "position, Hxx code, visual type, instructions, required content, redaction notes and proposed caption are present",
+    "caption_readability": "proposed captions remain complete, including wrapped multi-line captions"
+  },
+  "coverage": {
+    "appendix_e": [76],
+    "appendix_f": [77],
+    "appendix_g": [78, 79, 80, 81, 82, 83, 84, 85]
+  },
+  "notes": "Đã mở đầy đủ10 trang dưới dạng ảnh gốc,5 ảnh mỗi lượt. Đã đọc comparison.json xác nhận bản bàn giao85 trang,55 trang vùng nội dung giống bản đã xem trước và không có trang trắng. Không sửa tài liệu hoặc script. Các hướng dẫn dài trong Phụ lụcG tiếp tục qua trang theo luồng văn bản bình thường; nội dung và chú thích đầy đủ."
+}

@@ -1,0 +1,36 @@
+{
+  "review_method": "Opened each assigned qa-delivery PNG with view_image detail original and visually inspected the full page, in two batches of five. Read comparison.json to confirm these pages belong to the changed-page review set.",
+  "reviewed_pages": [43, 45, 46, 47, 48, 49, 50, 51, 52, 62],
+  "status": "pass",
+  "errors": [],
+  "summary": "All assigned delivery pages are legible and remain within margins. No clipping, overlap, table overflow, broken Vietnamese glyphs, blank page or orphaned figure caption was observed. Capture-step sentences now have clean punctuation; must_show and hide lists retain clear semicolon separators.",
+  "checks": [
+    {
+      "pages": [43],
+      "result": "H10 guidance and Hình 4.8 caption stay in the deployment section, before conclusion 4.14. Placeholder, caption and explanatory paragraph remain together."
+    },
+    {
+      "pages": [45, 46],
+      "result": "H11 folder-tree guidance remains in section 5.2; H12 authentication and authorization guidance remains in section 5.3. Each figure caption is directly below its insertion placeholder."
+    },
+    {
+      "pages": [47, 48, 49],
+      "result": "H13–H14 remain in section 5.4 and H15–H16 remain in section 5.5. Red instructions are readable and contain clean sentence punctuation and separated list items."
+    },
+    {
+      "pages": [50, 51, 52],
+      "result": "H17 command guidance remains in section 5.6; H18–H20 support guidance remains in section 5.7. H18 and H19 fit on page 51; H20 fits on page 52 with placeholder, caption and analysis intact."
+    },
+    {
+      "pages": [62],
+      "result": "The continued performance table header is accompanied by a data row and stays within margins. H21 and H22 chart instructions show units, data-source requirements and clean punctuation; each placeholder and caption stay together, and the H22 analysis remains above the footer."
+    }
+  ],
+  "comparison_context": {
+    "delivery_page_count": 85,
+    "same_body_pages_reported_by_comparison": 55,
+    "blank_pages_reported_by_comparison": []
+  },
+  "document_modified": false,
+  "script_modified": false
+}

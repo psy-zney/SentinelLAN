@@ -1,0 +1,354 @@
+[
+  {
+    "id": "H01",
+    "chapter": 3,
+    "section": "3.7",
+    "kind": "diagram",
+    "caption": "Hình 3.1. Sơ đồ Use Case tổng quát của SentinelLAN",
+    "capture_steps": [
+      "Vẽ ranh giới SentinelLAN và đặt các tác nhân Admin, Technician, Employee, Agent ở bên ngoài.",
+      "Liên kết Admin với quản lý tài khoản, cấp đăng ký, gán và thu hồi thiết bị; Technician với giám sát, cảnh báo và hỗ trợ; Employee với xem máy, báo sự cố, trao đổi và xác nhận kết quả.",
+      "Liên kết Agent với đăng ký, gửi dữ liệu kỹ thuật, nhận lệnh và trả kết quả; chỉ sử dụng include hoặc extend khi quan hệ thực sự đúng ngữ nghĩa UML.",
+      "Xuất SVG hoặc PNG rõ chữ, đối chiếu các Use Case với yêu cầu tại mục 3.3 và đặc tả tại mục 3.8 trước khi chèn."
+    ],
+    "must_show": ["Bốn tác nhân và ranh giới hệ thống", "Tên Use Case bằng tiếng Việt", "Các liên kết tác nhân–Use Case", "Quan hệ UML có chú giải nếu sử dụng"],
+    "hide": ["Use Case mới chỉ dự kiến nhưng chưa nằm trong phạm vi", "Quan hệ include/extend biểu diễn đơn thuần thứ tự màn hình"],
+    "explanation": "Sơ đồ phân bổ các chức năng theo trách nhiệm của từng tác nhân, làm cơ sở xác định phạm vi truy cập và đặc tả luồng xử lý. Agent thực hiện trao đổi kỹ thuật bằng định danh thiết bị, trong khi các tác nhân con người thao tác theo quyền tài khoản."
+  },
+  {
+    "id": "H02",
+    "chapter": 3,
+    "section": "3.9",
+    "kind": "diagram",
+    "caption": "Hình 3.2. Quy trình quản lý thiết bị và xử lý sự cố",
+    "capture_steps": [
+      "Vẽ Activity Diagram với các swimlane Admin, Agent, Employee, Technician và hệ thống; bắt đầu từ đăng ký, gán thiết bị và sử dụng.",
+      "Tách nhánh telemetry phát sinh cảnh báo và nhánh nhân viên báo sự cố, sau đó biểu diễn việc tiếp nhận, bổ sung thông tin, xử lý và phản hồi.",
+      "Thêm điều kiện không đủ quyền, mất kết nối và cần phê duyệt; kết thúc yêu cầu theo quy trình có xác nhận kết quả.",
+      "Đặt điều kiện rõ trên các nhánh, phân biệt nhánh lựa chọn với thao tác đồng thời và kiểm tra tính liên tục của toàn bộ luồng."
+    ],
+    "must_show": ["Điểm bắt đầu và kết thúc", "Trách nhiệm từng swimlane", "Hai nguồn phát sinh: cảnh báo và báo sự cố", "Các nhánh từ chối, chờ và bổ sung thông tin", "Bước phản hồi hoặc xác nhận kết quả"],
+    "hide": ["Tên người và thiết bị thật", "Điều kiện ngưỡng chưa xác nhận", "Luồng mô phỏng bị trình bày như tác động hệ điều hành thật"],
+    "explanation": "Quy trình liên kết quản lý thiết bị với giám sát kỹ thuật và phản hồi của người sử dụng. Hai nguồn phát sinh sự cố được tiếp nhận trong cùng quy trình hỗ trợ nhưng vẫn giữ nguyên ý nghĩa và bằng chứng riêng."
+  },
+  {
+    "id": "H03",
+    "chapter": 4,
+    "section": "4.1",
+    "kind": "diagram",
+    "caption": "Hình 4.1. Kiến trúc tổng thể của SentinelLAN",
+    "capture_steps": [
+      "Dùng sơ đồ Mermaid ở mục 4.1 làm bản khởi đầu, sau đó đối chiếu các thành phần với phiên bản đem bảo vệ.",
+      "Thể hiện Dashboard quản trị, cổng nhân viên, API, Application, Domain, các hợp đồng hạ tầng, Infrastructure, PostgreSQL và Agent.",
+      "Phân biệt đường trao đổi dữ liệu với chiều phụ thuộc mã bằng kiểu nét và chú giải; chỉ giữ giao diện mobile khi thuộc phạm vi đã xác nhận.",
+      "Xuất hình vector hoặc ảnh có thể đọc ở chiều rộng trang Word và giữ tệp nguồn sơ đồ để chỉnh sửa."
+    ],
+    "must_show": ["Các thành phần giao diện, Backend, Agent và PostgreSQL", "Đường đi qua API", "Luồng heartbeat, telemetry, polling lệnh và biên lai", "Kênh cập nhật giao diện nếu đã hiện thực", "Chú giải loại mũi tên"],
+    "hide": ["Địa chỉ triển khai nội bộ thật", "Chuỗi kết nối và secret", "Thành phần mở rộng chưa xác nhận"],
+    "explanation": "Kiến trúc tập trung việc xác thực và xử lý nghiệp vụ tại Backend, trong khi giao diện và Agent trao đổi qua các hợp đồng API. Sự phân chia này tạo vị trí kiểm tra thống nhất cho dữ liệu trước khi lưu trữ hoặc sử dụng."
+  },
+  {
+    "id": "H04",
+    "chapter": 4,
+    "section": "4.2",
+    "kind": "diagram",
+    "caption": "Hình 4.2. Phân lớp Backend và chiều phụ thuộc giữa các thành phần",
+    "capture_steps": [
+      "Đối chiếu các dự án và tham chiếu thực tế, sau đó vẽ bốn lớp API, Application, Domain và Infrastructure.",
+      "Ghi trách nhiệm chính trong mỗi khối và biểu diễn Application phụ thuộc Domain, Infrastructure triển khai hợp đồng Application, API là nơi cấu hình và kết nối các thành phần.",
+      "Phân biệt tham chiếu mã với việc gọi thành phần lúc chạy; đánh dấu phần chưa tuân thủ nếu còn tồn tại để đồng bộ với nội dung phân tích.",
+      "Xuất hình với chú giải mũi tên và không bổ sung một đường phụ thuộc chỉ để làm sơ đồ cân đối."
+    ],
+    "must_show": ["Bốn lớp và trách nhiệm", "Chiều phụ thuộc mã", "Hợp đồng hoặc port thuộc Application", "Vị trí composition root tại API", "Chú giải tham chiếu và triển khai"],
+    "hide": ["Chiều phụ thuộc không có trong mã nguồn", "Tuyên bố toàn bộ dự án đã tuân thủ khi chưa đối chiếu"],
+    "explanation": "Chiều phụ thuộc hướng về phần nghiệp vụ giúp các quy tắc cốt lõi được kiểm thử mà không cần khởi tạo HTTP hoặc cơ sở dữ liệu. API cấu hình các triển khai hạ tầng thông qua hợp đồng để phối hợp xử lý khi ứng dụng chạy."
+  },
+  {
+    "id": "H05",
+    "chapter": 4,
+    "section": "4.5.2",
+    "kind": "diagram",
+    "caption": "Hình 4.3. Sơ đồ thực thể và liên kết của cơ sở dữ liệu SentinelLAN",
+    "capture_steps": [
+      "Sinh hoặc vẽ ERD từ migrations hay schema của cơ sở dữ liệu thử nghiệm đúng phiên bản bảo vệ.",
+      "Thể hiện các bảng lõi về tổ chức, người dùng, thiết bị, telemetry, lệnh, cảnh báo, hỗ trợ và audit với tên vật lý, khóa chính, khóa ngoại và lực lượng kết hợp.",
+      "Nếu assignment nằm trên bảng thiết bị, biểu diễn đúng cột và quan hệ thay vì tự thêm bảng Assignment; phân biệt bảng mở rộng nếu đưa vào sơ đồ.",
+      "Xuất hình đủ lớn để đọc các trường cần thiết, chia thành các vùng dữ liệu trong cùng hình nếu schema dài và ghi migration hoặc phiên bản nguồn ở dòng nguồn."
+    ],
+    "must_show": ["Tên bảng vật lý thực tế", "Khóa chính và khóa ngoại", "Quan hệ một–nhiều hoặc quan hệ thực tế", "Trường phạm vi tổ chức", "Chú giải và phiên bản schema"],
+    "hide": ["Dữ liệu trong bảng", "Chuỗi kết nối", "Bảng hoặc ràng buộc mới chỉ đề xuất", "Ràng buộc tenant chưa tồn tại ở cơ sở dữ liệu"],
+    "explanation": "ERD thể hiện cách dữ liệu thiết bị liên kết với mẫu kỹ thuật, lệnh, cảnh báo và lịch sử hỗ trợ. Phạm vi tổ chức cần được xem xét cùng các ràng buộc cơ sở dữ liệu và kiểm tra tại lớp Application để giải thích đầy đủ cơ chế giới hạn truy cập."
+  },
+  {
+    "id": "H06",
+    "chapter": 4,
+    "section": "4.7",
+    "kind": "diagram",
+    "caption": "Hình 4.4. Trình tự đăng ký và cấp định danh cho Agent",
+    "capture_steps": [
+      "Vẽ các lifeline Admin, API, kho đăng ký, Agent và kho credential cục bộ; biểu diễn cấp mã đăng ký, gửi yêu cầu, xác minh và cấp định danh thiết bị.",
+      "Thể hiện bước Agent lưu thông tin xác thực trước khi báo hoàn tất đăng ký.",
+      "Dùng khung alt cho token hết hạn hoặc đã dùng, gián đoạn kết nối và lỗi lưu credential; ghi điều kiện từ chối hoặc thử lại theo hiện thực.",
+      "Ghi tên thông điệp nghiệp vụ hoặc hợp đồng đã xác nhận, không đoán đường dẫn endpoint và không đưa giá trị credential vào sơ đồ."
+    ],
+    "must_show": ["Người cấp mã và Agent sử dụng mã", "Kiểm tra thời hạn, trạng thái sử dụng và tổ chức", "Cấp định danh", "Lưu credential cục bộ", "Nhánh từ chối và lỗi lưu trữ"],
+    "hide": ["Token, khóa và credential thật", "Endpoint chưa được đối chiếu", "Thông báo thành công trước khi lưu credential được xác nhận"],
+    "explanation": "Luồng đăng ký thiết lập định danh thiết bị và quyền trao đổi của Agent trong phạm vi tổ chức. Việc lưu credential cục bộ là một bước riêng cần xác nhận để tránh đồng nhất phản hồi cấp định danh với đăng ký hoàn chỉnh trên thiết bị."
+  },
+  {
+    "id": "H07",
+    "chapter": 4,
+    "section": "4.8",
+    "kind": "diagram",
+    "caption": "Hình 4.5. Trình tự gửi telemetry và gửi lại sau gián đoạn kết nối",
+    "capture_steps": [
+      "Vẽ các lifeline bộ thu thập, hàng đợi Agent, API và kho dữ liệu; thể hiện tạo mẫu với thời điểm và định danh idempotency.",
+      "Thêm tình huống máy chủ đã nhận dữ liệu nhưng phản hồi bị mất, sau đó Agent gửi lại cùng mẫu với nguyên định danh.",
+      "Biểu diễn kiểm tra trùng, phản hồi xác nhận và việc xóa mẫu khỏi hàng đợi sau xác nhận; ghi giới hạn hàng đợi hoặc thời hạn lưu theo cấu hình đã xác nhận.",
+      "Nếu thể hiện restart, chỉ vẽ cơ chế lưu bền đã có và ghi riêng trường hợp chưa được kiểm chứng."
+    ],
+    "must_show": ["Thời điểm thu thập và nhận mẫu", "Định danh giữ nguyên khi retry", "Trường hợp mất phản hồi", "Kiểm tra trùng và xác nhận", "Điều kiện xóa hoặc loại mẫu khỏi hàng đợi"],
+    "hide": ["Số liệu minh họa được ghi như kết quả đo", "Tuyên bố bảo toàn toàn bộ dữ liệu khi hàng đợi có giới hạn", "Credential HTTP"],
+    "explanation": "Giữ ổn định định danh của mẫu giúp máy chủ nhận biết lần gửi lại khi phản hồi trước đó bị mất. Khả năng gửi bù vẫn phụ thuộc giới hạn hàng đợi và chính sách lưu, nên lịch sử có thể thiếu mẫu khi gián đoạn vượt phạm vi thiết kế."
+  },
+  {
+    "id": "H08",
+    "chapter": 4,
+    "section": "4.9",
+    "kind": "diagram",
+    "caption": "Hình 4.6. Trình tự phát hành, xác minh và xác nhận kết quả lệnh",
+    "capture_steps": [
+      "Vẽ người quản trị, API/Application, bộ ký, Agent verifier, adapter và kho biên lai; thể hiện yêu cầu thao tác với lý do và xác nhận.",
+      "Đặt các bước kiểm tra quyền, tổ chức, thiết bị đích, thời hạn, chữ ký và nonce trước khi gọi adapter.",
+      "Dùng các khung alt cho lệnh không hợp lệ và adapter không khả dụng, cùng nhánh mất phản hồi rồi gửi lại biên lai đã lưu.",
+      "Chỉ rõ bước có thể tác động hệ điều hành và khoảng dừng tiến trình trước khi lưu biên lai; sử dụng tên thuật toán phù hợp cấu hình đã xác nhận."
+    ],
+    "must_show": ["Lý do và xác nhận thao tác", "Kiểm tra quyền và phạm vi", "Chữ ký, thời hạn, nonce và thiết bị đích", "Kiểm tra trước adapter", "Lưu và gửi biên lai", "Nhánh từ chối hoặc mất phản hồi"],
+    "hide": ["Khóa riêng, chữ ký hoặc credential thật", "Thực thi tùy ý ngoài danh sách cho phép", "Khẳng định thực thi đúng một lần dưới mọi sự cố"],
+    "explanation": "Các điều kiện hợp lệ được kiểm tra trước khi lệnh tiếp cận adapter, còn kết quả được phản ánh bằng biên lai sau xử lý. Bước chấp nhận yêu cầu tại máy chủ và bước xác nhận tác động trên thiết bị thuộc hai thời điểm khác nhau của cùng vòng đời."
+  },
+  {
+    "id": "H09",
+    "chapter": 4,
+    "section": "4.9",
+    "kind": "diagram",
+    "caption": "Hình 4.7. Mô hình trạng thái và chuyển trạng thái của lệnh",
+    "capture_steps": [
+      "Lấy tên trạng thái và các chuyển trạng thái từ enum, dịch vụ xử lý và endpoint của đúng phiên bản bảo vệ.",
+      "Vẽ State Diagram với trạng thái đầu, trạng thái kết thúc và nhãn sự kiện hoặc điều kiện trên từng chuyển trạng thái.",
+      "Giải thích tên tiếng Việt bên cạnh tên kỹ thuật nếu cần; phân biệt bị từ chối khi xác minh với lỗi khi thực thi theo mô hình thực tế.",
+      "Đánh dấu điều kiện hết hạn và các đường chuyển không được phép quay lại, đồng thời giữ trạng thái yêu cầu hỗ trợ ở sơ đồ riêng."
+    ],
+    "must_show": ["Tên trạng thái thực trong mã", "Sự kiện và điều kiện chuyển", "Nhánh thành công, thất bại và hết hạn nếu có", "Trạng thái kết thúc", "Chú giải ý nghĩa tên kỹ thuật"],
+    "hide": ["Trạng thái tự đặt chưa hiện thực", "Chuyển trạng thái không được mã cho phép", "Trạng thái hỗ trợ bị gộp vào trạng thái lệnh"],
+    "explanation": "Mô hình trạng thái xác định ý nghĩa của từng kết quả và các điều kiện để chuyển tiếp. Tách trạng thái lệnh khỏi trạng thái hỗ trợ giúp giao diện phản ánh rõ một yêu cầu đã được duyệt nhưng chưa có kết quả thực thi."
+  },
+  {
+    "id": "H10",
+    "chapter": 4,
+    "section": "4.13",
+    "kind": "diagram",
+    "caption": "Hình 4.8. Mô hình triển khai SentinelLAN trong môi trường thử nghiệm",
+    "capture_steps": [
+      "Vẽ các nút máy chủ, trình duyệt người dùng và thiết bị Agent theo môi trường thực tế; thể hiện container hoặc tiến trình nằm trên cùng máy nếu có.",
+      "Ghi subnet lab, chế độ mạng máy ảo, cổng, giao thức và hướng kết nối bằng các giá trị đã xác nhận.",
+      "Đặt vị trí kết thúc TLS và phạm vi truy cập PostgreSQL theo cấu hình chạy thật; nếu lab chưa có HTTPS, ghi rõ điều đó thay vì vẽ như đã triển khai.",
+      "Dùng địa chỉ lab hoặc mã máy đã ẩn danh, sau đó đối chiếu hình với bảng môi trường ở mục 5.10 và 6.2."
+    ],
+    "must_show": ["Ranh giới máy và tiến trình", "Máy Agent và trình duyệt", "API, giao diện và PostgreSQL", "Cổng và giao thức", "Subnet hoặc mạng máy ảo", "Vị trí TLS nếu có"],
+    "hide": ["Địa chỉ công khai của môi trường thật", "Thông tin quản trị hoặc mật khẩu DB", "Sao lưu hay TLS mới chỉ dự kiến"],
+    "explanation": "Mô hình triển khai phân biệt ranh giới mạng với ranh giới tiến trình, giúp xác định chính xác đường kết nối từ thiết bị đến máy chủ. Những cấu hình như TLS và phạm vi mở cổng cần được đối chiếu với môi trường chạy để đánh giá điều kiện của thực nghiệm."
+  },
+  {
+    "id": "H11",
+    "chapter": 5,
+    "section": "5.2",
+    "kind": "diagram",
+    "caption": "Hình 5.1. Cấu trúc thư mục và các dự án chính của SentinelLAN",
+    "capture_steps": [
+      "Tạo cây thư mục rút gọn từ phiên bản mã dùng bảo vệ với các nhánh apps/backend, apps/agent, apps/company, giao diện nhân viên và packages/web-ui thực có.",
+      "Giữ tên các dự án Backend và Agent có ý nghĩa phân lớp, đồng thời ghi chức năng ngắn ở bên cạnh nếu cần.",
+      "Loại node_modules, bin, obj, thư mục cache, log và dữ liệu sinh; chỉ giữ mobile hoặc bộ cài khi cần giải thích phạm vi.",
+      "Xuất thành hình rõ chữ hoặc sơ đồ cây vector và ghi mốc phiên bản; không dùng ảnh cây thư mục có tệp secret."
+    ],
+    "must_show": ["Các thư mục thực tế thuộc phạm vi", "Bốn dự án Backend nếu hiện có", "Core, Infrastructure và Worker của Agent", "Giao diện và thư viện dùng chung", "Mốc phiên bản nguồn"],
+    "hide": ["node_modules, bin, obj và cache", "Secret, .env, chứng thư và credential", "Đường dẫn tên người dùng không cần thiết", "Dữ liệu sinh hoặc thư mục rỗng làm sai phạm vi"],
+    "explanation": "Cấu trúc thư mục phản ánh cách nhóm các thành phần theo trách nhiệm và nền tảng triển khai. Các hợp đồng và thư viện dùng chung hỗ trợ tổ chức mã nhưng quyền truy cập vẫn cần được kiểm tra tại Backend."
+  },
+  {
+    "id": "H12",
+    "chapter": 5,
+    "section": "5.3",
+    "kind": "screenshot",
+    "caption": "Hình 5.2. Đăng nhập, điều hướng theo vai trò và phản hồi truy cập không đủ quyền",
+    "capture_steps": [
+      "Trên dữ liệu lab, chụp màn hình đăng nhập trước khi nhập mật khẩu, rồi chụp màn hình sau đăng nhập thể hiện điều hướng của các vai trò đã kiểm chứng.",
+      "Thực hiện một kịch bản truy cập không đủ quyền đã chuẩn bị và chụp thông báo từ chối hoặc phản hồi có mã lỗi, không mở vùng chứa cookie hay token.",
+      "Ghép các ảnh thành các khung (a) đăng nhập, (b) điều hướng theo vai trò và (c) từ chối quyền; sử dụng nhãn vai trò thay tên người thật.",
+      "Ghi mã test và phiên bản ở dòng nguồn; chỉ mô tả từ chối đúng với phản hồi đã quan sát."
+    ],
+    "must_show": ["Tên chức năng đăng nhập", "Điều hướng hoặc nhãn vai trò", "Thao tác hoặc đối tượng bị từ chối", "Thông báo hoặc mã phản hồi quan sát được", "Nhãn các khung ảnh"],
+    "hide": ["Mật khẩu, token, cookie, OTP", "Thông tin tài khoản cá nhân", "Header xác thực và request body chứa secret", "Dữ liệu từ tổ chức ngoài lab"],
+    "explanation": "Điều hướng theo vai trò hỗ trợ người dùng tiếp cận đúng chức năng, còn quyết định cho phép truy cập cần được kiểm tra tại API. Một màn hình từ chối là bằng chứng cho kịch bản cụ thể và cần liên kết với kết quả kiểm thử tương ứng."
+  },
+  {
+    "id": "H13",
+    "chapter": 5,
+    "section": "5.4",
+    "kind": "screenshot",
+    "caption": "Hình 5.3. Cấp mã đăng ký và ghi nhận thiết bị Agent",
+    "capture_steps": [
+      "Dùng một thiết bị lab được phép quản lý và chụp màn hình cấp mã đăng ký sau khi đã che toàn bộ phần bí mật.",
+      "Chụp trạng thái đăng ký của Agent không chứa credential, rồi chụp thiết bị tương ứng trong danh sách quản lý.",
+      "Ghép thành các khung (a) cấp mã, (b) đăng ký Agent và (c) thiết bị xuất hiện, dùng cùng tên thiết bị thử nghiệm để liên kết các bước.",
+      "Ghi thời điểm, phiên bản và kết quả thực tế; nếu đăng ký lỗi, giữ ảnh lỗi và mô tả nguyên nhân thay vì ghi thành công."
+    ],
+    "must_show": ["Điều kiện hoặc thời hạn mã nếu giao diện có", "Trạng thái đăng ký của Agent", "Tên thiết bị lab nhất quán", "Trạng thái và thời điểm trong danh sách", "Nhãn thứ tự các bước"],
+    "hide": ["Enrollment token", "Agent credential, khóa và file cấu hình chứa secret", "Hostname cá nhân hoặc địa chỉ mạng nhạy cảm", "Đường dẫn lưu credential"],
+    "explanation": "Chuỗi ảnh giúp đối chiếu bước cấp quyền đăng ký với việc Agent nhận định danh và máy chủ ghi nhận thiết bị. Kết quả cần được đọc cùng trạng thái lưu credential và mẫu dữ liệu đầu tiên để xác định mức hoàn tất của luồng."
+  },
+  {
+    "id": "H14",
+    "chapter": 5,
+    "section": "5.4",
+    "kind": "screenshot",
+    "caption": "Hình 5.4. Chi tiết thiết bị và thao tác gán người sử dụng",
+    "capture_steps": [
+      "Mở chi tiết thiết bị lab đã đăng ký và chụp các thông tin định danh, kết nối, cập nhật gần nhất và người đang được giao.",
+      "Chụp biểu mẫu gán hoặc thay đổi người dùng bằng tài khoản có quyền, rồi chụp trạng thái sau thao tác nếu đã thành công.",
+      "Dùng các khung trước và sau với cùng mã thiết bị đã ẩn danh; kiểm tra kết quả quan sát thay vì chỉ chụp nút lưu.",
+      "Bổ sung trong nội dung tên test và chính sách assignment thực được áp dụng."
+    ],
+    "must_show": ["Tên hoặc mã thiết bị lab", "Trạng thái kết nối và cập nhật gần nhất", "Người dùng lab được gán", "Khu vực thao tác assignment", "Trạng thái trước và sau nếu có"],
+    "hide": ["Email và tên nhân viên thật", "Credential hoặc mã đăng ký", "Thông tin phần cứng định danh cá nhân không cần thiết", "Dữ liệu tổ chức khác"],
+    "explanation": "Assignment liên kết thiết bị với người sử dụng để xác định phạm vi của giao diện nhân viên và yêu cầu hỗ trợ. Trạng thái sau thao tác cần được đối chiếu ở cả phía quản trị và quyền nhìn thấy thiết bị của nhân viên."
+  },
+  {
+    "id": "H15",
+    "chapter": 5,
+    "section": "5.5",
+    "kind": "screenshot",
+    "caption": "Hình 5.5. Dữ liệu kỹ thuật và thời điểm cập nhật của thiết bị Agent",
+    "capture_steps": [
+      "Chạy Agent trên thiết bị lab theo môi trường đã ghi, sau đó mở trang giám sát của đúng thiết bị khi có mẫu dữ liệu thật.",
+      "Chụp vùng CPU, RAM, đĩa, hệ điều hành, phiên bản Agent và thời điểm cập nhật nếu các trường này có trên giao diện.",
+      "Giữ mã thiết bị lab và khoảng thời gian quan sát để liên kết với bản ghi hoặc tệp đo gốc; ghi riêng trường chưa được thu thập hay chưa có dữ liệu.",
+      "Chỉ bổ sung khung dữ liệu Agent đối chiếu khi đã loại credential và chọn đúng mẫu tương ứng."
+    ],
+    "must_show": ["Thiết bị lab và nguồn Agent thật", "Giá trị telemetry với đơn vị", "Thời điểm cập nhật", "Trạng thái kết nối", "Khoảng thời gian đồ thị nếu có"],
+    "hide": ["Token hoặc request header", "Địa chỉ mạng và serial cá nhân", "Số liệu seed được dùng như mẫu Agent thật", "Nội dung riêng tư trên màn hình thiết bị"],
+    "explanation": "Các giá trị kỹ thuật cần được đọc cùng thời điểm cập nhật để đánh giá mức mới của dữ liệu. Một mẫu CPU hoặc RAM cao chỉ mô tả tình trạng tài nguyên tại thời điểm quan sát và chưa đủ để kết luận nguyên nhân sự cố."
+  },
+  {
+    "id": "H16",
+    "chapter": 5,
+    "section": "5.5",
+    "kind": "screenshot",
+    "caption": "Hình 5.6. Cảnh báo kỹ thuật và dữ liệu giải thích điều kiện phát sinh",
+    "capture_steps": [
+      "Chọn một kịch bản cảnh báo lab đã xác định ngưỡng, thời gian duy trì hoặc số mẫu từ cấu hình nghiệm thu.",
+      "Thực hiện kịch bản được phép và chụp cảnh báo khi phát sinh, giữ tên thiết bị, loại cảnh báo, thời điểm, trạng thái và dữ liệu liên quan.",
+      "Ghép thêm khung dữ liệu hoặc lịch sử đáp ứng điều kiện để chứng minh vì sao cảnh báo được tạo; ghi ngưỡng thực tế ở chú thích bổ sung hoặc đoạn phân tích.",
+      "Nếu thử trạng thái phục hồi, chụp riêng kết quả sau phục hồi và chỉ mô tả tự đóng khi đã quan sát đúng quy tắc."
+    ],
+    "must_show": ["Loại cảnh báo", "Thiết bị lab", "Thời điểm và trạng thái", "Dữ liệu đạt điều kiện phát sinh", "Ngưỡng và điều kiện đã xác nhận"],
+    "hide": ["Thông báo demo hoặc seed được trình bày như cảnh báo thực nghiệm", "Kết luận mã độc từ CPU/RAM", "Dữ liệu công việc và người dùng thật", "Ngưỡng tự đặt chưa tồn tại trong cấu hình"],
+    "explanation": "Cảnh báo có ý nghĩa khi được liên kết với điều kiện phát sinh và dữ liệu kỹ thuật tương ứng. Bằng chứng này hỗ trợ đánh giá quy tắc phát hiện, còn nguyên nhân và mức ảnh hưởng cần được xác minh trong quá trình xử lý."
+  },
+  {
+    "id": "H17",
+    "chapter": 5,
+    "section": "5.6",
+    "kind": "screenshot",
+    "caption": "Hình 5.7. Vòng đời một lệnh được phép và kết quả phản hồi từ Agent",
+    "capture_steps": [
+      "Chọn lệnh đã được phép thử như CollectTelemetryNow hoặc một lệnh mô phỏng có nhãn rõ, rồi chụp biểu mẫu tạo lệnh với lý do và bước xác nhận.",
+      "Chụp trạng thái khi xếp hàng và trạng thái sau Agent phản hồi với cùng mã lệnh đã ẩn danh.",
+      "Ghép các khung theo thứ tự và giữ thời điểm, loại lệnh, thiết bị đích, trạng thái, nội dung biên lai và thông báo mô phỏng nếu có.",
+      "Mô tả thuật toán hoặc key ID đã làm mờ từ cấu hình thực tế ở đoạn văn; chỉ ghi thành công hoặc thay đổi hệ điều hành khi có bằng chứng tương ứng."
+    ],
+    "must_show": ["Loại lệnh và thiết bị đích", "Lý do và xác nhận", "Mã lệnh nhất quán đã ẩn danh", "Trạng thái phát hành và phản hồi", "Thời điểm hoặc thời hạn", "Nhãn mô phỏng nếu sử dụng"],
+    "hide": ["Khóa ký, Agent credential và token", "Chi tiết nhạy cảm trong lý do", "Lệnh ngoài danh sách được phép", "Ảnh mô phỏng bị chú thích như khóa hoặc cách ly thật"],
+    "explanation": "Các khung theo thời gian giúp phân biệt việc máy chủ phát hành lệnh với việc Agent gửi kết quả xử lý. Với lệnh mô phỏng, kết quả chỉ chứng minh đường trao đổi và xử lý tương ứng, không chứng minh tác động khóa hay cách ly hệ điều hành."
+  },
+  {
+    "id": "H18",
+    "chapter": 5,
+    "section": "5.7",
+    "kind": "screenshot",
+    "caption": "Hình 5.8. Biểu mẫu nhân viên báo sự cố và chọn ảnh hỗ trợ",
+    "capture_steps": [
+      "Đăng nhập Employee lab đã có thiết bị được giao và mở biểu mẫu báo sự cố.",
+      "Điền mô tả giả định phục vụ kiểm thử, thể hiện thiết bị tự xác định, nhóm vấn đề và câu hỏi công việc có bị gián đoạn hay không.",
+      "Nếu thử ảnh đính kèm, người dùng tự chọn ảnh lab, chụp phần xem trước và bước đồng ý gửi trước khi gửi yêu cầu.",
+      "Ghép các khung cần thiết mà vẫn đọc được chữ; ảnh đính kèm chỉ chứa thông tin thử nghiệm liên quan."
+    ],
+    "must_show": ["Thiết bị được tự xác định từ assignment", "Nhóm sự cố và mô tả", "Câu hỏi về gián đoạn công việc", "Chọn và xem trước ảnh nếu có", "Bước đồng ý gửi và nút gửi"],
+    "hide": ["Nội dung công việc thật", "Thông tin cá nhân trên ảnh", "Ảnh chụp màn hình ngầm", "Token, OTP và credential"],
+    "explanation": "Biểu mẫu thu thập bối cảnh công việc bằng ngôn ngữ dễ hiểu và liên kết với thiết bị đã được giao. Ảnh hỗ trợ do nhân viên chủ động chọn và xem trước giúp cung cấp thêm thông tin cho yêu cầu trong phạm vi đồng ý gửi."
+  },
+  {
+    "id": "H19",
+    "chapter": 5,
+    "section": "5.7",
+    "kind": "screenshot",
+    "caption": "Hình 5.9. Nhân viên theo dõi tiến độ và trao đổi trong yêu cầu hỗ trợ",
+    "capture_steps": [
+      "Sau khi tạo yêu cầu lab, mở trang chi tiết bằng đúng Employee đã gửi yêu cầu.",
+      "Chụp mã yêu cầu, trạng thái, người xử lý đã ẩn danh, lịch sử tiến độ và vùng trao đổi nếu giao diện có.",
+      "Ghi một trao đổi thử nghiệm có ý nghĩa và chụp kết quả đã hiển thị; giữ cùng mã yêu cầu để liên kết với H18 và H20.",
+      "Thể hiện rõ trạng thái yêu cầu và trạng thái lệnh nếu cả hai cùng xuất hiện, sau đó chú thích theo kết quả quan sát."
+    ],
+    "must_show": ["Mã yêu cầu lab", "Trạng thái và tiến độ", "Thời điểm cập nhật", "Trao đổi hoặc thông tin xử lý", "Thiết bị liên quan", "Trạng thái lệnh riêng nếu có"],
+    "hide": ["Tên, email và thông tin công việc thật", "Tệp đính kèm có dữ liệu nhạy cảm", "Yêu cầu của người khác", "Token và cookie"],
+    "explanation": "Thông tin tiến độ và trao đổi giúp người gửi theo dõi trách nhiệm xử lý và bổ sung bối cảnh khi cần. Trạng thái hỗ trợ cần được đọc riêng với trạng thái lệnh để tránh hiểu việc duyệt thao tác là đã khắc phục sự cố."
+  },
+  {
+    "id": "H20",
+    "chapter": 5,
+    "section": "5.7",
+    "kind": "screenshot",
+    "caption": "Hình 5.10. Kỹ thuật viên xử lý và nhân viên phản hồi kết quả hỗ trợ",
+    "capture_steps": [
+      "Mở cùng yêu cầu lab bằng Technician có quyền, chụp bước tiếp nhận và cập nhật nội dung hoặc trạng thái xử lý.",
+      "Khi kịch bản có kết quả, chuyển sang Employee gửi yêu cầu để chụp xác nhận đã khắc phục hoặc phản hồi chưa khắc phục.",
+      "Ghép các khung (a) tiếp nhận, (b) cập nhật kết quả và (c) xác nhận hoặc mở lại; dùng mã yêu cầu nhất quán với H18–H19.",
+      "Chỉ ghi thao tác đóng hay mở lại nếu giao diện và Backend đã chấp nhận, giữ bằng chứng về trạng thái sau thao tác."
+    ],
+    "must_show": ["Cùng một yêu cầu lab", "Vai trò Technician và Employee", "Nội dung xử lý", "Trạng thái trước và sau", "Thời điểm", "Phản hồi xác nhận hoặc chưa khắc phục"],
+    "hide": ["Dữ liệu hỗ trợ thật", "Thông tin tài khoản cá nhân", "Hành động cần quyền chưa được cấp", "Kết luận hoàn tất chỉ dựa trên lệnh xếp hàng"],
+    "explanation": "Chuỗi thao tác gắn tiến độ kỹ thuật với phản hồi của nhân viên và giữ lại lịch sử xử lý. Cơ chế xác nhận hoặc mở lại giúp kết quả hỗ trợ phản ánh tình trạng sử dụng thay vì chỉ dựa vào một thao tác quản trị đã được gửi."
+  },
+  {
+    "id": "H21",
+    "chapter": 6,
+    "section": "6.7",
+    "kind": "chart",
+    "caption": "Hình 6.1. Độ trễ phản hồi API theo mức tải thử nghiệm",
+    "capture_steps": [
+      "Chạy các mức tải đã định nghĩa và lưu dữ liệu gốc về thời gian phản hồi, mã HTTP, endpoint, phiên bản và thời điểm; không điền số minh họa làm kết quả.",
+      "Tính các thống kê đã chọn như p50 và p95 từ dữ liệu hợp lệ, đồng thời báo tỷ lệ lỗi và quy tắc loại mẫu tại bảng hoặc đoạn văn liên quan.",
+      "Vẽ trục ngang theo đại lượng tải thật đã dùng, trục dọc theo độ trễ mili giây, tách chuỗi theo endpoint hoặc thống kê với chú giải rõ.",
+      "Ghi số mẫu, số lần lặp, cấu hình và điều kiện đo ở dòng nguồn; nếu chưa đo, giữ ô chờ H21 và chưa chèn biểu đồ."
+    ],
+    "must_show": ["Đại lượng tải và đơn vị", "Độ trễ với đơn vị ms", "Tên endpoint hoặc kịch bản", "Thống kê hiển thị và chú giải", "Số mẫu và số lần lặp", "Điều kiện đo và nguồn dữ liệu"],
+    "hide": ["Token và thông tin xác thực trong tệp đo", "Số liệu giả hoặc mẫu minh họa", "Mẫu bị loại không có lý do", "Tên hiệu năng tốt hoặc đạt khi chưa đối chiếu ngưỡng"],
+    "explanation": "Biểu đồ hỗ trợ đối chiếu sự thay đổi độ trễ khi tải tăng trong điều kiện cấu hình và kịch bản đã xác định. Kết luận về mức đáp ứng cần xem đồng thời phân vị độ trễ, tỷ lệ lỗi và ngưỡng chấp nhận được đặt trước thực nghiệm."
+  },
+  {
+    "id": "H22",
+    "chapter": 6,
+    "section": "6.7",
+    "kind": "chart",
+    "caption": "Hình 6.2. Mức sử dụng CPU và RAM của Agent theo thời gian",
+    "capture_steps": [
+      "Đo tiến trình hoặc dịch vụ Agent trên thiết bị lab trong khoảng thời gian và chế độ chạy đã xác định, lưu dữ liệu CPU và loại chỉ số RAM đã chọn.",
+      "Ghi rõ công cụ, chu kỳ lấy mẫu, cấu hình máy và cách tính CPU; thống nhất RAM là working set, private bytes hoặc chỉ số thực tế được đo.",
+      "Vẽ hai biểu đồ chung trục thời gian hoặc hai khung rõ đơn vị CPU phần trăm và RAM MiB, đánh dấu các pha khởi động, ổn định hoặc tác vụ nếu thực nghiệm có.",
+      "Ghi số mẫu và đường dẫn dữ liệu gốc đã loại bí mật; nếu chưa có phép đo thật, giữ ô chờ H22 và chưa vẽ kết quả."
+    ],
+    "must_show": ["Trục thời gian với đơn vị", "CPU với cách tính xác định", "RAM với loại chỉ số và đơn vị", "Chu kỳ lấy mẫu", "Chế độ chạy và cấu hình thiết bị", "Các pha đo nếu có", "Số mẫu và nguồn dữ liệu"],
+    "hide": ["Dữ liệu toàn máy bị gắn nhãn tài nguyên Agent", "Số liệu minh họa", "Pha lỗi hoặc mẫu cao bị loại không giải thích", "Tuyên bố Agent nhẹ khi chưa có ngưỡng và kết quả"],
+    "explanation": "Theo dõi CPU và RAM theo thời gian cho phép đánh giá mức sử dụng tài nguyên của Agent trong từng pha quan sát. Kết quả phụ thuộc cấu hình thiết bị, chế độ chạy và cách đo nên cần giới hạn kết luận trong môi trường thực nghiệm đã mô tả."
+  }
+]

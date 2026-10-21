@@ -1,0 +1,76 @@
+{
+  "source": "Khoa-luan-SentinelLAN-ban-thao.md",
+  "review_scope": "Biên tập ngôn ngữ và ghi chú để chuyển Word; không sửa tệp nguồn và không xác nhận kết quả thực nghiệm.",
+  "edits": [
+    {
+      "id": "ED01",
+      "reason": "Bỏ lời kể về quá trình đọc mã khỏi cơ sở lý thuyết; phân biệt hai kênh giao tiếp.",
+      "original": "SignalR cung cấp cơ chế giao tiếp từ máy chủ đến các phía khách đang kết nối, phù hợp cho cập nhật Dashboard. Thư viện hỗ trợ WebSocket, Server-Sent Events và long polling tùy điều kiện kết nối [1]. Trong SentinelLAN, cần phân biệt Hub cập nhật giao diện với kênh Agent nhận lệnh. Phần mã đã đối chiếu cho thấy Agent gọi PollCommandAsync; do đó không mô tả việc phát lệnh xuống Agent bằng SignalR nếu bản nghiệm thu vẫn dùng luồng này.",
+      "replacement": "SignalR cung cấp cơ chế giao tiếp từ máy chủ đến các phía khách đang kết nối, phù hợp cho cập nhật Dashboard. Thư viện hỗ trợ WebSocket, Server-Sent Events và long polling tùy điều kiện kết nối [1]. Trong SentinelLAN, Hub phục vụ cập nhật giao diện, còn Agent truy vấn lệnh qua PollCommandAsync. Hai kênh có vai trò riêng: kênh cập nhật hỗ trợ hiển thị dữ liệu mới, trong khi chu kỳ truy vấn quyết định thời điểm Agent tiếp nhận lệnh.\n\n[XÁC NHẬN: đối chiếu hai kênh giao tiếp với cấu hình của phiên bản dùng bảo vệ; cập nhật đoạn trên nếu cơ chế nhận lệnh đã thay đổi.]"
+    },
+    {
+      "id": "ED02",
+      "reason": "Trình bày lựa chọn mật mã như nội dung kỹ thuật, chuyển yêu cầu xác nhận cấu hình sang ghi chú.",
+      "original": "Trong mã nguồn đã đối chiếu, hệ thống có hai bộ ký/xác minh. Bộ HMAC sử dụng khóa bí mật chung; bộ RSA sử dụng khóa riêng để ký và khóa công khai để xác minh. Cấu hình ngoài Development yêu cầu khóa RSA trong phần đăng ký dịch vụ đã kiểm tra. Bộ RSA dùng SHA-256, padding PSS và kiểm tra kích thước khóa tối thiểu 3072 bit. Đây là mô tả lựa chọn hiện thực của SentinelLAN, không phải kết quả đánh giá độ an toàn tổng thể của hệ thống.",
+      "replacement": "Hệ thống cung cấp hai bộ ký và xác minh lệnh. Bộ HMAC sử dụng khóa bí mật chung; bộ RSA sử dụng khóa riêng để ký và khóa công khai để xác minh. Cấu hình ngoài môi trường Development yêu cầu khóa RSA. Bộ RSA sử dụng SHA-256, cơ chế đệm PSS và kiểm tra kích thước khóa tối thiểu 3072 bit. Độ an toàn của luồng lệnh còn phụ thuộc việc bảo vệ khóa, kiểm tra quyền, xác minh thời hạn và ngăn phát lại; lựa chọn thuật toán riêng lẻ chưa đủ để đánh giá toàn bộ hệ thống.\n\n[XÁC NHẬN: ghi bộ ký thực sự được dùng trong bản nghiệm thu và dẫn cấu hình tương ứng; bổ sung nguồn chính thức cho SHA-256 và RSA-PSS khi phân tích các cơ chế này.]"
+    },
+    {
+      "id": "ED03",
+      "reason": "Bỏ cụm ghi lại hoạt động đọc mã trong phần thiết kế Agent.",
+      "original": "Trong một chu kỳ, Agent ưu tiên gửi lại biên lai đang chờ, thu thập mẫu kỹ thuật, gửi các mẫu đủ điều kiện trong hàng đợi và truy vấn lệnh. Lệnh chỉ được đưa đến bộ thực thi sau khi vượt qua kiểm tra. Nếu không có cấu hình khóa xác minh, chu kỳ vẫn có thể thu thập telemetry theo mã đã đối chiếu, nhưng không tiếp tục nhận lệnh để thực thi.",
+      "replacement": "Trong một chu kỳ, Agent ưu tiên gửi lại biên lai đang chờ, thu thập mẫu kỹ thuật, gửi các mẫu đủ điều kiện trong hàng đợi và truy vấn lệnh. Lệnh chỉ được đưa đến bộ thực thi sau khi vượt qua kiểm tra. Khi thiếu cấu hình khóa xác minh, Agent có thể tiếp tục thu thập telemetry nhưng dừng việc nhận lệnh để thực thi. Cách xử lý này duy trì khả năng quan sát kỹ thuật đồng thời giữ điều kiện xác minh bắt buộc đối với thao tác quản trị.\n\n[XÁC NHẬN: kiểm tra hành vi khi thiếu khóa bằng test case và cấu hình của phiên bản nghiệm thu.]"
+    },
+    {
+      "id": "ED04",
+      "reason": "Trình bày tham số retention đã biết, giữ loại bản ghi chưa biết trong ghi chú.",
+      "original": "Telemetry có tốc độ phát sinh cao hơn thông tin danh mục, vì vậy cần chính sách lưu giữ. Mã TechnicalDataRetentionService đã đối chiếu sử dụng ngưỡng 30 ngày cho dữ liệu kỹ thuật đi qua cổng lưu giữ của dịch vụ. Cần kiểm tra phần triển khai cổng để biết chính xác loại bản ghi nào được xóa; không suy diễn rằng toàn bộ audit hoặc yêu cầu hỗ trợ cũng có thời hạn 30 ngày.",
+      "replacement": "Telemetry có tốc độ phát sinh cao hơn thông tin danh mục, vì vậy hệ thống cần chính sách lưu giữ để kiểm soát dung lượng và chi phí truy vấn. TechnicalDataRetentionService sử dụng ngưỡng 30 ngày đối với dữ liệu kỹ thuật được xử lý qua cổng lưu giữ của dịch vụ. Chính sách dành cho nhật ký kiểm toán và yêu cầu hỗ trợ phải được mô tả riêng theo loại dữ liệu.\n\n[XÁC NHẬN E03: bổ sung tên loại bản ghi thực sự được tác vụ lưu giữ xử lý; đối chiếu tham số 30 ngày với phiên bản bảo vệ và ghi rõ chính sách của audit, yêu cầu hỗ trợ nếu đã xác định.]"
+    },
+    {
+      "id": "ED05",
+      "reason": "Viết giới hạn hàng đợi thành nội dung thiết kế; chuyển yêu cầu đo sang ghi chú.",
+      "original": "Trong phần Core đã đối chiếu, hàng đợi mặc định có dung lượng 50 mục và thời hạn lưu một giờ; một chu kỳ gửi tối đa 10 mẫu trước bước tiếp theo. Các giá trị này thể hiện giới hạn tài nguyên, không chứng minh hệ thống lưu được toàn bộ lịch sử trong mọi thời gian mất mạng. Khi vượt dung lượng hoặc thời hạn, dữ liệu có thể bị loại theo thuật toán hàng đợi; cần đo và báo số mẫu mất trong thực nghiệm.",
+      "replacement": "Hàng đợi trong Agent Core có dung lượng mặc định 50 mục và thời hạn lưu một giờ; mỗi chu kỳ gửi tối đa 10 mẫu trước khi chuyển sang bước tiếp theo. Các giới hạn này giúp kiểm soát tài nguyên và thời gian của chu kỳ xử lý. Khi số mẫu hoặc thời gian chờ vượt giới hạn, dữ liệu có thể bị loại theo chính sách của hàng đợi, làm gián đoạn lịch sử kỹ thuật trong thời gian mất kết nối dài.\n\n[XÁC NHẬN: ghi giá trị cấu hình thực tế của dung lượng, thời hạn lưu và số mẫu gửi mỗi chu kỳ.]\n\n[ĐO VÀ ĐIỀN: báo số mẫu phát sinh, được phục hồi và bị loại trong thực nghiệm mất mạng tại mục 6.6; không thay số đo bằng các tham số mặc định.]"
+    },
+    {
+      "id": "ED06",
+      "reason": "Tách yêu cầu chụp minh chứng khỏi mô tả học thuật về tệp hỗ trợ.",
+      "original": "Theo hợp đồng self-service đã đọc, ảnh hỗ trợ chỉ chấp nhận JPEG hoặc PNG với giới hạn 2 MiB, có kiểm tra nội dung và tải xuống qua endpoint cần xác thực. Luồng nhân viên chọn ảnh, xem trước và đồng ý gửi phải được thể hiện trong ảnh minh chứng. Một liên kết ảnh công khai không được xem là thay thế tương đương cho kiểm tra quyền tải tệp.",
+      "replacement": "Hợp đồng hỗ trợ nhân viên chấp nhận ảnh JPEG hoặc PNG với giới hạn 2 MiB, kiểm tra nội dung và cung cấp tệp qua endpoint yêu cầu xác thực. Nhân viên chủ động chọn ảnh, xem trước nội dung và đồng ý gửi cùng yêu cầu hỗ trợ. Quyền tải ảnh được kiểm tra theo phạm vi của yêu cầu để hạn chế việc truy cập nội dung ngoài trách nhiệm của người dùng.\n\n[CHỤP HÌNH: chụp trạng thái chọn ảnh và xem trước trước khi gửi, kèm thông báo giới hạn định dạng, dung lượng hoặc đồng ý gửi; dùng ảnh mẫu và loại bỏ dữ liệu cá nhân. Chú thích đề xuất: “Nhân viên chọn, xem trước và gửi ảnh minh họa cho yêu cầu hỗ trợ”.]"
+    },
+    {
+      "id": "ED07",
+      "reason": "Bỏ lời kể đã đọc khởi tạo; bảo toàn giới hạn kiểm chứng bảo mật.",
+      "original": "Trong phần khởi tạo ứng dụng đã đọc, hệ thống có middleware chống CSRF cho các yêu cầu thay đổi dữ liệu sử dụng cookie theo điều kiện được triển khai, cấu hình CORS theo danh sách origin và giới hạn tần suất cho nhóm thao tác nhạy cảm. Kết nối realtime có thành phần đánh giá lại quyền khi cập nhật tài khoản. Các cơ chế này phải được kiểm thử theo đúng cấu hình triển khai; việc đã có mã không chứng minh mọi endpoint đều được bảo vệ đầy đủ.",
+      "replacement": "Phần khởi tạo ứng dụng đăng ký middleware chống CSRF cho các yêu cầu thay đổi dữ liệu sử dụng cookie theo điều kiện áp dụng, cấu hình CORS theo danh sách origin và giới hạn tần suất đối với nhóm thao tác nhạy cảm. Thành phần giao tiếp thời gian thực hỗ trợ đánh giá lại quyền khi tài khoản được cập nhật. Hiệu lực của các biện pháp phụ thuộc điều kiện áp dụng, thứ tự middleware và cấu hình triển khai.\n\n[XÁC NHẬN: mô tả điều kiện áp dụng CSRF, danh sách origin và các nhóm endpoint chịu giới hạn tần suất từ cấu hình nghiệm thu.]\n\n[ĐO VÀ ĐIỀN: bổ sung test case và bằng chứng từ chối yêu cầu không hợp lệ; kết luận mức bảo vệ theo các endpoint đã kiểm thử.]"
+    },
+    {
+      "id": "ED08",
+      "reason": "Làm rõ dữ liệu thu thập và chu kỳ tác vụ; bỏ lời kể đọc mã.",
+      "original": "Agent sử dụng ITelemetryCollector để thu thập dữ liệu thông qua adapter. TelemetrySnapshot trong phần Core đã đọc chứa CPU, RAM, mức sử dụng đĩa, phiên bản hệ điều hành và Agent, đồng thời có thể mang thông tin bảo trì và thời điểm thu thập. Việc giới hạn trường dữ liệu giúp làm rõ hệ thống quan sát những gì.\n\nAgentCycle tạo mã idempotency cho mỗi mẫu, đưa mẫu vào hàng đợi và gửi theo cơ chế đã mô tả. Trên máy chủ, các tác vụ nền kiểm tra dữ liệu và tình trạng thiết bị. DeviceHealthWorker đã đối chiếu chạy theo bộ hẹn giờ một phút và gọi dịch vụ lưu giữ dữ liệu kỹ thuật cùng dịch vụ giám sát sức khỏe thiết bị. Ngưỡng và quy tắc cảnh báo thuộc phần nghiệp vụ tương ứng, cần được ghi đúng từ phiên bản nghiệm thu.",
+      "replacement": "Agent sử dụng ITelemetryCollector để thu thập dữ liệu thông qua adapter. TelemetrySnapshot thuộc phần Core chứa CPU, RAM, mức sử dụng đĩa, phiên bản hệ điều hành và Agent, đồng thời có thể mang thông tin bảo trì và thời điểm thu thập. Phạm vi trường dữ liệu xác định những thông tin kỹ thuật hệ thống quan sát trên thiết bị.\n\nAgentCycle tạo mã idempotency cho mỗi mẫu, đưa mẫu vào hàng đợi và gửi theo cơ chế đã mô tả. Trên máy chủ, DeviceHealthWorker chạy theo bộ hẹn giờ một phút và gọi dịch vụ lưu giữ dữ liệu kỹ thuật cùng dịch vụ giám sát sức khỏe thiết bị. Ngưỡng cảnh báo và điều kiện xử lý được xác định tại phần nghiệp vụ tương ứng.\n\n[XÁC NHẬN: bổ sung đơn vị và nguồn đo từng trường telemetry, chu kỳ DeviceHealthWorker, ngưỡng cảnh báo và điều kiện phục hồi theo cấu hình nghiệm thu.]"
+    },
+    {
+      "id": "ED09",
+      "reason": "Trình bày luồng ký/xác minh tự nhiên; chuyển thông số chưa chốt sang ghi chú.",
+      "original": "ICommandSigner tách giao diện ký lệnh khỏi thuật toán cụ thể. RsaCommandSigner đã đọc tạo chữ ký từ một biểu diễn JSON theo thứ tự cố định; phía Agent xây dựng lại dữ liệu tương ứng để xác minh. Vì chữ ký phụ thuộc từng byte của dữ liệu, thứ tự trường và cách biểu diễn thời gian cần thống nhất. Phần hiện thực dùng thời gian Unix mili giây trong dữ liệu ký, giúp xác định rõ đơn vị giữa hai phía.\n\nCommandVerifier kiểm tra thiết bị đích và danh sách loại lệnh trước khi chấp nhận. Phần mã đã đọc giới hạn phong bì lệnh không quá 15 phút, từ chối thời hạn không hợp lệ, kiểm tra thời điểm phát hành, chữ ký và nonce. Đây là giới hạn tại verifier; thời hạn mặc định hoặc giới hạn của endpoint phát hành phải được ghi riêng nếu khác.",
+      "replacement": "ICommandSigner tách giao diện ký lệnh khỏi thuật toán cụ thể. RsaCommandSigner tạo chữ ký từ dữ liệu JSON có thứ tự trường cố định; Agent xây dựng lại dữ liệu tương ứng để xác minh. Do chữ ký phụ thuộc từng byte, thứ tự trường và cách biểu diễn thời gian phải thống nhất giữa hai phía. Thời gian trong dữ liệu ký được biểu diễn theo Unix mili giây để xác định rõ đơn vị và hạn chế khác biệt khi tuần tự hóa.\n\nCommandVerifier kiểm tra thiết bị đích và danh sách loại lệnh trước khi chấp nhận. Bộ xác minh giới hạn khoảng thời gian hợp lệ của phong bì lệnh không quá 15 phút, từ chối thời hạn không hợp lệ và kiểm tra thời điểm phát hành, chữ ký cùng nonce. Giới hạn của bộ xác minh được phân biệt với thời hạn mặc định và giới hạn tại endpoint phát hành.\n\n[XÁC NHẬN: bổ sung thời hạn mặc định và giới hạn tại endpoint phát hành từ phiên bản nghiệm thu; đối chiếu thứ tự trường được ký với hai phía.]"
+    },
+    {
+      "id": "ED10",
+      "reason": "Di chuyển đoạn kể quá trình soạn thảo ra ghi chú, tránh xuất hiện như nội dung khóa luận.",
+      "original": "Tài liệu tổng quan có một số mô tả cũ về HMAC và tenant; bản thảo ưu tiên phần mã đã đọc khi mô tả lựa chọn RSA và bộ lọc EF, đồng thời yêu cầu xác nhận cấu hình chạy thực. Một số tài liệu con được dẫn trong tổng quan có thể không hiện diện trong bản checkout; bản thảo không sử dụng các tài liệu chưa đọc để khẳng định kết quả.",
+      "replacement": "[GHI CHÚ BIÊN TẬP: đối chiếu mô tả HMAC/RSA, tenant và bộ lọc EF với cấu hình chạy thực của phiên bản nghiệm thu. Chỉ dẫn tài liệu dự án đã kiểm tra nội dung và có thể cung cấp trong gói bàn giao. Bỏ ghi chú này khỏi bản nộp.]"
+    }
+  ],
+  "important_findings": [
+    "Bảng TC01–TC26 hiện ghi Chưa thực hiện. Không được chuyển các ô thành Đạt hoặc viết kết luận vận hành hoàn tất khi chưa có dữ liệu thật.",
+    "H01–H22 mới là mã việc biên tập, chưa có chú thích học thuật và số hình theo chương. Khi chuyển Word cần tạo vị trí chèn, loại ảnh, thao tác chụp, chú thích và dẫn chiếu; H15/H16, H18/H19/H20, H21/H22 đang gộp trong một ghi chú và cần tách.",
+    "Mục 2.10 và danh mục tham khảo mới có bốn nguồn tài liệu kỹ thuật, chưa đủ phần khảo sát công trình học thuật. Giữ C01, C02 và R01–R03 dưới ghi chú bổ sung; không viết như đã khảo sát đủ sản phẩm hoặc công trình.",
+    "Bảng thực thể Chương 4 là mô hình khái niệm. Không dựng ERD vật lý, kiểu dữ liệu hoặc phụ thuộc hàm từ bảng này; cần migrations hoặc schema thực tế.",
+    "Các đoạn mẫu kết quả tại 6.6, 6.7, 6.12 và 7.1 có ô như [số], [giá trị], [môi trường]. Cần định dạng cả đoạn thành vùng cần hoàn thiện hoặc thay bằng marker rõ tên thông tin; không để chúng trông giống đoạn kết quả chính thức.",
+    "Thông tin bìa đã có tên trường, khoa, sinh viên và năm. Bản thảo vẫn có A04 yêu cầu xác nhận; bản Word phải giữ ghi chú vì chưa có mẫu trường chính thức.",
+    "Một số câu hướng dẫn vẫn chen vào nội dung học thuật như Không gọi token ... nếu chưa xác nhận, Báo cáo cần nêu ..., phải được sửa theo trạng thái thực tế. Nên chuyển phần mệnh lệnh dành cho tác giả thành ghi chú màu riêng, giữ nội dung phân tích thiết kế trong đoạn chính.",
+    "Ngày truy cập nguồn 10/10/2026 là ngày đã ghi trong bản thảo; nếu không có bằng chứng mở nguồn trong lần soạn trước, giữ dưới ghi chú xác nhận và không tự ghi là đã kiểm tra lại."
+  ]
+}

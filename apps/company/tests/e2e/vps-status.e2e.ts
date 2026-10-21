@@ -100,6 +100,7 @@ test("Admin can expand individual VPS resources and port bindings, recognize old
   await expect(gateway.getByText("SQL không qua Nginx", { exact: true })).toHaveCount(2);
   await expect(gateway).toContainText("UDP 50000–50100");
   await expect(gateway).toContainText("127.0.0.1:3080");
+  await expect(gateway.getByText("Qua Nginx, không qua container", { exact: true })).toHaveCount(2);
   await gateway.getByRole("button", { name: "Xem container sentinellan-prod-company-tls-1", exact: true }).click();
   await expect(diagram.locator(".vps-diagram-detail")).toContainText("sentinellan-prod-company-tls-1:test");
   await diagram.locator(".vps-diagram-detail").getByRole("button", { name: "Thu gọn", exact: true }).click();

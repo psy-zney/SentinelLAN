@@ -1,0 +1,43 @@
+{
+  "review_method": "Mở và xem trực quan từng ảnh page-01.png đến page-30.png ở detail original; Word native PDF được raster bằng bundled Poppler ở 120 dpi.",
+  "pages_viewed": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
+  "overall": "Không thấy chữ tiếng Việt lỗi, clipping, nội dung chồng lên nhau hoặc bảng vượt lề trong 30 trang đã xem. Có ba vấn đề bố cục cần sửa và một vấn đề mục lục nên tinh chỉnh.",
+  "findings": [
+    {
+      "pages": [6],
+      "severity": "medium",
+      "category": "front_matter_page_break",
+      "description": "MỤC LỤC bắt đầu ở giữa trang ngay sau phần Abstract và Keywords. Hai phần đầu tài liệu đang dùng chung trang.",
+      "suggestion": "Thêm page break trước tiêu đề MỤC LỤC rồi cập nhật các field số trang và xuất PDF lại."
+    },
+    {
+      "pages": [13, 14],
+      "severity": "medium",
+      "category": "excessive_whitespace",
+      "description": "Danh mục bảng sang trang14 chỉ để chứa một dòng Bảng P.4 Rủi ro và phương án xử lý; phần còn lại của trang gần như trống.",
+      "suggestion": "Giảm giãn dòng hoặc spacing riêng của danh mục bảng để gói tất cả vào một trang; kiểm tra lại sau khi cập nhật fields."
+    },
+    {
+      "pages": [25, 26],
+      "severity": "medium",
+      "category": "orphan_table_header",
+      "description": "Cuối trang25 có tiêu đề mục3.3, chú thích Bảng3.2 và chỉ hàng tiêu đề bảng. Tất cả các hàng dữ liệu nằm tại trang26, làm đoạn bắt đầu bảng bị rời dữ liệu.",
+      "suggestion": "Giữ các paragraph trong hàng tiêu đề bảng cùng hàng dữ liệu đầu; nếu cần, ngắt trang trước mục3.3 hoặc caption Bảng3.2."
+    },
+    {
+      "pages": [10, 11],
+      "severity": "low",
+      "category": "toc_scope",
+      "description": "Mục lục bao gồm từng đề mục trong Phụ lụcG có tên Hình3.1 đến Hình6.2. Các mục này trùng nhiều tên trong Danh mục hình ở trang12 và làm mục lục dài hơn một trang.",
+      "suggestion": "Cân nhắc chuyển style các đề mục hướng dẫn từng hình trong Phụ lụcG khỏi Heading1–3 để chúng không được đưa vào mục lục; vẫn giữ đề mục PHỤ LỤCG."
+    }
+  ],
+  "accepted_layout_notes": [
+    "Trang3 và4 còn nhiều khoảng trắng vì Lời cam đoan và Lời cảm ơn được dành trang riêng, có marker thông tin chưa hoàn thiện; không phải trang trắng sinh lỗi.",
+    "Trang19 còn khoảng trắng dưới nội dung do kết thúc Chương1 và Chương2 bắt đầu trang20; chấp nhận được.",
+    "Trang11 là trang cuối mục lục nên có khoảng trắng cuối trang; phần tràn một dòng ở trang14 mới là trường hợp cần sửa.",
+    "Vị trí chèn Hình3.1 và caption ở trang29 vẫn nằm cùng nhau; phần hướng dẫn trước đó được phép tiếp diễn từ trang28.",
+    "Bảng dài Bảng3.2 ở trang26 lặp lại header, nội dung và đường kẻ đều đủ rõ, không bị cắt."
+  ],
+  "no_observed_errors": ["vietnamese_glyphs", "clipping", "overlap", "table_outside_margins", "caption_detached_from_image_placeholder", "unexpected_blank_page"]
+}

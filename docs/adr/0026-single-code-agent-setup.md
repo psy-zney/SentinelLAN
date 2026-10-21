@@ -1,0 +1,13 @@
+# ADR 0026: One-code Windows Agent setup
+
+Status: Accepted, 2026-10-03.
+
+Employees open the Windows installer and paste one IT-issued connection code. The code contains the configured Agent API origin, a random single-use enrollment secret and its UTC expiry. The API chooses the origin from SENTINELLAN_AGENT_PUBLIC_URL, never request Host/Forwarded headers. The SL1 base64url envelope is transport encoding, not encryption or a trusted signature. Trusted HTTPS is required outside local loopback; installers and Agent disable HTTP redirects. No command signing keys or device credentials are included.
+
+The server remains authoritative for expiry and UsedAt. Device, credential, token consumption and audit are saved together; optimistic concurrency on UsedAt admits only one successful enrollment. An unsuccessful local validation or health check does not consume the token. A lost enrollment response can mean the token has already been consumed; IT must verify and revoke a stranded device before re-enrolling with a fresh code. Editing the envelope does not restore a consumed token.
+
+SentinelLAN.Setup is a Windows Forms configurator with an administrator manifest and embedded configuration script. The MSI contains that configurator, launches it from the final interactive dialog, and installs a Start menu shortcut. The downloadable Setup.exe is a second publish of the same configurator with the completed MSI embedded. Silent MSI deployment does not open the interactive UI. Token input is masked and is sent only through redirected stdin to a fixed local script loader. MSI properties and process arguments do not contain the token. Installer staging uses a unique directory restricted to Administrators/SYSTEM and deletes only known extracted files. Existing device identities are not overwritten.
+
+Agent writes a local setup-state receipt containing only a fixed state and UTC time. Setup reports success only after the first successful Agent cycle, including heartbeat. Rejection codes distinguish used and expired tokens. The temporary token is removed from the restricted Agent settings file on completion/failure. Agent credentials, signing-key provisioning, desktop companion and real-action lab permissions retain their existing separate controls.
+
+Validation covers unsafe/malformed code envelopes, configured-origin issuance, server-side reuse/expiry, existing parallel-enrollment tests, safe error mapping, API permissions/tenant checks, package compilation and MSI/EXE generation. Installation, enrollment and reboot acceptance must also run on a separate authorized Windows test machine; building an installer does not certify those runtime behaviors.

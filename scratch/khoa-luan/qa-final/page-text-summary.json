@@ -1,0 +1,518 @@
+[
+  {
+    "page": 1,
+    "chars": 422,
+    "start": "ĐẠI HỌC KINH TẾ THÀNH PHỐ HỒ CHÍ MINH  KHOA CÔNG NGHỆ THÔNG TIN  KHÓA LUẬN TỐT NGHIỆP  HỆ THỐNG QUẢN LÝ GIÁM SÁT VÀ BẢO MẬT  THIẾT BỊ ĐẦU CUỐI TRONG MẠNG NỘI BỘ   SentinelLAN  Sinh",
+    "end": "thông tin  Giảng viên hướng dẫn: [TỰ ĐIỀN A03: học hàm, học vị, họ tên]  TP. Hồ Chí Minh năm 2026   "
+  },
+  {
+    "page": 2,
+    "chars": 1650,
+    "start": "2  HƯỚNG DẪN HOÀN THIỆN FILE WORD  Tài liệu gồm phần nội dung khóa luận và các ghi chú giúp bổ sung minh chứng.  Chữ màu đỏ là phần cần điền, xác nhận hoặc thay bằng dữ liệu thực t",
+    "end": "Nếu dùng bàn phím laptop, có thể  cần Fn+F9. Các vị trí hình H01–H22 được tổng hợp tại Phụ lục G.   "
+  },
+  {
+    "page": 3,
+    "chars": 259,
+    "start": "3  LỜI CAM ĐOAN  [TỰ ĐIỀN A05: viết và ký lời cam đoan theo mẫu của trường, phản ánh đúng tác giả, đóng  góp, dữ liệu và công cụ đã sử dụng. Nếu trường yêu cầu khai báo hỗ trợ AI, ",
+    "end": " khai báo hỗ trợ AI, bổ sung thông tin  theo quy định. Không ký một nội dung chưa được kiểm tra.]   "
+  },
+  {
+    "page": 4,
+    "chars": 626,
+    "start": "4  LỜI CẢM ƠN  Em xin cảm ơn [TỰ ĐIỀN A06: tên giảng viên hướng dẫn]  đã hướng dẫn em  trong quá trình xác định phạm vi đề tài, xây dựng hệ thống và hoàn thiện khóa luận.  Em cảm ơ",
+    "end": " các giới hạn của sản phẩm.  [XÁC NHẬN A09: chỉ giữ những lời cảm ơn đúng với sự hỗ trợ thực tế.]   "
+  },
+  {
+    "page": 5,
+    "chars": 1695,
+    "start": "5  TÓM TẮT  Khóa luận nghiên cứu và xây dựng SentinelLAN, hệ thống hỗ trợ quản lý, giám sát  tình trạng kỹ thuật và kiểm soát các thao tác quản trị trên thiết bị đầu cuối được tổ  ",
+    "end": "thiết bị đầu cuối, mạng nội bộ, Agent –Server, giám sát kỹ thuật,  phân quyền, nhật ký kiểm toán.   "
+  },
+  {
+    "page": 6,
+    "chars": 1311,
+    "start": "6  ABSTRACT  This thesis presents SentinelLAN, a system for managing authorized endpoints,  monitoring technical health, and controlling administrative operations within an  organi",
+    "end": "nagement, local area network, Agent –Server, technical  monitoring, authorization, audit logging.   "
+  },
+  {
+    "page": 7,
+    "chars": 5496,
+    "start": "7  MỤC LỤC  CHƯƠNG 1 TỔNG QUAN ĐỀ TÀI ...................................................................................... 13  1.1 Bối cảnh và lý do chọn đề tài .................",
+    "end": "................................................................................................ 33 "
+  },
+  {
+    "page": 8,
+    "chars": 5737,
+    "start": "8  4.5 Thiết kế cơ sở dữ liệu .................................................................................................... 34  4.5.1 Các nhóm dữ liệu ......................",
+    "end": "................................................................................................ 63 "
+  },
+  {
+    "page": 9,
+    "chars": 3128,
+    "start": "9  6.8 Đánh giá khả năng triển khai và phục hồi dữ liệu ......................................................... 63  6.9 Đánh giá khả năng sử dụng ................................",
+    "end": "....... 78  PHỤ LỤC G HƯỚNG DẪN HÌNH MINH CHỨNG VÀ CHÚ THÍCH................................ 79     "
+  },
+  {
+    "page": 10,
+    "chars": 2483,
+    "start": "10  DANH MỤC HÌNH  Hình 3.1. Sơ đồ Use Case tổng quát của SentinelLAN ........................................................... 26  Hình 3.2. Quy trình quản lý thiết bị và xử lý ",
+    "end": "Mức sử dụng CPU và RAM của Agent theo thời gian ............................................ 62     "
+  },
+  {
+    "page": 11,
+    "chars": 3292,
+    "start": "11  DANH MỤC BẢNG  Bảng 1.1 Mục tiêu và phương pháp đánh giá .......................................................................... 14  Bảng 2.1 Các hướng tiếp cận bài toán quả",
+    "end": "ử lý ....................................................................................... 77     "
+  },
+  {
+    "page": 12,
+    "chars": 841,
+    "start": "12  DANH MỤC CHỮ VIẾT TẮT  Chữ viết tắt Nội dung  API Application Programming Interface — giao diện lập trình ứng dụng  LAN Local Area Network — mạng cục bộ  RBAC Role-Based Access",
+    "end": "n tối thiểu đáp ứng luồng sử  dụng cốt lõi  OTP One-Time Password — mã xác thực sử dụng một lần     "
+  },
+  {
+    "page": 13,
+    "chars": 2481,
+    "start": "13  CHƯƠNG 1 TỔNG QUAN ĐỀ TÀI  1.1 Bối cảnh và lý do chọn đề tài  Trong môi trường làm việc có nhiều máy tính, hoạt động quản trị cần trả lời những  câu hỏi cơ bản: thiết bị nào đa",
+    "end": " xác nhận. Một trạng thái thành công ở  bước trước không tự động chứng minh bước sau đã thành công. "
+  },
+  {
+    "page": 14,
+    "chars": 1956,
+    "start": "14  Đầu vào của hệ thống gồm dữ liệu đăng ký thiết bị, số liệu kỹ thuật, yêu cầu của  người dùng và các thao tác được cấp quyền. Đầu ra gồm danh sách thiết bị, trạng thái  và lịch ",
+    "end": "p người sử dụng gửi yêu cầu và theo dõi kết quả mà không  phải hiểu các tham số kỹ thuật hay không. "
+  },
+  {
+    "page": 15,
+    "chars": 2350,
+    "start": "15  Các câu hỏi được giới hạn trong môi trường, dữ liệu và kịch bản thực nghiệm của  đề tài. Một kết quả tốt ở quy mô nhỏ không đủ để kết luận hệ thống đã đáp ứng triển  khai quy m",
+    "end": " phép kiểm thử các quy tắc nghiệp vụ mà không phụ thuộc trực tiếp  vào giao diện hoặc hệ điều hành. "
+  },
+  {
+    "page": 16,
+    "chars": 1451,
+    "start": "16  Ở giai đoạn đánh giá, các kết quả kiểm thử tự động được kết hợp với thực nghiệm  PostgreSQL và Agent trên môi trường đích. Phương pháp đo ghi rõ cấu hình, số lượng  mẫu và điều",
+    "end": "y kết quả thực nghiệm. Chương 7 đối chiếu kết quả với mục tiêu, nêu hạn chế  và hướng phát triển.   "
+  },
+  {
+    "page": 17,
+    "chars": 2274,
+    "start": "17  CHƯƠNG 2 CƠ SỞ LÝ THUYẾT VÀ KHẢO SÁT GIẢI PHÁP  2.1 Mạng nội bộ và thiết bị đầu cuối  Mạng nội bộ tạo môi trường kết nối giữa các máy tính và dịch vụ trong một phạm  vi tổ chức",
+    "end": "i  tài nguyên. Mẫu gửi lại sau mất mạng vẫn có giá trị lịch sử nhưng không phải phép đo  hiện thời. "
+  },
+  {
+    "page": 18,
+    "chars": 2421,
+    "start": "18  Gọi h là chu kỳ heartbeat và T là ngưỡng xác định mất kết nối. T cần lớn hơn mức  biến động thông thường của quá trình gửi dữ liệu để tránh báo offline do một lần chậm  ngắn. N",
+    "end": "vận hành trong phạm vi đồ án, đồng thời giữ ranh giới để  kiểm thử và thay đổi từng nhóm chức năng. "
+  },
+  {
+    "page": 19,
+    "chars": 2420,
+    "start": "19  Đánh đổi của cách tổ chức này là các module có thể cùng chịu ảnh hưởng khi tiến  trình Backend gặp sự cố. Khả năng mở rộng từng module độc lập cũng bị giới hạn so  với một hệ t",
+    "end": "cấu hình tương ứng;  bổ sung nguồn chính thức cho SHA-256 và RSA-PSS khi phân tích các cơ chế này.] "
+  },
+  {
+    "page": 20,
+    "chars": 2139,
+    "start": "20  Chữ ký được kiểm tra cùng với thiết bị đích, thời hạn và nonce. Chữ ký hợp lệ  không chứng minh thiết bị đã thực thi lệnh, cũng không chứng minh thao tác đó phù  hợp với mọi cấ",
+    "end": "ung phân tích theo  yêu cầu của đề tài, không phải kết quả đánh giá một sản phẩm thương mại cụ thể. "
+  },
+  {
+    "page": 21,
+    "chars": 1705,
+    "start": "21  Bảng 2.1 Các hướng tiếp cận bài toán quản lý thiết bị  Hướng tiếp cận Giá trị đối với bài toán Nội dung cần bổ sung hoặc kiểm  chứng  Bảng tính và trao đổi  trực tiếp  Ghi nhận",
+    "end": "nhận. Chương tiếp theo chuyển những định  hướng này thành các yêu cầu và quy tắc có thể kiểm thử.   "
+  },
+  {
+    "page": 22,
+    "chars": 1754,
+    "start": "22  CHƯƠNG 3 PHÂN TÍCH YÊU CẦU HỆ THỐNG  3.1 Bối cảnh sử dụng và thu thập yêu cầu  Kịch bản sử dụng của đề tài là một tổ chức có nhân viên sử dụng máy tính được  giao và bộ phận kỹ",
+    "end": "Dashboard là kênh tương tác của người dùng, không phải một vai trò  có quyền cao hơn người dùng đó. "
+  },
+  {
+    "page": 23,
+    "chars": 1654,
+    "start": "23  3.3 Yêu cầu chức năng  Bảng 3.2 Yêu cầu chức năng và điều kiện chấp nhận  Mã Yêu cầu Điều kiện chấp nhận  FR01 Xác thực và kết thúc phiên Tài khoản hợp lệ truy cập được; phiên ",
+    "end": "ện phải  chuyển sang thiết kế hoặc hướng phát triển; không tự ghi tất cả yêu cầu là đã hoàn thành.] "
+  },
+  {
+    "page": 24,
+    "chars": 2034,
+    "start": "24  3.4 Yêu cầu phi chức năng  Bảng 3.3 Yêu cầu phi chức năng và cách đánh giá  Mã Nội dung Cách đánh giá  NFR01 Dữ liệu được giới hạn theo tổ chức và đối  tượng  Kiểm thử truy cập",
+    "end": "thu  hồi thiết bị phải có hiệu lực đối với các yêu cầu xác thực tiếp theo theo cơ chế đã thiết  kế. "
+  },
+  {
+    "page": 25,
+    "chars": 1339,
+    "start": "25  3.6 Ma trận quyền nghiệp vụ  Bảng 3.4 Ma trận quyền nghiệp vụ  Hoạt động Admin Technician Employee Agent  Quản lý tài khoản Theo quyền tổ  chức Không mặc định Không Không  Cấp ",
+    "end": ", trao đổi và xác nhận kết quả. Agent liên kết với đăng ký, gửi số  liệu, nhận lệnh và trả kết quả. "
+  },
+  {
+    "page": 26,
+    "chars": 2568,
+    "start": "26  VẼ SƠ ĐỒ H01 — Hình 3.1. Sơ đồ Use Case tổng quát của SentinelLAN.  Cách thực hiện: Vẽ ranh giới SentinelLAN và đặt các tác nhân Admin, Technician, Employee,  Agent ở bên ngoài",
+    "end": " gửi về máy  chủ; máy chủ xác thực, kiểm tra dữ liệu và ghi nhận; giao diện tải hoặc nhận cập nhật; "
+  },
+  {
+    "page": 27,
+    "chars": 2101,
+    "start": "27  người dùng xem giá trị cùng thời điểm cập nhật. Luồng thay thế:  mạng lỗi làm mẫu  được lưu trong hàng đợi giới hạn; mẫu gửi lại không tạo dữ liệu trùng; vượt ngưỡng  không liê",
+    "end": "  tất chỉ vì một lệnh đã được xếp hàng. Bằng chứng: chuỗi trạng thái, trao đổi và audit  liên quan. "
+  },
+  {
+    "page": 28,
+    "chars": 2132,
+    "start": "28  3.8.5 UC05 Tạo và nhận kết quả lệnh  Mục tiêu:  thực hiện một yêu cầu nằm trong danh sách cho phép với khả năng  kiểm chứng. Tác nhân:  người quản trị được cấp quyền và Agent. ",
+    "end": "ng minh máy nhiễm  mã độc, còn yêu cầu “không in được” có thể không đi kèm bất thường CPU hay RAM.  "
+  },
+  {
+    "page": 29,
+    "chars": 2129,
+    "start": "29  Sau khi tiếp nhận, kỹ thuật viên thu thập bối cảnh, quyết định thao tác trong quyền  và theo dõi kết quả. Nếu có hành động cần phê duyệt, tiến trình chỉ tiếp tục khi điều  kiện",
+    "end": "TC18–TC21  FR15, NFR05 Audit và xử lý lỗi TC22–TC23  FR01, FR02 Xác thực và quản lý quyền TC24–TC25 "
+  },
+  {
+    "page": 30,
+    "chars": 552,
+    "start": "30  Yêu cầu Thành phần chính Kiểm thử tại Chương 6  FR08 Giám sát điều kiện và xử lý cảnh  báo TC26  NFR02, NFR03,  NFR07 Vận hành và triển khai Thực nghiệm tại mục 6.6–6.8    3.11",
+    "end": "nhận. Những điều kiện này là cơ sở để xây dựng kiến trúc và phương án  kiểm thử ở các chương sau.   "
+  },
+  {
+    "page": 31,
+    "chars": 1149,
+    "start": "31  CHƯƠNG 4 THIẾT KẾ HỆ THỐNG  4.1 Kiến trúc tổng thể  SentinelLAN gồm các giao diện người dùng, Backend, cơ sở dữ liệu và Agent. Các  giao diện gửi yêu cầu nghiệp vụ đến API. Bac",
+    "end": "ẳng hạn thiết  bị, lệnh và những điều kiện chuyển trạng thái. Lớp này không phụ thuộc thư viện lưu  "
+  },
+  {
+    "page": 32,
+    "chars": 2467,
+    "start": "32  trữ hoặc API hệ điều hành. Sự độc lập này giúp kiểm thử quy tắc mà không phải khởi  động một cơ sở dữ liệu thật cho mọi tình huống.  Lớp Application định nghĩa các ca sử dụng, ",
+    "end": "ác  Giám sát Heartbeat, telemetry, phát hiện điều  kiện cảnh báo Mẫu kỹ thuật và sự kiện tình trạng "
+  },
+  {
+    "page": 33,
+    "chars": 1900,
+    "start": "33  Module Trách nhiệm Hợp đồng trao đổi tiêu biểu  Lệnh và chính sách Tạo, ký, giao, xác nhận và giới hạn  thao tác Yêu cầu tạo lệnh và kết quả  Hỗ trợ nhân viên Yêu cầu, trao đổi",
+    "end": "dapter vẫn cần thiết để xác nhận một thao tác hợp lệ có tạo đúng hiệu ứng trên máy  thật hay không. "
+  },
+  {
+    "page": 34,
+    "chars": 1842,
+    "start": "34  4.5 Thiết kế cơ sở dữ liệu  4.5.1 Các nhóm dữ liệu  Dữ liệu được chia thành nhóm tổ chức và người dùng, nhóm thiết bị, nhóm số liệu  kỹ thuật, nhóm điều khiển, nhóm hỗ trợ và n",
+    "end": "ết người báo  với thiết bị liên quan; yêu cầu có thể có nhiều trao đổi và tệp đính kèm. Quan hệ gán "
+  },
+  {
+    "page": 35,
+    "chars": 2672,
+    "start": "35  máy phải biểu diễn được chính sách thực tế, chẳng hạn một nhân viên chỉ có một máy  hoạt động trong một luồng hỗ trợ cụ thể hoặc có thể được giao nhiều máy.  ERD cần thể hiện l",
+    "end": "quản lý không cần  được sao chép vào mọi mẫu telemetry chỉ để thay thế quan hệ thiết bị. Tuy nhiên, "
+  },
+  {
+    "page": 36,
+    "chars": 2280,
+    "start": "36  những bản chụp cần giữ nguyên ý nghĩa lịch sử, như nội dung gói phần mềm tại thời  điểm phê duyệt, có thể được lưu có chủ đích.  Các ràng buộc cần xem xét gồm không rỗng với tr",
+    "end": " liệu vẫn phải kiểm tra tổ chức và quyền trên đối tượng, kể cả khi đường dẫn chứa một  UUID hợp lệ. "
+  },
+  {
+    "page": 37,
+    "chars": 2551,
+    "start": "37  Lỗi cần phản ánh đúng nguyên nhân ở mức người dùng có thể xử lý: dữ liệu không  hợp lệ, phiên không hợp lệ, không đủ quyền, đối tượng không khả dụng hoặc xung đột  trạng thái. ",
+    "end": "riêng cần xác nhận  để tránh đồng nhất phản hồi cấp định danh với đăng ký hoàn chỉnh trên thiết bị. "
+  },
+  {
+    "page": 38,
+    "chars": 2708,
+    "start": "38  4.8 Luồng telemetry và phục hồi kết nối  Agent tạo mẫu kèm thời điểm thu thập và mã idempotency rồi đưa vào hàng đợi.  Khi kết nối hoạt động, các mẫu được gửi đến máy chủ; khi ",
+    "end": "hực thi và ghi  nhận kết quả. Ở bước phát hành, API xác định quyền và phạm vi, yêu cầu lý do và xác "
+  },
+  {
+    "page": 39,
+    "chars": 2226,
+    "start": "39  nhận. Lệnh được ký trên dữ liệu gồm mã lệnh, tổ chức, thiết bị, người phát hành, loại  thao tác, lý do, thời điểm, nonce và tham số. Agent lấy lệnh bằng polling và kiểm tra  tr",
+    "end": "i máy  chủ và bước xác nhận tác động trên thiết bị thuộc hai thời điểm khác nhau của cùng vòng đời. "
+  },
+  {
+    "page": 40,
+    "chars": 2582,
+    "start": "40  VẼ SƠ ĐỒ H09 — Hình 4.7. Mô hình trạng thái và chuyển trạng thái của lệnh.  Cách thực hiện: Lấy tên trạng thái và các chuyển trạng thái từ enum, dịch vụ xử lý và endpoint  của ",
+    "end": "c, trạng thái và  người xử lý. Trao đổi và tệp đính kèm thuộc cùng phạm vi quyền của yêu cầu. Trạng "
+  },
+  {
+    "page": 41,
+    "chars": 1986,
+    "start": "41  thái yêu cầu hỗ trợ được tách khỏi trạng thái lệnh: một yêu cầu được duyệt có thể vẫn  chờ Agent nhận hoặc có thể thất bại khi thực thi.  Hợp đồng hỗ trợ nhân viên chấp nhận ản",
+    "end": "udit chỉ thêm mới tại đường lưu  được triển khai  Không suy diễn thành chống sửa  bởi quản trị DB   "
+  },
+  {
+    "page": 42,
+    "chars": 2278,
+    "start": "42  4.12.2 Quản lý khóa và bí mật  Các khóa cho xác thực phiên, ký lệnh và bảo vệ dữ liệu có mục đích khác nhau nên  được tách biệt. Cấu hình triển khai sử dụng nguồn bí mật phù hợ",
+    "end": "ment và các cổng bind loopback;  môi trường LAN đích cần được mô tả từ cấu hình triển khai thực tế. "
+  },
+  {
+    "page": 43,
+    "chars": 2020,
+    "start": "43  Sao lưu bao gồm dữ liệu và các thành phần cần để khôi phục ý nghĩa dữ liệu. Nếu  dữ liệu được mã hóa, chỉ có bản sao cơ sở dữ liệu mà thiếu khóa cần thiết có thể không  đủ phục",
+    "end": "một thao tác đã có kết quả. Chương tiếp  theo mô tả cách các thiết kế được hiện thực trong dự án.   "
+  },
+  {
+    "page": 44,
+    "chars": 1754,
+    "start": "44  CHƯƠNG 5 HIỆN THỰC VÀ TRIỂN KHAI HỆ THỐNG  5.1 Môi trường và công nghệ  Hệ thống sử dụng C# và ASP.NET Core cho Backend, C# Worker cho Agent,  TypeScript và Next.js cho Dashboa",
+    "end": "ny, giao diện nhân  viên có phần ứng dụng tương ứng và thư viện dùng chung; typed API client của hệ "
+  },
+  {
+    "page": 45,
+    "chars": 2603,
+    "start": "45  thống nằm trong packages/web-ui. Dự án cũng có mã nguồn mobile và các thành phần  thiết lập bộ cài.  Cách tổ chức này cho phép chia sẻ hợp đồng và thành phần giao diện mà không",
+    "end": "p dụng CSRF, danh sách origin và các nhóm endpoint chịu  giới hạn tần suất từ cấu hình nghiệm thu.] "
+  },
+  {
+    "page": 46,
+    "chars": 2168,
+    "start": "46  [ĐO VÀ ĐIỀN: bổ sung test case và bằng chứng từ chối yêu cầu không hợp lệ; kết luận mức  bảo vệ theo các endpoint đã kiểm thử.]  CHỤP ẢNH H12 — Hình 5.2. Đăng nhập, điều hướng ",
+    "end": "i được hiển thị là chưa có dữ liệu, thay vì  dùng giá trị 0 để tạo cảm giác máy hoàn toàn nhàn rỗi. "
+  },
+  {
+    "page": 47,
+    "chars": 2824,
+    "start": "47  CHỤP ẢNH H13 — Hình 5.3. Cấp mã đăng ký và ghi nhận thiết bị Agent.  Cách thực hiện: Dùng một thiết bị lab được phép quản lý và chụp màn hình cấp mã đăng ký sau  khi đã che toà",
+    "end": "u thập.  Phạm vi trường dữ liệu xác định những thông tin kỹ thuật hệ thống quan sát trên thiết  bị. "
+  },
+  {
+    "page": 48,
+    "chars": 2036,
+    "start": "48  AgentCycle tạo mã idempotency cho mỗi mẫu, đưa mẫu vào hàng đợi và gửi theo  cơ chế đã mô tả. Trên máy chủ, DeviceHealthWorker chạy theo bộ hẹn giờ một phút  và gọi dịch vụ lưu",
+    "end": "o chỉ mô tả tình trạng tài  nguyên tại thời điểm quan sát và chưa đủ để kết luận nguyên nhân sự cố. "
+  },
+  {
+    "page": 49,
+    "chars": 2640,
+    "start": "49  CHỤP ẢNH H16 — Hình 5.6. Cảnh báo kỹ thuật và dữ liệu giải thích điều kiện phát sinh.  Cách thực hiện: Chọn một kịch bản cảnh báo lab đã xác định ngưỡng, thời gian duy trì hoặc",
+    "end": "các lệnh SimulateLock và SimulateNetworkIsolation trả  kết quả mô phỏng và giữ nguyên hệ điều hành. "
+  },
+  {
+    "page": 50,
+    "chars": 2520,
+    "start": "50  CHỤP ẢNH H17 — Hình 5.7. Vòng đời một lệnh được phép và kết quả phản hồi từ Agent.  Cách thực hiện: Chọn lệnh đã được phép thử như CollectTelemetryNow hoặc một lệnh mô phỏng  c",
+    "end": "ông hợp lệ, đồng thời kiểm thử tài khoản khác không thể tải ảnh bằng  cách thay ID trong đường dẫn. "
+  },
+  {
+    "page": 51,
+    "chars": 2332,
+    "start": "51  CHỤP ẢNH H18 — Hình 5.8. Biểu mẫu nhân viên báo sự cố và chọn ảnh hỗ trợ.  Cách thực hiện: Đăng nhập Employee lab đã có thiết bị được giao và mở biểu mẫu báo sự cố.;  Điền mô t",
+    "end": "rợ cần được đọc riêng với trạng  thái lệnh để tránh hiểu việc duyệt thao tác là đã khắc phục sự cố. "
+  },
+  {
+    "page": 52,
+    "chars": 2551,
+    "start": "52  CHỤP ẢNH H20 — Hình 5.10. Kỹ thuật viên xử lý và nhân viên phản hồi kết quả hỗ trợ.  Cách thực hiện: Mở cùng yêu cầu lab bằng Technician có quyền, chụp bước tiếp nhận và cập  n",
+    "end": "o, mobile được  trình bày như kênh giao diện sử dụng cùng quy tắc quyền, không được coi là hệ thống "
+  },
+  {
+    "page": 53,
+    "chars": 1962,
+    "start": "53  MDM quản lý điện thoại. Camera, deep link, lưu phiên và thông báo đẩy phải kiểm  thử riêng trên thiết bị hoặc emulator đích.  Các chức năng danh mục phần mềm, phê duyệt cài đặt",
+    "end": "ình mạng và vị trí TLS [TỰ ĐIỀN F08]  Phiên bản PostgreSQL,  persistence và migration [TỰ ĐIỀN F09] "
+  },
+  {
+    "page": 54,
+    "chars": 1661,
+    "start": "54  Thông tin triển khai Giá trị thực nghiệm  Số Agent thật và Agent mô  phỏng [TỰ ĐIỀN F10]  Tài khoản dịch vụ Agent và  các cờ đã bật [TỰ ĐIỀN F11: không ghi credential]  Chu kỳ ",
+    "end": "ở chương tiếp theo. Vì vậy, ảnh giao diện và mô tả mã cần đi  cùng bằng chứng kiểm thử tương ứng.   "
+  },
+  {
+    "page": 55,
+    "chars": 1997,
+    "start": "55  CHƯƠNG 6 KIỂM THỬ VÀ ĐÁNH GIÁ  6.1 Mục tiêu và nguyên tắc kiểm thử  Kiểm thử nhằm xác định mức đáp ứng của hệ thống đối với các yêu cầu đã nêu,  bao gồm chức năng, giới hạn tru",
+    "end": "ị trí  chạy]  Agent [ĐO VÀ ĐIỀN G04: phiên bản, OS, quyền dịch vụ, cấu hình  heartbeat và hàng đợi] "
+  },
+  {
+    "page": 56,
+    "chars": 1948,
+    "start": "56  Thành phần Cấu hình cần ghi  Mạng [ĐO VÀ ĐIỀN G05: mạng thật/ảo, cách tạo mất mạng, độ trễ nếu  có]  Giao diện [ĐO VÀ ĐIỀN G06: trình duyệt, thiết bị, độ phân giải; mobile nếu ",
+    "end": "ng khi không có test]  Build giao diện npm.cmd run build trong ứng dụng  tương ứng [ĐO VÀ ĐIỀN G12] "
+  },
+  {
+    "page": 57,
+    "chars": 1854,
+    "start": "57  Nhóm kiểm tra Lệnh hoặc cách chạy Kết quả  E2E npm.cmd run test:e2e nếu ứng dụng  và môi trường đã cấu hình [ĐO VÀ ĐIỀN G13]  PostgreSQL và Agent  thật  Thực hiện các kịch bản ",
+    "end": "i theo cấu hình  Trạng thái mất kết nối theo quy  tắc; không gán nguyên nhân chủ  ý  Chưa thực hiện "
+  },
+  {
+    "page": 58,
+    "chars": 1964,
+    "start": "58  Mã Thao tác kiểm thử Kết quả mong đợi Kết quả thực tế  TC10 Khôi phục mạng sau mất mạng  trong giới hạn hàng đợi  Mẫu đủ điều kiện gửi bù với  thời điểm thu thập gốc Chưa thực ",
+    "end": "ealtime đang tồn tại  Các đường truy cập không tiếp  tục cung cấp dữ liệu trái quyền Chưa thực hiện "
+  },
+  {
+    "page": 59,
+    "chars": 2214,
+    "start": "59  Mã Thao tác kiểm thử Kết quả mong đợi Kết quả thực tế  TC26 Tạo điều kiện cảnh báo rồi phục  hồi theo quy tắc  Sinh cảnh báo đúng, chống  trùng và xử lý phục hồi đúng  thiết kế",
+    "end": "ây số mẫu phát  sinh xấp xỉ d/h, tùy pha chu kỳ và thời điểm lấy mẫu. Với dung lượng c, số mẫu được "
+  },
+  {
+    "page": 60,
+    "chars": 2067,
+    "start": "60  giữ còn phụ thuộc c, thời hạn lưu và số mục đã có sẵn. Công thức này dùng để lập dự  kiến; kết quả phải dựa trên số mẫu thực tế ghi nhận.  6.6.2 Bảng kết quả  Bảng 6.4 Kết quả ",
+    "end": "c xác định sai số; một độ trễ  âm do lệch đồng hồ không được đưa vào trung bình như kết quả hợp lệ. "
+  },
+  {
+    "page": 61,
+    "chars": 1759,
+    "start": "61  Các chỉ số cần báo gồm số mẫu, trung vị, p95, tỷ lệ lỗi và điều kiện tải. p95 được  tính từ tập đo sau khi sắp xếp bằng phương pháp đã nêu trong script; nó phản ánh phần  lớn q",
+    "end": "Định nghĩa  loại RAM  được đo  Mất mạng [ĐO VÀ ĐIỀN] [ĐO VÀ ĐIỀN] [ĐO VÀ ĐIỀN] Ghi độ dài  hàng đợi "
+  },
+  {
+    "page": 62,
+    "chars": 2914,
+    "start": "62  Chế độ Agent Số mẫu và thời  gian đo  CPU trung  vị/p95  RAM trung  vị/đỉnh Ghi chú  Khôi phục và gửi bù [ĐO VÀ ĐIỀN] [ĐO VÀ ĐIỀN] [ĐO VÀ ĐIỀN]  Ghi thời  gian hoàn  tất    TẠO",
+    "end": " thiết bị,  chế độ chạy và cách đo nên cần giới hạn kết luận trong môi trường thực nghiệm đã mô tả. "
+  },
+  {
+    "page": 63,
+    "chars": 2259,
+    "start": "63  6.7.4 Phân tích kết quả  [ĐO VÀ ĐIỀN G18: hoàn thiện đoạn sau.] Khi số nguồn gửi tăng từ [mức] lên [mức], p95 của  [endpoint] thay đổi từ [giá trị] sang [giá trị]. Tỷ lệ lỗi gh",
+    "end": " có người dùng thử, ghi mục này là chưa thực hiện; không tự đánh giá thay họ  rồi gọi là khảo sát.] "
+  },
+  {
+    "page": 64,
+    "chars": 1475,
+    "start": "64  Bảng 6.8 Kết quả thực hiện tác vụ của người dùng thử  Tác vụ Người tham gia hoàn  thành/tổng số  Thời gian theo cách tổng  hợp đã chọn Vấn đề quan sát  Tìm thiết bị được  giao ",
+    "end": "có tác động trái  phép  9 Xem audit và tổng hợp giới hạn Có dấu vết, nêu rõ phần chưa  nghiệm thu   "
+  },
+  {
+    "page": 65,
+    "chars": 1695,
+    "start": "65  Demo không thay thế kết quả đo hiệu năng. Trước buổi bảo vệ cần chuẩn bị dữ  liệu và các trạng thái đầu vào để lặp lại, đồng thời có ảnh hoặc video bằng chứng từ  lần chạy đã g",
+    "end": "inh hệ thống không còn lỗi; giá trị của kiểm thử  nằm ở tình huống và ranh giới đã được kiểm chứng. "
+  },
+  {
+    "page": 66,
+    "chars": 419,
+    "start": "66  6.12 Kết luận chương  [ĐO VÀ ĐIỀN G31: hoàn thiện sau thực nghiệm.] Bộ đánh giá đã thực hiện [số] kịch bản,  trong đó [số] đạt, [số] không đạt và [số] chưa thực hiện. Các kết q",
+    "end": "g môi trường [cấu hình], đồng thời cần tiếp tục kiểm chứng [nội dung] trước khi  mở rộng sử dụng.   "
+  },
+  {
+    "page": 67,
+    "chars": 2283,
+    "start": "67  CHƯƠNG 7 KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN  7.1 Kết quả của đề tài  Đề tài xác định và mô hình hóa bài toán quản lý thiết bị đầu cuối được ủy quyền  theo một vòng đời gồm đăng ký, g",
+    "end": "t quả chưa đại  diện cho môi trường có nhiều loại phần cứng, cấu hình bảo mật và sự cố kéo dài. Các "
+  },
+  {
+    "page": 68,
+    "chars": 2239,
+    "start": "68  phép thử mô phỏng tải hỗ trợ đánh giá Backend nhưng không thay thế nghiệm thu  Agent trên các hệ điều hành đích.  Hạn chế về dữ liệu nằm ở việc telemetry chỉ cung cấp một phần ",
+    "end": "c là hướng nghiên cứu bổ sung, cần có bài toán,  quyền thu thập dữ liệu và tiêu chí đánh giá riêng. "
+  },
+  {
+    "page": 69,
+    "chars": 1221,
+    "start": "69  Bảng 7.1 Ưu tiên phát triển và căn cứ thực hiện  Ưu tiên Hạng mục Căn cứ triển khai  1 Nghiệm thu Agent và PostgreSQL  trên môi trường đích  Hoàn thiện bằng chứng cho mục  tiêu",
+    "end": "uận “đã sẵn sàng triển khai diện rộng” khi chưa có thực  nghiệm và điều kiện vận hành tương ứng.]   "
+  },
+  {
+    "page": 70,
+    "chars": 2185,
+    "start": "70  TÀI LIỆU THAM KHẢO  Các mục [1] –[4] dưới đây là nguồn kỹ thuật đã mở để đối chiếu ngày 10/10/2026.  Chuẩn hóa trình bày theo kiểu trích dẫn trường yêu cầu và kiểm tra ngày tru",
+    "end": " README.md, docs/project-overview.md và docs/self-service- contract.md trong workspace SentinelLAN. "
+  },
+  {
+    "page": 71,
+    "chars": 918,
+    "start": "71  • apps/backend/src/SentinelLAN.Api/Extensions/ServiceCollectionExtensions.cs,  WebApplicationExtensions.cs và EndpointRouteBuilderExtensions.cs.  • apps/backend/src/SentinelLAN",
+    "end": "án được triển khai nội dung và có thể cung  cấp trong gói bàn giao. Bỏ ghi chú này khỏi bản nộp.]   "
+  },
+  {
+    "page": 72,
+    "chars": 1388,
+    "start": "72  PHỤ LỤC A DANH SÁCH API  Danh sách dưới đây là các đường dẫn tiêu biểu đã thấy trong hợp đồng hoặc API  client, chưa phải toàn bộ OpenAPI. Điền yêu cầu quyền, mã lỗi và ví dụ p",
+    "end": "ào và ràng buộc; ví dụ phản hồi đã ẩn dữ liệu; mã lỗi;  idempotency nếu có; test case kiểm chứng.   "
+  },
+  {
+    "page": 73,
+    "chars": 475,
+    "start": "73  PHỤ LỤC B TỪ ĐIỂN DỮ LIỆU  Bảng P.2 Mẫu từ điển dữ liệu  Tên bảng vật  lý Cột Kiểu  PostgreSQL  Cho  phép  null  Khóa/ràng buộc Ý nghĩa  [TỰ ĐIỀN  PB01] [TỰ ĐIỀN] [TỰ ĐIỀN] [TỰ",
+    "end": "ặc cơ sở dữ liệu thử nghiệm được triển khai, không đính kèm database dump có dữ  liệu người dùng.   "
+  },
+  {
+    "page": 74,
+    "chars": 1110,
+    "start": "74  PHỤ LỤC C BIỂU MẪU KIỂM THỬ VÀ BẰNG CHỨNG  C.1 Phiếu kiểm thử  • Mã: [TỰ ĐIỀN PC01].  • Yêu cầu liên quan: [TỰ ĐIỀN].  • Phiên bản và môi trường: [TỰ ĐIỀN].  • Ngày giờ, người ",
+    "end": "ỉ vì làm xấu kết quả. Việc phân chia pha khởi động và ổn định phải có quy  tắc xác định từ trước.   "
+  },
+  {
+    "page": 75,
+    "chars": 2110,
+    "start": "75  PHỤ LỤC D HƯỚNG DẪN CÀI ĐẶT VÀ SỬ DỤNG  D.1 Chuẩn bị  Chuẩn bị môi trường theo bảng cấu hình nghiệm thu, nguồn mã đúng phiên bản và  các giá trị bí mật riêng. Xác định địa chỉ ",
+    "end": " tới yêu cầu. Các lỗi không xử lý được cần được ghi với mã tương  quan và thông tin đã loại bí mật. "
+  },
+  {
+    "page": 76,
+    "chars": 5,
+    "start": "76   ",
+    "end": "76   "
+  },
+  {
+    "page": 77,
+    "chars": 1621,
+    "start": "77  PHỤ LỤC E KẾ HOẠCH VÀ QUẢN LÝ PHẠM VI  Bảng P.3 Giai đoạn thực hiện và điều kiện hoàn thành  Giai đoạn Đầu ra cần có Điều kiện chuyển bước  Chốt bài toán Phạm vi, mục tiêu và c",
+    "end": "ián đoạn Mạng hoặc dịch vụ lỗi Chuẩn bị quy trình khởi động lại và  bằng chứng có ghi phiên bản     "
+  },
+  {
+    "page": 78,
+    "chars": 1219,
+    "start": "78  PHỤ LỤC F DANH MỤC VIỆC CẦN TỰ HOÀN THIỆN  Phụ lục này là bảng kiểm biên tập; bỏ khỏi bản nộp nếu không có yêu cầu giữ lại.  Xử lý các việc theo thứ tự để tránh phải viết lại p",
+    "end": "ải chuyển thành hạn chế hoặc công việc tương lai,  không để trống và không tự nhận đã hoàn thành.   "
+  },
+  {
+    "page": 79,
+    "chars": 2587,
+    "start": "79  PHỤ LỤC G HƯỚNG DẪN HÌNH MINH CHỨNG VÀ CHÚ  THÍCH  Danh sách này tổng hợp vị trí hình để chuẩn bị minh chứng. Hướng dẫn chi tiết  cũng được đặt ngay trong nội dung tại từng vị ",
+    "end": " lại các thành phần trước khi nộp.  Chú thích đề xuất: Hình 4.1. Kiến trúc tổng thể của SentinelLAN "
+  },
+  {
+    "page": 80,
+    "chars": 2894,
+    "start": "80  Hình 4.2. Phân lớp Backend và chiều phụ thuộc giữa các thành phần  Vị trí: mục 4.2; mã H04; loại sơ đồ.  Cách thực hiện: Đối chiếu các dự án và tham chiếu thực tế, sau đó vẽ bố",
+    "end": " trạng thái sử  dụng và tổ chức; Cấp định danh; Lưu credential cục bộ; Nhánh từ chối và lỗi lưu trữ "
+  },
+  {
+    "page": 81,
+    "chars": 2412,
+    "start": "81  Thông tin cần che: Token, khóa và credential thật; Endpoint chưa được đối chiếu; Thông báo  thành công trước khi lưu credential được xác nhận  Chú thích đề xuất: Hình 4.4. Trìn",
+    "end": "h  Hình 4.7. Mô hình trạng thái và chuyển trạng thái của lệnh  Vị trí: mục 4.9; mã H09; loại sơ đồ. "
+  },
+  {
+    "page": 82,
+    "chars": 3006,
+    "start": "82  Cách thực hiện: Lấy tên trạng thái và các chuyển trạng thái từ enum, dịch vụ xử lý và endpoint  của đúng phiên bản bảo vệ.; Vẽ State Diagram với trạng thái đầu, trạng thái kết ",
+    "end": " làm sai phạm vi  Chú thích đề xuất: Hình 5.1. Cấu trúc thư mục và các dự án chính của  SentinelLAN "
+  },
+  {
+    "page": 83,
+    "chars": 3035,
+    "start": "83  Hình 5.2. Đăng nhập, điều hướng theo vai trò và phản hồi truy cập không đủ  quyền  Vị trí: mục 5.3; mã H12; loại ảnh chụp màn hình.  Cách thực hiện: Trên dữ liệu lab, chụp màn ",
+    "end": "ntial hoặc mã đăng ký; Thông tin phần  cứng định danh cá nhân không cần thiết; Dữ liệu tổ chức khác "
+  },
+  {
+    "page": 84,
+    "chars": 2855,
+    "start": "84  Chú thích đề xuất: Hình 5.4. Chi tiết thiết bị và thao tác gán người sử dụng  Hình 5.5. Dữ liệu kỹ thuật và thời điểm cập nhật của thiết bị Agent  Vị trí: mục 5.5; mã H15; loại",
+    "end": "ình thực tế ở đoạn văn; chỉ ghi thành công  hoặc thay đổi hệ điều hành khi có bằng chứng tương ứng. "
+  },
+  {
+    "page": 85,
+    "chars": 2935,
+    "start": "85  Nội dung cần nhìn thấy: Loại lệnh và thiết bị đích; Lý do và xác nhận; Mã lệnh nhất quán đã ẩn  danh; Trạng thái phát hành và phản hồi; Thời điểm hoặc thời hạn; Nhãn mô phỏng n",
+    "end": " đóng hay mở lại nếu giao diện và Backend đã chấp nhận, giữ bằng chứng về trạng  thái sau thao tác. "
+  },
+  {
+    "page": 86,
+    "chars": 2672,
+    "start": "86  Nội dung cần nhìn thấy: Cùng một yêu cầu lab; Vai trò Technician và Employee; Nội dung xử lý;  Trạng thái trước và sau; Thời điểm; Phản hồi xác nhận hoặc chưa khắc phục  Thông ",
+    "end": " có ngưỡng và kết quả  Chú thích đề xuất: Hình 6.2. Mức sử dụng CPU và RAM của Agent theo thời gian "
+  }
+]

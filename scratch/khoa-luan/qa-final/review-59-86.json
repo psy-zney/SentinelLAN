@@ -1,0 +1,45 @@
+{
+  "review_type": "Visual inspection of the 86-page Word-native PDF export",
+  "raster_dpi": 120,
+  "view_detail": "original",
+  "pages_reviewed": [59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86],
+  "checks": {
+    "clipping": "none observed",
+    "overlap": "none observed",
+    "tables_outside_print_area": "none observed",
+    "vietnamese_glyph_corruption": "none observed",
+    "table_code_wrapping": "TC26 on page59 fits on one line; earlier issue resolved in inspected range",
+    "actual_figure_or_table_caption_stranded": "none observed",
+    "blank_pages": [76]
+  },
+  "issues": [
+    {
+      "page": 76,
+      "severity": "fix_required",
+      "type": "blank_page",
+      "description": "Trang76 chỉ có số trang, nằm sau Phụ lụcD và trước Phụ lụcE. Root đã nhận diện và đang sửa.",
+      "suggested_fix": "Bỏ đoạn trắng/ngắt trang thừa sau Phụ lụcD và tái xuất trang bị ảnh hưởng."
+    },
+    {
+      "pages": [62, 79, 80, 81, 82, 83, 84, 85, 86],
+      "severity": "polish",
+      "type": "double_punctuation",
+      "description": "Trong một số đoạn Cách thực hiện, việc ghép các câu bằng dấu chấm phẩy tạo chuỗi '.;' như 'kết quả.; Tính', '...thử nghiệm.; Thực hiện'. Không ảnh hưởng render nhưng câu hướng dẫn nên chuẩn hóa.",
+      "suggested_fix": "Thay '.;' bằng ';' hoặc giữ câu trọn với dấu chấm và không thêm chấm phẩy."
+    },
+    {
+      "page": 66,
+      "severity": "optional",
+      "type": "large_end_of_chapter_whitespace",
+      "description": "Mục6.12 và toàn đoạnG31 đã được giữ cùng trang66, không còn đoạn tiếp nối bị rời; trang vẫn có khoảng trắng lớn vì Chương7 mở trang67.",
+      "suggested_fix": "Có thể giảm nhẹ khoảng cách ở cuối trang65 để6.12 kết thúc trên trang65; bố cục hiện tại vẫn đọc được và không mất nội dung."
+    }
+  ],
+  "acceptable_whitespace": [
+    {"page": 69, "reason": "Cuối Chương7 trước tài liệu tham khảo."},
+    {"page": 71, "reason": "Cuối tài liệu dự án trước Phụ lụcA."},
+    {"page": 73, "reason": "Phụ lụcB là mẫu từ điển dữ liệu cần tự điền."},
+    {"page": 86, "reason": "Trang cuối của bản thảo/hướng dẫn hình."}
+  ],
+  "notes": "Đã mở đủ28 trang dưới dạng ảnh đầy đủ, thường5 ảnh mỗi lượt. Không sửa Word hoặc script. Báo cáo này phản ánh lần xuất86 trang trước khi sửa trang trắng76; cần kiểm lại phạm vi tái xuất bị ảnh hưởng."
+}

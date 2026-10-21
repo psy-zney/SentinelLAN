@@ -1,0 +1,60 @@
+# Đăng ký Agent được ủy quyền
+
+Admin tạo token enrollment 1–60 phút trong dashboard, ghi lý do và xác nhận. Token chỉ hiển thị một lần; server lưu hash và từ chối tái sử dụng. Cài Agent trên thiết bị thuộc quyền quản lý của tổ chức, dùng DNS/chứng chỉ HTTPS tin cậy. Không truyền token trong URL, log, issue hoặc kênh chat công khai.
+
+## Mã kết nối và máy chủ
+
+API cần `SENTINELLAN_AGENT_PUBLIC_URL` là địa chỉ gốc HTTPS truy cập được từ thiết bị công ty (ví dụ `https://sentinel.company.local`). Cấu hình Production Compose mặc định lấy `https://PUBLIC_DOMAIN`; LAN có thể ghi đè bằng tên DNS nội bộ. Không lấy URL từ Host/Forwarded header của người gọi. Development mặc định loopback HTTP để thử trên cùng máy; không cấp mã loopback cho máy nhân viên trong LAN.
+
+`POST /api/v1/enrollment-tokens` giữ `token` cho công cụ IT cũ, thêm `connectionCode` định dạng `SL1.<base64url-json>` chứa `serverUrl`, `token`, `expiresAt`. Đây là đóng gói để giảm thao tác, không phải mã hóa bí mật hay bằng chứng ủy quyền. Không đưa khóa ký lệnh, credential thiết bị hoặc chứng chỉ vào mã. Agent kiểm tra HTTPS/chứng chỉ hệ thống; máy chủ xác nhận token và tiêu thụ trong giao dịch tạo thiết bị. `UsedAt` có optimistic concurrency; đổi thời hạn trong envelope không làm token dùng lại được.
+
+## Windows
+
+Người cài ưu tiên `SentinelLAN.Setup.exe`: nhập một mã kết nối và bấm **Cài đặt và kết nối**. EXE chứa MSI và script cấu hình; MSI chứa configurator, tự mở cửa sổ sau khi cài bằng giao diện và có shortcut Start menu để mở lại. Cài silent MSI vẫn để cấu hình cho IT. Không truyền token qua CLI/MSI property: configurator chuyển token qua stdin của tiến trình cấu hình. Dữ liệu tạm nằm trong ProgramData có ACL hạn chế và token được xóa khi hoàn tất/lỗi.
+
+Cửa sổ chỉ báo thành công sau heartbeat đầu tiên. `enrollment-status.json` chỉ lưu trạng thái và thời điểm, không có token/secret. Lỗi `TokenUsed`/`TokenExpired` được hiển thị riêng. Máy đã có identity không bị configurator ghi đè hoặc tiêu thụ mã khác; thu hồi và đăng ký lại là thao tác IT riêng. Không bật thêm quyền lab hoặc phân phối signing key trong mã kết nối.
+
+### Cấu hình nâng cao bằng script (IT)
+
+Windows MSI là lựa chọn chính. Tải `SentinelLAN.Agent.msi`, `configure-windows-agent.ps1` và `SHA256SUMS.txt` từ cùng một GitHub Release; kiểm tra SHA-256 trước khi cài. Mở PowerShell Administrator:
+
+```powershell
+msiexec /i .\SentinelLAN.Agent.msi
+.\configure-windows-agent.ps1 -ServerUrl 'https://sentinel.example.com'
+```
+
+MSI cài binary, cửa sổ kết nối và đăng ký service LocalService ở trạng thái chờ. Luồng script bên dưới dành cho IT; nhân viên dùng cửa sổ kết nối đã đi kèm. Script hỏi token qua prompt, lưu tạm trong thư mục ProgramData chỉ dành cho SYSTEM, Administrators và tài khoản service, chạy service và xóa token khỏi file cấu hình sau khi đăng ký hoặc khi xảy ra lỗi. Không đưa token vào tham số `msiexec`, log, issue hay trang tải. Kiểm tra `Get-Service SentinelLANAgent` và heartbeat sau khi cấu hình. Không gỡ MSI khi chỉ cần đổi URL; IT có thể chạy lại script với URL mới.
+
+EXE là lựa chọn phụ để triển khai thủ công hoặc kiểm tra. Quy trình dưới đây dành riêng cho EXE và không dùng sau khi đã cài MSI vì sẽ đăng ký service chồng lên bộ cài. Nếu máy đã có service cài bằng script EXE cũ, hãy gỡ service cũ theo quy trình vận hành, thu hồi định danh thiết bị cũ rồi cài MSI và đăng ký lại bằng token mới; không sao chép file identity giữa tài khoản dịch vụ.
+
+```powershell
+dotnet publish apps/agent/src/SentinelLAN.Agent/SentinelLAN.Agent.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish/win-x64
+```
+
+Chuyển `SentinelLAN.Agent.exe` và `deploy/agent/install-windows-agent.ps1` qua kênh nội bộ được phép. Mở PowerShell Administrator tại nơi chứa hai file:
+
+```powershell
+./install-windows-agent.ps1 -ServerUrl 'https://sentinel.example.com'
+```
+
+Installer hỏi token qua prompt, đăng ký Windows Service và xóa biến token toàn máy sau khi thấy identity đã được ghi trong `%ProgramData%\SentinelLAN\Agent`. Nếu chưa ghi được, xem trạng thái service và cấp token mới khi token cũ hết hạn. Agent dùng DPAPI để bảo vệ identity dưới tài khoản dịch vụ; không di chuyển file identity sang máy khác.
+
+## Linux
+
+```bash
+dotnet publish apps/agent/src/SentinelLAN.Agent/SentinelLAN.Agent.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -o publish/linux-x64
+sudo bash deploy/agent/install-linux-agent.sh --server https://sentinel.example.com
+```
+
+Script hỏi token, tạo user dịch vụ `sentinellan`, khóa identity riêng trong `/etc/sentinellan/agent.env` và dữ liệu trong `/var/lib/sentinellan-agent`. Thư mục dữ liệu Linux phải chỉ chủ sở hữu truy cập (mode 0700); Agent từ chối ghi vào thư mục có quyền nhóm/người khác thay vì tự đổi quyền thư mục dùng chung. Khóa Linux phải được giữ khi cài lại; mất khóa thì cần thu hồi device cũ rồi đăng ký lại. Có thể truyền `--signing-key-file <root-only-file>` nếu vận hành luồng lệnh có chữ ký; khóa phải khớp server và phải phân phối bằng kênh riêng. Không bật lệnh khóa/cô lập thật; mã hiện chỉ mô phỏng.
+
+## Kiểm tra và xử lý lỗi
+
+Windows Service cần desktop companion để thực thi thông báo/khóa/idle policy trên console. Xem [hướng dẫn thực thi thật](real-agent-execution.md) để đăng ký companion, cấu hình quyền và nghiệm thu; `SimulateLock` không khóa Windows. Linux hiện chỉ hỗ trợ telemetry thật, lưu trữ bảo vệ và xác thực/biên lai; các adapter OS mới trong ADR 0007 yêu cầu Windows.
+
+1. Từ thiết bị Agent, thử `https://<dns>/health/live` và xác nhận chứng chỉ hợp lệ. `health/ready` 503 là lỗi kết nối DB phía server.
+2. Kiểm tra service (`Get-Service SentinelLANAgent` trên Windows; `systemctl status sentinellan-agent` trên Linux), rồi xem thiết bị trong inventory và thời điểm heartbeat. Online có thể cần một chu kỳ gửi tiếp theo.
+3. Nếu enroll trả 400, token có thể sai, hết hạn hoặc đã dùng. Admin tạo token mới; không sửa DB để tái dùng token cũ.
+4. Nếu Agent bị thu hồi, header credential cũ trả 401. Cài lại bằng token mới sau khi xác minh thiết bị; không sao chép secret từ thiết bị khác.
+
+Khi offline, Agent giữ tối đa 50 mục telemetry trong một giờ và retry với idempotency key cũ. Production lưu queue trong file được bảo vệ (DPAPI trên Windows; AES-GCM với `SENTINELLAN_AGENT_STORE_KEY` trên Linux) và nạp lại sau restart. Development mặc định dùng RAM nên mất queue khi tiến trình khởi động lại. Cần kiểm tra quyền file và khôi phục trên host thật; queue không phải bản sao lưu.

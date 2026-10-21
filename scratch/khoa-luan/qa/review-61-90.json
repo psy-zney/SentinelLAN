@@ -1,0 +1,51 @@
+{
+  "review_type": "Visual inspection of Word-native PDF raster pages",
+  "raster_dpi": 120,
+  "view_detail": "original",
+  "pages_reviewed": [61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90],
+  "major_rendering_failures": [],
+  "checks": {
+    "clipping": "none observed",
+    "overlap": "none observed",
+    "tables_outside_print_area": "none observed",
+    "vietnamese_glyph_corruption": "none observed",
+    "completely_blank_pages": "none observed",
+    "figure_caption_stranded": "no actual figure/table caption separated from its visual; appendix guide captions follow their entries"
+  },
+  "issues": [
+    {
+      "pages": [61, 62],
+      "severity": "minor",
+      "type": "table_column_readability",
+      "description": "Cột Mã trong bảng kiểm thử quá hẹp: TC10–TC26 bị xuống dòng thành TC1 + 0, TC2 + 6, v.v. Nội dung không bị cắt nhưng mã khó đọc.",
+      "suggested_fix": "Nới cột Mã hoặc giảm lề trong ô/giảm cỡ chữ riêng cột mã để mọi TCxx ở trên một dòng."
+    },
+    {
+      "pages": [69],
+      "severity": "minor",
+      "type": "near_empty_continuation_page",
+      "description": "Trang69 chỉ có ba dòng tiếp nối đoạn ghi chú G31 từ trang68; phần còn lại trắng trước khi Chương7 bắt đầu ở trang70.",
+      "suggested_fix": "Điều chỉnh ngắt dòng/khoảng cách ở cuối Chương6 để đoạn G31 kết thúc trên trang68, nếu vẫn giữ mỗi chương mở ở trang mới."
+    },
+    {
+      "pages": [79],
+      "severity": "minor",
+      "type": "near_empty_continuation_page",
+      "description": "Trang79 chỉ có hai dòng kết thúc mục D.4 từ trang78; phần còn lại trắng trước Phụ lụcE ở trang80.",
+      "suggested_fix": "Giảm nhẹ khoảng cách đoạn của Phụ lụcD hoặc điều chỉnh phần D.4 để kết thúc trên trang78."
+    },
+    {
+      "pages": [74, 75],
+      "severity": "polish",
+      "type": "long_identifier_wrapping",
+      "description": "Tên tệp dài và đường dẫn được xuống dòng trong từ (TechnicalDataRetentionService.cs, telemetry, attachments). Trang74 căn đều làm khoảng cách giữa vài từ dài lớn. Không tràn lề hoặc mất nội dung.",
+      "suggested_fix": "Có thể căn trái danh mục đường dẫn và dùng cỡ chữ nhỏ hơn riêng cho đường dẫn/API; không cần thay đổi nếu ưu tiên bảo toàn bố cục bản biên tập."
+    }
+  ],
+  "acceptable_whitespace": [
+    {"page": 72, "reason": "Cuối chương7 trước phần tài liệu tham khảo."},
+    {"page": 76, "reason": "Phụ lụcB hiện là mẫu cần tự điền, bắt đầu phụ lục mới ở trang77."},
+    {"page": 90, "reason": "Trang cuối cùng của hướng dẫn hình minh chứng."}
+  ],
+  "notes": "Đã xem toàn bộ30 trang dưới dạng ảnh đầy đủ, 5 ảnh mỗi lượt. Đây là kiểm tra bố cục trực quan của bản xuất hiện tại; không sửa Word hoặc script."
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: SentinelLAN Developer
+  short_description: Build and secure SentinelLAN vertical slices
+  default_prompt: Implement the requested SentinelLAN change as a small tested slice, preserving tenant isolation, auditability, privacy, and simulated-safe commands.

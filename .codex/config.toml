@@ -1,0 +1,11 @@
+#:schema https://developers.openai.com/codex/config-schema.json
+
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+project_doc_max_bytes = 32768
+project_root_markers = [".git", "SentinelLAN.slnx", "package.json"]
+
+[sandbox_workspace_write]
+network_access = true
+
+# Project-scoped settings load only after this repository is trusted by Codex.

@@ -217,6 +217,9 @@ input::placeholder, textarea::placeholder { color: #7d8791; font-weight: 400; }
 .vps-gateway-project-title { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; }
 .vps-gateway-project-title h4, .vps-route-other h4 { font-size: 14px; margin: 0; }
 .vps-route-legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+.vps-gateway-entry { background: #edf3ff; border-color: #8eacd9; }
+.vps-route-static { display: grid; gap: 6px; padding: 10px; margin-top: 12px; border: 1px solid #8eacd9; border-radius: 7px; background: #edf3ff; font-size: 12px; overflow-wrap: anywhere; }
+.vps-route-static .badge { justify-self: start; }
 .vps-route-key { padding: 5px 8px; border: 1px solid var(--border); border-radius: 5px; font-size: 11px; background: #edf8f1; }
 .vps-route-key[data-kind="nginx"], .vps-route-nginx { background: #edf3ff; border-color: #8eacd9; }
 .vps-route-key[data-kind="localhost"], .vps-route-localhost { background: #fff6e7; border-color: #dab56b; }

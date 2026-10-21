@@ -1,0 +1,52 @@
+{
+  "review_method": "Opened every page as a full page PNG rendered at 120 dpi from Word native PDF; each image was visually inspected with view_image, in batches of five pages.",
+  "reviewed_pages": [31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60],
+  "overall": "Readable Vietnamese text and red editing guidance; no clipping, overlap, tables outside page width, missing Vietnamese glyphs, or blank pages found within this range. Figure instructions and captions remain within their correct sections. Two formatting issues should be fixed, and one minor instruction-block pagination issue is optional.",
+  "errors": [
+    {
+      "severity": "minor",
+      "pages": [32, 35, 38, 40, 41, 42, 43, 46, 48, 49, 50, 51, 52, 53, 54],
+      "type": "missing_list_separators",
+      "description": "The red paragraphs beginning 'Trong hình cần thấy' and 'Cần che hoặc bỏ' concatenate array items with spaces only, so consecutive requirements are read as an uninterrupted sentence. A visible example on page 32 is 'Điểm bắt đầu và kết thúc Trách nhiệm từng swimlane Hai nguồn phát sinh'.",
+      "suggested_fix": "Join must_show and hide entries with '; ' or render them as individual bullets. Keep the same red editing style."
+    },
+    {
+      "severity": "minor",
+      "pages": [60],
+      "type": "table_identifier_wrapping",
+      "description": "The first column of Bảng 6.3 is too narrow: TC01–TC09 split across two lines as 'TC0' followed by the final digit. Rows and text remain within the page, but the identifier wrapping reduces clarity.",
+      "suggested_fix": "Increase the 'Mã' column width or apply no-wrap to its cells; reduce only this column's font if necessary, while keeping full TCxx identifiers on one line."
+    },
+    {
+      "severity": "optional",
+      "pages": [53, 54],
+      "type": "figure_instruction_block_split",
+      "description": "The H18 guidance starts near the bottom of page 53, and its capture steps continue on page 54. The placeholder and Hình 5.8 caption are together on page 54, so the caption is not orphaned, but the guidance is easier to use when read as a single block.",
+      "suggested_fix": "If it does not create excessive whitespace, keep the H18 instruction heading and capture-step paragraph together, or move the whole H18 block to the next page."
+    }
+  ],
+  "observations": [
+    {
+      "pages": [33, 57],
+      "type": "chapter_end_whitespace",
+      "description": "Large lower-page whitespace follows a short chapter conclusion, before the next chapter starts on a new page. These are normal chapter-end pages and are not blank pages."
+    },
+    {
+      "pages": [34],
+      "type": "existing_figure",
+      "description": "Hình 4.1 renders with legible text, intact Vietnamese glyphs and caption directly underneath. Its diagram stays within the page margins."
+    },
+    {
+      "pages": [35, 36, 37, 44, 47, 56, 58, 59, 60],
+      "type": "table_rendering",
+      "description": "Tables have visible borders, readable text and repeated headers when continuing to another page. No table clips or crosses the page width. The identifier wrapping on page 60 is reported separately."
+    },
+    {
+      "pages": [32, 35, 38, 40, 41, 42, 43, 46, 48, 49, 50, 51, 52, 53, 54],
+      "type": "figure_guidance_placement",
+      "description": "Guidance H02 and H04–H20 remains adjacent to the corresponding section content, with visible figure numbers and italic captions. Red text is readable against the white page background. H18 pagination is the only minor guidance-block split noted."
+    }
+  ],
+  "document_modified": false,
+  "script_modified": false
+}
