@@ -4,6 +4,7 @@ param(
     [string]$CommandPublicKey = '',
     [string]$CommandKeyId = '',
     [switch]$ReadTokenFromStandardInput,
+    [switch]$ExistingIdentityOnly,
     [switch]$AllowApprovedAppInstall,
     [switch]$AllowAgentMaintenance,
     [string[]]$TrustedPackageHosts = @()
@@ -32,6 +33,10 @@ if ($LASTEXITCODE -ne 0) { throw 'Could not protect the Agent data directory.' }
 
 $identityPath = Join-Path $dataDir 'identity.dat'
 $settingsPath = Join-Path $dataDir 'agent-settings.json'
+if ($ExistingIdentityOnly -and -not (Test-Path -LiteralPath $identityPath)) {
+    Write-Output 'SETUP_STATE:IdentityMissing'
+    throw 'The existing Agent identity is missing. No enrollment was attempted.'
+}
 $token = $null
 if (-not (Test-Path -LiteralPath $identityPath)) {
     if ($ReadTokenFromStandardInput) {

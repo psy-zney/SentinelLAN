@@ -2,6 +2,7 @@
 import { portalBaseUrl } from "@/lib/portal";
 import { EndpointObservationPanel } from "@/components/endpoint-observation-panel";
 import { SoftwareCompliancePanel } from "@/components/software-compliance-panel";
+import { PageControls } from "@/components/page-controls";
 
 import { useCallback, useRef, useState } from "react";
 import { useLiveQuery } from "@/hooks/use-live-query";
@@ -23,6 +24,8 @@ export function DeviceDetail({ id }: { id: string }) {
   const { t, lang } = useTranslation();
   const session = useCurrentSession();
   const isAdmin = session?.role === "Admin";
+  const [incidentOffset, setIncidentOffset] = useState(0);
+  const [workOrderOffset, setWorkOrderOffset] = useState(0);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"overview" | "timeline" | "cmms" | "tco">("overview");
@@ -97,13 +100,13 @@ export function DeviceDetail({ id }: { id: string }) {
       client.getDeviceAssetDetail(id).catch(() => null),
       client.deviceTelemetry(id).catch(() => []),
       client.getDeviceTimeline(id).catch(() => []),
-      client.getIncidents(id).catch(() => []),
-      client.getWorkOrders(id).catch(() => []),
+      client.getIncidents(id, incidentOffset, 100).catch(() => []),
+      client.getWorkOrders(id, workOrderOffset, 100).catch(() => []),
       client.getQrLabel(id).catch(() => null)
     ]);
 
     if (isAdmin) {
-      const directory = await client.users().catch(() => []);
+      const directory = await client.allUsers().catch(() => []);
       setUsers(directory);
     }
 
@@ -115,7 +118,7 @@ export function DeviceDetail({ id }: { id: string }) {
       workOrders,
       qrLabel
     };
-  }, [id, isAdmin]);
+  }, [id, isAdmin, incidentOffset, workOrderOffset]);
 
   const { data, error, refresh } = useLiveQuery(load);
   const asset = data?.assetDetail;
@@ -862,6 +865,7 @@ export function DeviceDetail({ id }: { id: string }) {
               )}
             </div>
 
+            <PageControls offset={workOrderOffset} count={workOrders.length} onChange={setWorkOrderOffset} />
             {workOrders.length === 0 ? (
               <p className="subtitle">{lang === "vi" ? "Chưa có phiếu bảo trì nào được lập cho thiết bị này." : "No work orders created for this device."}</p>
             ) : (
@@ -883,7 +887,7 @@ export function DeviceDetail({ id }: { id: string }) {
                       <td><strong>{wo.workOrderNumber}</strong></td>
                       <td>{wo.title}</td>
                       <td><span className="badge badge-info">{wo.type}</span></td>
-                      <td><span className={`badge ${wo.priority === "Urgent" ? "badge-danger" : wo.priority === "High" ? "badge-warn" : "badge-neutral"}`}>{wo.priority}</span></td>
+                      <td><span className={`badge ${wo.priority === "Critical" ? "badge-danger" : wo.priority === "High" ? "badge-warn" : "badge-neutral"}`}>{wo.priority}</span></td>
                       <td>
                         <span className={`badge ${wo.status === "Completed" ? "badge-success" : wo.status === "InProgress" ? "badge-info" : "badge-neutral"}`}>
                           {wo.status}
@@ -936,6 +940,7 @@ export function DeviceDetail({ id }: { id: string }) {
               </button>
             </div>
 
+            <PageControls offset={incidentOffset} count={incidents.length} onChange={setIncidentOffset} />
             {incidents.length === 0 ? (
               <p className="subtitle">{lang === "vi" ? "Không có sự cố nào được báo cáo trên thiết bị này." : "No incidents reported."}</p>
             ) : (
@@ -1201,7 +1206,6 @@ export function DeviceDetail({ id }: { id: string }) {
                   <select className="form-select" value={newWoType} onChange={(e) => setNewWoType(e.target.value)}>
                     <option value="Preventive">{lang === "vi" ? "Bảo trì phòng ngừa (Preventive)" : "Preventive"}</option>
                     <option value="Corrective">{lang === "vi" ? "Sửa chữa khắc phục (Corrective)" : "Corrective"}</option>
-                    <option value="Inspection">{lang === "vi" ? "Kiểm định kỹ thuật (Inspection)" : "Inspection"}</option>
                   </select>
                 </div>
                 <div className="form-group">
@@ -1210,7 +1214,7 @@ export function DeviceDetail({ id }: { id: string }) {
                     <option value="Low">Low</option>
                     <option value="Medium">Medium</option>
                     <option value="High">High</option>
-                    <option value="Urgent">Urgent</option>
+                    <option value="Critical">{lang === "vi" ? "Khẩn cấp (Critical)" : "Critical"}</option>
                   </select>
                 </div>
               </div>

@@ -4,6 +4,9 @@ import Image from "next/image";
 import { SoftwareRulesPanel } from "@/components/software-compliance-panel";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useCurrentSession } from "@/components/app-shell";
+import { UiIcon } from "@/components/ui-icon";
+import { PageTransition } from "@/components/page-transition";
+import { PageControls } from "@/components/page-controls";
 import { ApiClient, ApiError } from "@/lib/api-client";
 import { categoryNames, executionLabel, itStatusOptions, kindNames, statusNames, validateSupportImage } from "@/lib/self-service";
 import { useSelfServiceQuery } from "@/hooks/use-self-service-query";
@@ -22,21 +25,30 @@ export function SupportCenterView({ initialRequestId = "" }: { initialRequestId?
   const session = useCurrentSession();
   const employee = session?.role === "Employee";
   const admin = session?.role === "Admin";
+  const [requestOffset, setRequestOffset] = useState(0);
+  const [notificationOffset, setNotificationOffset] = useState(0);
+  const [filter, setFilter] = useState("active");
   const load = useCallback(async () => {
     const [requests, catalog, announcements, notifications, help] = await Promise.all([
-      api.supportRequests(), api.catalogApps(), api.announcements(), api.employeeNotifications(), api.helpArticles()
+      api.supportRequests(requestOffset, 100, filter === "active"), api.catalogApps(), api.announcements(), api.employeeNotifications(notificationOffset, 100), api.helpArticles()
     ]);
     return { requests, catalog, announcements, notifications, help };
-  }, []);
+  }, [requestOffset, notificationOffset, filter]);
   const { data, error, refresh } = useSelfServiceQuery(load);
   const [selected, setSelected] = useState(initialRequestId);
   const [createKind, setCreateKind] = useState<RequestKind | null>(null);
   const [requestedAppId, setRequestedAppId] = useState("");
   const [category, setCategory] = useState<SupportCategory>("Network");
   const [tab, setTab] = useState<"requests" | "catalog" | "help" | "notifications" | "announcements">("requests");
-  const [filter, setFilter] = useState("active");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [contentJump, setContentJump] = useState(0);
+  useEffect(() => {
+    if (contentJump === 0) return;
+    contentRef.current?.focus({ preventScroll: true });
+    contentRef.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "start" });
+  }, [contentJump]);
   async function mutate(operation: () => Promise<unknown>) {
     if (busy) return;
     setBusy(true); setNotice("");
@@ -45,10 +57,11 @@ export function SupportCenterView({ initialRequestId = "" }: { initialRequestId?
   }
   const visibleRequests = data?.requests.filter(request => filter !== "active" || !["Closed", "Rejected"].includes(request.status));
   return <div className="support-center">
+    {employee && <div className="support-welcome"><h2>Bạn cần hỗ trợ gì hôm nay?</h2><p>Chọn việc bạn cần. Yêu cầu sẽ được gửi cho máy tính được giao cho bạn.</p></div>}
     {employee && <section className="support-actions" aria-label="Bạn cần IT giúp gì?">
-      <button type="button" className="panel support-shortcut" onClick={() => { setCreateKind("Incident"); setTab("requests"); }}><strong>Tôi gặp sự cố</strong><span>Báo lỗi hoặc hẹn IT hỗ trợ</span></button>
-      <button type="button" className="panel support-shortcut" onClick={() => setTab("catalog")}><strong>Tôi cần phần mềm</strong><span>Chọn ứng dụng được công ty cho phép</span></button>
-      <button type="button" className="panel support-shortcut" onClick={() => { setTab("requests"); setCreateKind(null); }}><strong>Yêu cầu của tôi</strong><span>Xem phản hồi và trao đổi với IT</span></button>
+      <button type="button" className="panel support-shortcut" onClick={() => { setCreateKind("Incident"); setTab("requests"); setContentJump(value => value + 1); }}><span className="shortcut-icon"><UiIcon name="support" /></span><strong>Tôi gặp sự cố</strong><span className="shortcut-description">Báo lỗi hoặc hẹn IT hỗ trợ</span><UiIcon name="arrow" className="shortcut-arrow" /></button>
+      <button type="button" className="panel support-shortcut" onClick={() => { setTab("catalog"); setContentJump(value => value + 1); }}><span className="shortcut-icon"><UiIcon name="download" /></span><strong>Tôi cần phần mềm</strong><span className="shortcut-description">Chọn ứng dụng được công ty cho phép</span><UiIcon name="arrow" className="shortcut-arrow" /></button>
+      <button type="button" className="panel support-shortcut" onClick={() => { setTab("requests"); setCreateKind(null); setContentJump(value => value + 1); }}><span className="shortcut-icon"><UiIcon name="message" /></span><strong>Yêu cầu của tôi</strong><span className="shortcut-description">Xem phản hồi và trao đổi với IT</span><UiIcon name="arrow" className="shortcut-arrow" /></button>
     </section>}
     {error && <div role="alert" className="privacy"><p>{error}</p><button type="button" className="action" onClick={() => void refresh()}>Thử kết nối lại</button></div>}
     {notice && <p role="alert" className="privacy">{notice}</p>}
@@ -65,18 +78,21 @@ export function SupportCenterView({ initialRequestId = "" }: { initialRequestId?
       <button type="button" className="action-outline" onClick={() => { setCreateKind("Appointment"); setTab("requests"); }}>Chọn giờ IT hỗ trợ</button>
       <details><summary>Tạm dừng hoặc gỡ SentinelLAN</summary><p>Cần IT duyệt và cấp mã xác nhận riêng cho máy của bạn.</p><div className="support-inline-actions"><button type="button" className="action-outline" onClick={() => { setCreateKind("PauseAgent"); setTab("requests"); }}>Xin tạm dừng 15 phút</button><button type="button" className="action-outline" onClick={() => { setCreateKind("UninstallAgent"); setTab("requests"); }}>Xin gỡ SentinelLAN</button></div></details>
     </div>}
+    <div className="support-content" ref={contentRef} tabIndex={-1}>
+    <PageTransition key={tab}>
     {tab === "requests" && <>
       {employee && createKind && <CreateRequestForm key={`${createKind}-${category}-${requestedAppId}`} kind={createKind} initialCategory={category} catalog={data?.catalog ?? []} initialCatalogId={requestedAppId} onCancel={() => setCreateKind(null)} onCreated={value => { setSelected(value.id); setCreateKind(null); void refresh(); }} />}
       <div className="support-columns">
         <section className="panel" aria-label="Danh sách yêu cầu">
-          <div className="panel-head"><h2>{employee ? "Yêu cầu của tôi" : "Yêu cầu từ nhân viên"}</h2><label>Hiển thị <select value={filter} onChange={event => setFilter(event.target.value)}><option value="active">Đang xử lý</option><option value="all">Tất cả</option></select></label></div>
-          {visibleRequests?.length === 0 && <p>Chưa có yêu cầu trong danh sách này.</p>}
+          <div className="panel-head"><h2>{employee ? "Yêu cầu của tôi" : "Yêu cầu từ nhân viên"}</h2><label>Hiển thị <select value={filter} onChange={event => { setFilter(event.target.value); setRequestOffset(0); }}><option value="active">Đang xử lý</option><option value="all">Tất cả</option></select></label></div>
+          {visibleRequests?.length === 0 && <div className="empty-state"><UiIcon name="check" /><p>Chưa có yêu cầu trong danh sách này.</p><small>{employee ? "Khi cần, hãy chọn “Tôi gặp sự cố” để nhờ IT." : "Yêu cầu mới từ nhân viên sẽ xuất hiện tại đây."}</small></div>}
           <ul className="support-request-list">{visibleRequests?.map(request => <li key={request.id}><button type="button" className="support-request" aria-pressed={selected === request.id} onClick={() => setSelected(request.id)}>
             <strong>{request.title}</strong><span>{statusNames[request.status]} · {kindNames[request.kind]}</span><small>{employee ? request.deviceName : `${request.userName} · ${request.deviceName}`} · {when(request.createdAt)}</small>
             {!request.canWork && <span className="badge badge-danger">Chưa thể tiếp tục làm việc</span>}
           </button></li>)}</ul>
+          <PageControls offset={requestOffset} count={data?.requests.length ?? 0} onChange={setRequestOffset} />
         </section>
-        {selected ? <RequestDetail key={selected} id={selected} employee={employee} admin={admin} onChanged={() => void refresh()} /> : <section className="panel"><h2>{employee ? "Trao đổi với IT" : "Chi tiết yêu cầu"}</h2><p>Chọn một yêu cầu để xem người phụ trách, gửi ảnh và nhận phản hồi.</p></section>}
+        {selected ? <RequestDetail key={selected} id={selected} employee={employee} admin={admin} onChanged={() => void refresh()} /> : <section className="panel request-placeholder"><span className="shortcut-icon"><UiIcon name="message" /></span><h2>{employee ? "Trao đổi với IT" : "Chi tiết yêu cầu"}</h2><p>Chọn một yêu cầu để xem người phụ trách, gửi ảnh và nhận phản hồi.</p></section>}
       </div>
     </>}
     {tab === "catalog" && admin && <SoftwareRulesPanel />}
@@ -84,6 +100,9 @@ export function SupportCenterView({ initialRequestId = "" }: { initialRequestId?
     {tab === "help" && <section className="panel"><h2>Hướng dẫn nhanh</h2>{data?.help.map(article => <details key={article.id} className="support-card"><summary>{article.title}</summary><ol>{article.steps.map((step, index) => <li key={index}>{step}</li>)}</ol>{employee && <button type="button" className="action" onClick={() => { setCategory(article.category); setCreateKind("Incident"); setTab("requests"); }}>Vẫn chưa được — nhờ IT</button>}</details>)}</section>}
     {tab === "notifications" && <section className="panel"><h2>Thông báo của bạn</h2>{data?.notifications.length === 0 && <p>Chưa có thông báo mới.</p>}{data?.notifications.map(item => <article key={item.id} className="support-card"><h3>{item.title}</h3><p>{item.body}</p><small>{when(item.createdAt)}</small><div className="support-inline-actions">{item.requestId && <button type="button" className="action-outline" onClick={() => { setSelected(item.requestId!); setTab("requests"); }}>Xem yêu cầu</button>}<button type="button" className="action-outline" disabled={busy || !!item.readAt} onClick={() => void mutate(() => api.readEmployeeNotification(item.id))}>{item.readAt ? "Đã đọc" : "Đánh dấu đã đọc"}</button></div></article>)}</section>}
     {tab === "announcements" && <section className="panel"><h2>Thông báo công ty</h2>{!employee && <AnnouncementEditor onSaved={() => void refresh()} />}{data?.announcements.map(item => <article key={item.id} className="support-card"><h3>{item.title}</h3><p>{item.body}</p><p className="subtitle">{when(item.startsAt)} — {when(item.endsAt)}</p>{item.requiresAcknowledgement && <button type="button" className="action-outline" disabled={busy || item.acknowledged} onClick={() => void mutate(() => api.acknowledgeAnnouncement(item.id))}>{item.acknowledged ? "Đã xác nhận đọc" : "Tôi đã đọc"}</button>}</article>)}</section>}
+    {tab === "notifications" && <PageControls offset={notificationOffset} count={data?.notifications.length ?? 0} onChange={setNotificationOffset} />}
+    </PageTransition>
+    </div>
   </div>;
 }
 
@@ -124,10 +143,11 @@ function CreateRequestForm({ kind, initialCategory, catalog, initialCatalogId = 
 }
 
 function RequestDetail({ id, employee, admin, onChanged }: { id: string; employee: boolean; admin: boolean; onChanged: () => void }) {
+  const [messageOffset, setMessageOffset] = useState(0);
   const load = useCallback(async () => {
-    const [request, messages, attachments, team] = await Promise.all([api.supportRequest(id), api.supportMessages(id), api.supportAttachments(id), employee ? Promise.resolve([]) : api.supportTeam()]);
+    const [request, messages, attachments, team] = await Promise.all([api.supportRequest(id), api.supportMessages(id, messageOffset, 100), api.supportAttachments(id), employee ? Promise.resolve([]) : api.supportTeam()]);
     return { request, messages, attachments, team };
-  }, [id, employee]);
+  }, [id, employee, messageOffset]);
   const { data, error, refresh } = useSelfServiceQuery(load, 5000);
   const [body, setBody] = useState(""); const [reason, setReason] = useState(""); const [status, setStatus] = useState<SupportStatus>("InProgress");
   const [assignee, setAssignee] = useState(""); const [confirmed, setConfirmed] = useState(false);
@@ -175,10 +195,11 @@ function RequestDetail({ id, employee, admin, onChanged }: { id: string; employe
       </div>}
       <h3>Trao đổi với IT</h3><p className="subtitle">Tin nhắn được lưu trong yêu cầu; IT có thể trả lời sau nếu đang bận.</p>
       <ol className="support-messages" aria-label="Cuộc trao đổi">{data?.messages.map(message => <li key={message.id}><strong>{message.authorName}</strong><small>{when(message.createdAt)}</small><p>{message.body}</p></li>)}</ol>
+      <PageControls offset={messageOffset} count={data?.messages.length ?? 0} onChange={setMessageOffset} />
       <form onSubmit={event => { event.preventDefault(); void mutate(async () => {
         const text = body.trim(); if (!text) return;
         if (messageKey.current?.body !== text) messageKey.current = { body: text, key: crypto.randomUUID() };
-        await api.sendSupportMessage(id, text, messageKey.current.key); setBody(""); messageKey.current = null;
+        await api.sendSupportMessage(id, text, messageKey.current.key); setBody(""); setMessageOffset(0); messageKey.current = null;
       }); }}><label className="field">Tin nhắn<textarea className="form-input" required maxLength={4000} rows={3} value={body} onChange={event => setBody(event.target.value)} /></label><button type="submit" className="action" disabled={busy || !body.trim()}>Gửi tin nhắn</button></form>
       <Evidence id={id} onUploaded={() => { void refresh(); onChanged(); }} attachments={data?.attachments ?? []} />
     </>}

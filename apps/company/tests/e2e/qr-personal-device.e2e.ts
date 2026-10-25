@@ -13,7 +13,6 @@ test("public QR card exposes only the minimal asset identity", async ({ page }) 
 
 test("assigned employee enters a QR code and reaches My Device", async ({ page }) => {
   await page.goto(`${employeeUrl}/employee/login`);
-  await page.locator('input[name="organizationCode"]').fill("demo");
   await page.locator('input[name="email"]').fill("employee@sentinellan.local");
   await page.locator('input[name="password"]').fill("local-demo-only");
   await page.locator("form.login button[type=submit]").click();

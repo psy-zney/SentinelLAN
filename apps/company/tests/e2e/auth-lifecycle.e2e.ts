@@ -5,7 +5,6 @@ const apiUrl = process.env.SENTINELLAN_E2E_API_URL ?? "http://127.0.0.1:8080";
 
 test("Employee completes login, refresh, assigned-device view, and logout", async ({ page, context }) => {
   await page.goto(`${employeeUrl}/employee/login`);
-  await page.locator('input[name="organizationCode"]').fill("demo");
   await page.locator('input[name="email"]').fill("employee@sentinellan.local");
   await page.locator('input[name="password"]').fill("local-demo-only");
   await page.locator("form.login button[type=submit]").click();

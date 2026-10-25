@@ -10,19 +10,26 @@ public sealed class DeviceHealthReader(SentinelDbContext db) : IDeviceHealthRead
 
     public async Task<IReadOnlyList<DeviceHealthObservation>> GetDevicesAsync(Guid organizationId, DateTimeOffset now, CancellationToken cancellationToken)
     {
-        var devices = await db.Devices.AsNoTracking().Where(d => d.OrganizationId == organizationId && !d.IsRevoked).ToListAsync(cancellationToken);
         var since = now.AddMinutes(-32);
-        var observations = new List<DeviceHealthObservation>();
-        foreach (var device in devices)
-        {
-            var samples = await db.Telemetry.AsNoTracking().Where(t => t.OrganizationId == organizationId && t.DeviceId == device.Id &&
+        var rows = await db.Devices.AsNoTracking().Where(d => d.OrganizationId == organizationId && !d.IsRevoked)
+            .SelectMany(device => db.Telemetry.AsNoTracking().Where(t => t.OrganizationId == organizationId && t.DeviceId == device.Id &&
                     (t.CollectedAt ?? t.CreatedAt) >= since && (t.CollectedAt ?? t.CreatedAt) <= now)
-                .OrderByDescending(t => t.CollectedAt ?? t.CreatedAt).Take(1024)
-                .Select(t => new HealthMeasurement(t.CollectedAt ?? t.CreatedAt, t.CpuPercent, t.RamPercent, t.DiskPercent,
-                    t.ProtectionCollectedAt, t.AntivirusStatus, t.FirewallDomainStatus, t.FirewallPrivateStatus,
-                    t.FirewallPublicStatus, t.DiskEncryptionStatus)).ToListAsync(cancellationToken);
-            observations.Add(new(organizationId, device.Id, device.Name, device.LastSeenAt, device.MaintenanceUntil, samples));
-        }
-        return observations;
+                .OrderByDescending(t => t.CollectedAt ?? t.CreatedAt).ThenByDescending(t => t.Id).Take(1024).DefaultIfEmpty(), (device, sample) => new
+                {
+                    device.Id,
+                    device.Name,
+                    device.LastSeenAt,
+                    device.MaintenanceUntil,
+                    Measurement = sample == null ? null : new HealthMeasurement(sample.CollectedAt ?? sample.CreatedAt,
+                    sample.CpuPercent, sample.RamPercent, sample.DiskPercent, sample.ProtectionCollectedAt,
+                    sample.AntivirusStatus, sample.FirewallDomainStatus, sample.FirewallPrivateStatus,
+                    sample.FirewallPublicStatus, sample.DiskEncryptionStatus)
+                }).ToListAsync(cancellationToken);
+        return rows.GroupBy(x => x.Id).Select(group =>
+        {
+            var device = group.First();
+            return new DeviceHealthObservation(organizationId, device.Id, device.Name, device.LastSeenAt, device.MaintenanceUntil,
+                group.Where(x => x.Measurement != null).Select(x => x.Measurement!).ToArray());
+        }).ToArray();
     }
 }

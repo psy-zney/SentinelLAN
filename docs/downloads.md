@@ -1,8 +1,10 @@
 # Tải và cài SentinelLAN Agent
 
-Chỉ cài trên thiết bị được tổ chức cho phép. Nhận **mã kết nối** từ IT/Admin công ty; mã chứa sẵn địa chỉ máy chủ, chỉ đăng ký được một máy và có thời hạn. Đã dùng thì không thể dùng lại dù còn thời gian. Không chia sẻ mã trong ảnh, ticket hoặc lịch sử dòng lệnh.
+Chỉ cài trên thiết bị được công ty cho phép. Nhận **mã kết nối** từ IT/Admin; mã chỉ đăng ký được một máy và có thời hạn. Bộ cài nội bộ đã ghim địa chỉ máy chủ công ty; mã không cho đổi máy chủ. Đã dùng thì không thể dùng lại dù còn thời gian. Không chia sẻ mã trong ảnh, ticket hoặc lịch sử dòng lệnh.
 
 ## Lấy gói cài
+
+Với bản dùng nội bộ, ưu tiên liên kết bộ cài trên chính máy chủ công ty do IT cấp. Tệp `agent-release.json` đi kèm phải ghi đúng HTTPS công ty và `companyPinned: true`. Không dùng lại EXE cũ chỉ vì tên tệp giống nhau. EXE dịch vụ không phải giao diện cài đặt; bản thiếu cấu hình sẽ báo lỗi, không tự kết nối localhost.
 
 Mở [GitHub Releases](https://github.com/psy-zney/SentinelLAN/releases) và chọn bản do IT chỉ định. Nếu chưa có bản phát hành hoặc thiếu gói phù hợp, liên hệ IT; không tải từ nguồn khác.
 
@@ -57,4 +59,4 @@ Nhờ IT kiểm tra máy xuất hiện và có heartbeat mới, sau đó Admin g
 
 Nếu đăng ký thất bại, kiểm tra mạng, HTTPS, thời gian máy và hạn mã. Mã đã dùng/hết hạn cần Admin cấp lại; không gửi mã hoặc cấu hình bí mật khi báo lỗi. Dữ liệu hiển thị có thể cũ khi mất mạng; kết nối lỗi không có nghĩa máy đã hỏng.
 
-Ảnh hỗ trợ do nhân viên chủ động chọn và gửi. Liên hệ IT khi cần cập nhật/cấu hình lại/gỡ Agent; không chạy installer khác lên bản MSI đang hoạt động.
+Ảnh hỗ trợ do nhân viên chủ động chọn và gửi. Liên hệ IT khi cần cập nhật/cấu hình lại/gỡ Agent. Bản Windows mới hỗ trợ tự cập nhật khi IT đã bật tác vụ và cấu hình nguồn phát hành có chữ ký; bản cũ cần nâng cấp một lần. Xem [hướng dẫn tự cập nhật và gỡ bản cũ](guides/agent-auto-update.md). Không chạy bộ cài khác nguồn lên bản MSI đang hoạt động.

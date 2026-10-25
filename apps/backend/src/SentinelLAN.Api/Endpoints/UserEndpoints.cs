@@ -72,11 +72,10 @@ public static class UserEndpoints
             };
         }).RequireAuthorization(AuthorizationPolicies.Admin);
 
-        v1.MapDelete("/users/{id:guid}/activation-token", async (Guid id, [FromBody] RevokeActivationTokenRequest? req, HttpContext http, SentinelDbContext db, UserManagementService users, CancellationToken ct) =>
+        v1.MapDelete("/users/{id:guid}/activation-token", async (Guid id, [FromBody] RevokeActivationTokenRequest request, HttpContext http, SentinelDbContext db, UserManagementService users, CancellationToken ct) =>
         {
             using var developmentWrite = db.Database.IsRelational() ? null : await DevelopmentWriteGate.EnterAsync(ct);
             var actor = http.User.ToActorContext()!.Value;
-            var request = req ?? new RevokeActivationTokenRequest("Revoked by administrator", true);
             var (status, message) = await users.RevokeActivationTokenAsync(actor, id, request, ct);
             return status switch
             {
@@ -87,10 +86,10 @@ public static class UserEndpoints
             };
         }).RequireAuthorization(AuthorizationPolicies.Admin);
 
-        v1.MapGet("/users", async (HttpContext http, UserManagementService users, CancellationToken ct) =>
+        v1.MapGet("/users", async (int? offset, int? limit, HttpContext http, UserManagementService users, CancellationToken ct) =>
         {
             var actor = http.User.ToActorContext()!.Value;
-            var list = await users.GetUsersAsync(actor, ct);
+            var list = await users.GetUsersAsync(actor, new PageWindow(offset ?? 0, limit ?? 200), ct);
             return Results.Ok(list);
         }).RequireAuthorization(AuthorizationPolicies.Admin);
 

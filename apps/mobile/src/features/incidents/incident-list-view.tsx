@@ -127,7 +127,7 @@ export function IncidentListView() {
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} />
+            <RefreshControl testID="incidents-refresh" refreshing={isRefetching} onRefresh={() => { void refetch(); }} />
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>

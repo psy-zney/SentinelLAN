@@ -12,7 +12,6 @@ export function LoginView() {
   const router = useRouter();
   const { login } = useAuth();
 
-  const [orgCode, setOrgCode] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,18 +20,16 @@ export function LoginView() {
   const handleLogin = async () => {
     setErrorMsg(null);
 
-    const trimmedOrg = orgCode.trim();
     const trimmedEmail = email.trim();
 
-    if (!trimmedOrg || !trimmedEmail || !password) {
-      setErrorMsg('Vui lòng điền đầy đủ mã tổ chức, email và mật khẩu.');
+    if (!trimmedEmail || !password) {
+      setErrorMsg('Vui lòng điền đầy đủ email và mật khẩu.');
       return;
     }
 
     setLoading(true);
     try {
       await login({
-        organizationCode: trimmedOrg,
         email: trimmedEmail,
         password,
       });
@@ -65,16 +62,6 @@ export function LoginView() {
               <Text style={[styles.errorText, { color: colors.danger }]}>{errorMsg}</Text>
             </View>
           ) : null}
-
-          <AppInput
-            testID="org-code-input"
-            label={t('orgCodeLabel')}
-            placeholder={t('orgCodePlaceholder')}
-            value={orgCode}
-            onChangeText={setOrgCode}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
 
           <AppInput
             testID="email-input"

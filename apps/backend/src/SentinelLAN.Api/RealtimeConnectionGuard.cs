@@ -7,8 +7,16 @@ namespace SentinelLAN.Api;
 public sealed class RealtimeConnectionGuard(IServiceScopeFactory scopes, IHubContext<UpdatesHub> hub, TimeProvider clock)
 {
     private readonly ConcurrentDictionary<string, Connection> _connections = new();
+    private readonly object registrationGate = new();
 
-    public void Register(string connectionId, ActorContext actor, Action abort) => _connections[connectionId] = new(actor, abort);
+    public bool Register(string connectionId, ActorContext actor, Action abort)
+    {
+        lock (registrationGate)
+        {
+            if (_connections.Values.Count(x => x.Actor.OrganizationId == actor.OrganizationId && x.Actor.UserId == actor.UserId) >= 8) return false;
+            return _connections.TryAdd(connectionId, new(actor, abort));
+        }
+    }
     public void Remove(string connectionId) => _connections.TryRemove(connectionId, out _);
 
     public async Task RevalidateAsync(CancellationToken cancellationToken)

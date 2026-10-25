@@ -123,7 +123,8 @@ public sealed class Device : Entity, ITenantOwned
     public string? SpecificationsJson { get; set; }
     public DateTimeOffset? InventoryCapturedAt { get; set; }
 
-    public bool IsOnline(DateTimeOffset now) => !IsRevoked && LastSeenAt is not null && now - LastSeenAt < TimeSpan.FromMinutes(2);
+    public static TimeSpan OnlineTimeout => TimeSpan.FromMinutes(2);
+    public bool IsOnline(DateTimeOffset now) => !IsRevoked && LastSeenAt is not null && now - LastSeenAt < OnlineTimeout;
 }
 
 public sealed class DeviceEnrollmentToken : Entity, ITenantOwned

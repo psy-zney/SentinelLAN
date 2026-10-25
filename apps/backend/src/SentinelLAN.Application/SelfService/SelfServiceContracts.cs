@@ -45,11 +45,24 @@ public interface ISelfServiceStore
 {
     Task<ISelfServiceWriteScope> BeginWriteAsync(Guid organizationId, CancellationToken cancellationToken);
     Task<IReadOnlyList<SelfServiceRequest>> GetRequestsAsync(Guid organizationId, CancellationToken cancellationToken);
+    async Task<IReadOnlyList<SelfServiceRequest>> GetRequestPageAsync(Guid org, Guid? user, Guid? device, PageWindow page, bool activeOnly, CancellationToken ct)
+    {
+        page.Validate();
+        return (await GetRequestsAsync(org, ct)).Where(x => (user is null || x.UserId == user && x.DeviceId == device) && (!activeOnly || x.Status is not ("Closed" or "Rejected")))
+            .OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).Skip(page.Offset).Take(page.Limit).ToArray();
+    }
     Task<SelfServiceRequest?> FindRequestAsync(Guid organizationId, Guid id, CancellationToken cancellationToken);
     Task<SelfServiceRequest?> FindIdempotentRequestAsync(Guid organizationId, Guid userId, string key, CancellationToken cancellationToken);
     Task<IReadOnlyList<SelfServiceMessage>> GetMessagesAsync(Guid organizationId, Guid requestId, CancellationToken cancellationToken);
+    async Task<SelfServiceMessage?> FindIdempotentMessageAsync(Guid org, Guid request, Guid user, string key, CancellationToken ct) =>
+        (await GetMessagesAsync(org, request, ct)).SingleOrDefault(x => x.AuthorId == user && x.IdempotencyKey == key);
     Task<IReadOnlyList<SupportAttachmentDto>> GetAttachmentsAsync(Guid organizationId, Guid requestId, CancellationToken cancellationToken);
     Task<int> CountAttachmentsAsync(Guid organizationId, Guid requestId, CancellationToken cancellationToken);
+    Task<AttachmentUsage> GetAttachmentUsageAsync(Guid org, Guid user, DateTimeOffset dayStart, CancellationToken ct);
+    Task<IReadOnlyList<SelfServiceMessage>> GetMessagePageAsync(Guid org, Guid request, PageWindow page, CancellationToken ct);
+    Task<IReadOnlyList<SelfServiceNotification>> GetNotificationPageAsync(Guid org, Guid user, PageWindow page, CancellationToken ct);
+    Task<SelfServiceNotification?> FindNotificationAsync(Guid org, Guid user, Guid id, CancellationToken ct);
+    Task<SelfServiceNotification?> FindNotificationByKeyAsync(Guid org, Guid user, string key, CancellationToken ct);
     Task<SelfServiceAttachment?> FindAttachmentAsync(Guid organizationId, Guid requestId, Guid id, CancellationToken cancellationToken);
     Task<IReadOnlyList<SelfServiceCatalogApp>> GetCatalogAsync(Guid organizationId, CancellationToken cancellationToken);
     Task<SelfServiceCatalogApp?> FindCatalogAppAsync(Guid organizationId, Guid id, CancellationToken cancellationToken);
@@ -83,6 +96,12 @@ public interface ISelfServiceCommands
     DeviceCommand Queue(Guid organizationId, Guid deviceId, Guid actorId, string type, string reason,
         string parameter, DateTimeOffset now, DateTimeOffset expiresAt);
     Task<(DeviceCommand? Command, CommandResult? Result)> GetAsync(Guid organizationId, Guid commandId, CancellationToken cancellationToken);
+    async Task<IReadOnlyDictionary<Guid, (DeviceCommand? Command, CommandResult? Result)>> GetManyAsync(Guid org, IReadOnlyCollection<Guid> ids, CancellationToken ct)
+    {
+        var result = new Dictionary<Guid, (DeviceCommand?, CommandResult?)>();
+        foreach (var id in ids.Distinct()) result[id] = await GetAsync(org, id, ct);
+        return result;
+    }
 }
 
 public interface ISelfServiceAudit

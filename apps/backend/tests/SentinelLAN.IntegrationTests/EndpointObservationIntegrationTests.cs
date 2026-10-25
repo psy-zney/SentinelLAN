@@ -35,6 +35,8 @@ public sealed class EndpointObservationIntegrationTests(SentinelApiFactory facto
         Assert.Contains("Test CPU", device.SpecificationsJson!);
         var employee = await db.Users.SingleAsync(value => value.Email == "employee@sentinellan.local");
         foreach (var assigned in await db.Devices.Where(value => value.OrganizationId == device.OrganizationId && value.AssignedUserId == employee.Id).ToListAsync()) assigned.AssignedUserId = null;
+        // Release the existing unique assignment before assigning a different row.
+        await db.SaveChangesAsync();
         device.AssignedUserId = employee.Id;
         await db.SaveChangesAsync();
         var monitor = scope.ServiceProvider.GetRequiredService<DeviceHealthMonitoringService>();

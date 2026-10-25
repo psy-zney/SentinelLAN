@@ -10,9 +10,11 @@ public sealed partial class SelfServiceService
             await MutateAsync(organizationId, async () =>
             {
                 var requests = await store.GetRequestsAsync(organizationId, ct);
-                foreach (var request in requests.Where(r => r.CommandId is not null))
+                var pendingCommands = requests.Where(r => r.CommandId is not null).ToArray();
+                var commandStates = await commands.GetManyAsync(organizationId, pendingCommands.Select(r => r.CommandId!.Value).Distinct().ToArray(), ct);
+                foreach (var request in pendingCommands)
                 {
-                    var (command, result) = await commands.GetAsync(organizationId, request.CommandId!.Value, ct);
+                    var (command, result) = commandStates.GetValueOrDefault(request.CommandId!.Value);
                     if (command is null) continue;
                     var status = command.EffectiveStatus(Now).ToString();
                     var message = result?.Message ?? (status == "Expired"

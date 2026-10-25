@@ -59,7 +59,7 @@ export function MyDeviceView() {
       <ScrollView
         contentContainerStyle={[styles.centered, { backgroundColor: colors.background, padding: spacing.xl }]}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} />
+          <RefreshControl testID="device-refresh" refreshing={isRefetching} onRefresh={() => { void refetch(); }} />
         }
       >
         <AppCard style={styles.noDeviceCard}>
@@ -90,7 +90,7 @@ export function MyDeviceView() {
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.content}
       refreshControl={
-        <RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} />
+        <RefreshControl testID="device-refresh" refreshing={isRefetching} onRefresh={() => { void refetch(); }} />
       }
     >
       {/* Device Header Card */}

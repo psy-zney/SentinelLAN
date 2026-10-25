@@ -48,7 +48,9 @@ Chỉ bật quyền cần kiểm thử. Cấu hình lab/device ID và quyền po
 6. Isolation chỉ thử khi có console cục bộ để khôi phục. Gửi `IsolateNetwork` với parameter `30`–`60`; quan sát bốn rule, thử traffic IPv4/IPv6 tới host khác và giữ kết nối API. Dừng Agent để xác minh recovery độc lập vẫn xóa rule đúng hạn; thử reboot để kiểm tra startup recovery. Ngoại lệ là toàn bộ host IPv4 của API, không chỉ cổng HTTPS. Scheduler bị tắt/hỏng có thể làm recovery trễ; không triển khai ngoài lab khi chưa có bằng chứng này.
 7. Thử sai chữ ký, hết hạn, sai device ID, phát lại nonce, thiếu cờ lab và thiếu companion; OS không được tác động, receipt phải báo lỗi. Restart Agent khi gửi receipt thất bại; xác nhận không thực thi lặp.
 
-## Điều kiện còn thiếu trong phiên phát triển ngày 2026-09-26
+## Lịch sử: điều kiện của phiên phát triển ngày 2026-09-26
+
+Phần này lưu bằng chứng của phiên cũ. Thiết kế ký lệnh HMAC đã được thay thế bằng RSA-PSS và public-key pinning R2; xem [thiết kế giao lệnh hiện hành](../architecture/command-delivery.md). Các kết quả test và advisory ở dưới chỉ áp dụng tại ngày 26/9, không đại diện working tree hiện tại.
 
 Máy phát triển có .NET SDK 10.0.400 và Node.js 24.18.0. Sau khi người dùng khởi chạy Docker, Docker Engine 29.8.0 và Compose v5.5.1 đã kết nối được; PostgreSQL 18.1, API HTTP cổng 8080 và web cổng 3000 đang chạy. Các bài thử PostgreSQL và Docker dùng database/project riêng, không ghi đè database của stack đang chạy. Không tìm thấy Service SentinelLANAgent hay desktop companion đang chạy; tiến trình hiện tại không elevated. Chưa có URL HTTPS production với chứng chỉ tin cậy hoặc device ID lab được cấu hình. Vì vậy test tự động và đọc telemetry Windows không chứng minh một triển khai production hoặc một lần khóa/cô lập máy thật. Xem [kết quả kiểm tra đầy đủ](full-verification-2026-09-26.md).
 

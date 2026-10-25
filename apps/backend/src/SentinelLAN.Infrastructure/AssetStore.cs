@@ -7,6 +7,55 @@ namespace SentinelLAN.Infrastructure;
 
 public sealed class AssetStore(SentinelDbContext dbContext) : IAssetStore
 {
+    public async Task<T> ExecuteWriteAsync<T>(Func<Task<T>> action, CancellationToken ct)
+    {
+        if (!dbContext.Database.IsRelational()) return await action();
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+        try
+        {
+            var result = await action();
+            await transaction.CommitAsync(ct);
+            return result;
+        }
+        catch
+        {
+            dbContext.ChangeTracker.Clear();
+            throw;
+        }
+    }
+    public async Task<IReadOnlyDictionary<Guid, AssetDeviceReference>> GetDeviceReferencesAsync(Guid org, IReadOnlyCollection<Guid> ids, CancellationToken ct)
+    {
+        var selected = ids.Distinct().ToArray();
+        return await dbContext.Devices.AsNoTracking().Where(x => x.OrganizationId == org && selected.Contains(x.Id))
+            .Select(x => new AssetDeviceReference(x.Id, x.Name, x.AssignedUserId, x.IsRevoked)).ToDictionaryAsync(x => x.Id, ct);
+    }
+    public async Task<IReadOnlyDictionary<Guid, string>> GetUserNamesAsync(Guid org, IReadOnlyCollection<Guid> ids, CancellationToken ct)
+    {
+        var selected = ids.Distinct().ToArray();
+        return await dbContext.Users.AsNoTracking().Where(x => x.OrganizationId == org && selected.Contains(x.Id))
+            .Select(x => new { x.Id, x.DisplayName }).ToDictionaryAsync(x => x.Id, x => x.DisplayName, ct);
+    }
+    public async Task<IReadOnlyList<IncidentTicket>> GetIncidentPageAsync(Guid org, Guid? device, Guid? employee, PageWindow page, CancellationToken ct)
+    {
+        page.Validate();
+        return await dbContext.Incidents.AsNoTracking().Where(x => x.OrganizationId == org && (device == null || x.DeviceId == device) &&
+                (employee == null || dbContext.Devices.Any(d => d.OrganizationId == org && d.Id == x.DeviceId && d.AssignedUserId == employee && !d.IsRevoked)))
+            .OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).Skip(page.Offset).Take(page.Limit).ToListAsync(ct);
+    }
+    public async Task<IReadOnlyList<WorkOrder>> GetWorkOrderPageAsync(Guid org, Guid? device, Guid? employee, PageWindow page, CancellationToken ct)
+    {
+        page.Validate();
+        return await dbContext.WorkOrders.AsNoTracking().Where(x => x.OrganizationId == org && (device == null || x.DeviceId == device) &&
+                (employee == null || dbContext.Devices.Any(d => d.OrganizationId == org && d.Id == x.DeviceId && d.AssignedUserId == employee && !d.IsRevoked)))
+            .OrderBy(x => x.Status == "Completed" ? 1 : 0).ThenByDescending(x => x.Priority == "Critical" ? 4 : x.Priority == "High" ? 3 : x.Priority == "Medium" ? 2 : 1)
+            .ThenBy(x => x.DueDate ?? DateTimeOffset.MaxValue).ThenBy(x => x.CreatedAt).ThenBy(x => x.Id).Skip(page.Offset).Take(page.Limit).ToListAsync(ct);
+    }
+    public async Task<IReadOnlyList<AssetLoan>> GetLoanPageAsync(Guid org, Guid? device, PageWindow page, CancellationToken ct)
+    {
+        page.Validate();
+        return await dbContext.AssetLoans.AsNoTracking().Where(x => x.OrganizationId == org && (device == null || x.DeviceId == device))
+            .OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).Skip(page.Offset).Take(page.Limit).ToListAsync(ct);
+    }
     public async Task<Device?> FindDeviceAsync(Guid organizationId, Guid deviceId, CancellationToken cancellationToken = default) =>
         await dbContext.Devices.FirstOrDefaultAsync(x => x.OrganizationId == organizationId && x.Id == deviceId, cancellationToken);
 

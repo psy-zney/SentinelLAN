@@ -116,6 +116,7 @@ export function DeviceTable({ initialDevices }: { initialDevices: Device[] }) {
         </Link>
       </div>
       {admin && <form onSubmit={e => void sendBulk(e)} className="bulk-command-form"><p>Đã chọn {checked.length}/100 máy</p><select aria-label="Lệnh cho các máy đã chọn" value={bulkType} onChange={e => setBulkType(e.target.value as typeof bulkType)}><option value="CollectTelemetryNow">Cập nhật thông tin máy</option><option value="RefreshPolicy">Cập nhật chính sách</option></select><input aria-label="Lý do gửi hàng loạt" required minLength={3} maxLength={1000} value={bulkReason} onChange={e => setBulkReason(e.target.value)} placeholder="Lý do" /><label><input type="checkbox" checked={bulkConfirm} onChange={e => setBulkConfirm(e.target.checked)} /> Tôi xác nhận gửi đến các máy đã chọn</label><button className="action" disabled={!checked.length || !bulkConfirm || bulkBusy}>Gửi lệnh</button>{bulkMessage && <p role="status">{bulkMessage}</p>}</form>}
+      {admin && checked.length > 0 && <section aria-label="Thiết bị sẽ nhận lệnh"><p>Kiểm tra các máy trước khi gửi:</p><ul>{checked.map(id => <li key={id}>{devices.find(device => device.id === id)?.name ?? id}</li>)}</ul></section>}
       <table>
         <thead>
           <tr>

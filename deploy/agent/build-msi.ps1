@@ -11,11 +11,17 @@ if ($CompanyServerUrl) {
     if (-not $CommandPublicKey -or $CommandKeyId -notmatch '^[A-Za-z0-9-]{1,64}$') {
         throw 'A company installer requires CommandPublicKey (base64 SPKI) and CommandKeyId.'
     }
-    $null = [Convert]::FromBase64String($CommandPublicKey)
+    $publicKeyBytes = [Convert]::FromBase64String($CommandPublicKey)
+    $rsa = [Security.Cryptography.RSA]::Create()
+    try {
+        $bytesRead = 0
+        $rsa.ImportSubjectPublicKeyInfo($publicKeyBytes, [ref]$bytesRead)
+        if ($bytesRead -ne $publicKeyBytes.Length -or $rsa.KeySize -lt 3072) { throw 'A company installer requires a complete RSA public key of at least 3072 bits.' }
+    } finally { $rsa.Dispose() }
     $companyUri = $null
     if (-not [Uri]::TryCreate($CompanyServerUrl, [UriKind]::Absolute, [ref]$companyUri) -or
         $companyUri.Scheme -ne 'https' -or $companyUri.UserInfo -or $companyUri.Query -or
-        $companyUri.Fragment -or $companyUri.AbsolutePath -ne '/') {
+        $companyUri.Fragment -or $companyUri.AbsolutePath -ne '/' -or $companyUri.IsLoopback) {
         throw 'CompanyServerUrl must be a trusted HTTPS origin without credentials, query, fragment or path.'
     }
     $CompanyServerUrl = $companyUri.GetLeftPart([UriPartial]::Authority)
@@ -24,12 +30,12 @@ $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $outputPath = [IO.Path]::GetFullPath($OutputDir)
 New-Item -ItemType Directory -Force -Path $outputPath | Out-Null
 $agentExe = Join-Path $outputPath 'SentinelLAN.Agent.exe'
-dotnet publish (Join-Path $projectRoot 'apps\agent\src\SentinelLAN.Agent\SentinelLAN.Agent.csproj') -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:UseSharedCompilation=false -m:1 -o $outputPath
+dotnet publish (Join-Path $projectRoot 'apps\agent\src\SentinelLAN.Agent\SentinelLAN.Agent.csproj') -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:UseSharedCompilation=false "-p:Version=$Version" "-p:CompanyServerUrl=$CompanyServerUrl" "-p:CommandPublicKey=$CommandPublicKey" "-p:CommandKeyId=$CommandKeyId" -m:1 -o $outputPath
 if ($LASTEXITCODE -ne 0) { throw 'Agent publish failed.' }
 
 $setupProject = Join-Path $projectRoot 'apps\agent\src\SentinelLAN.Setup\SentinelLAN.Setup.csproj'
 $configuratorDir = Join-Path $outputPath 'configurator'
-dotnet publish $setupProject -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:UseSharedCompilation=false "-p:CompanyServerUrl=$CompanyServerUrl" "-p:CommandPublicKey=$CommandPublicKey" "-p:CommandKeyId=$CommandKeyId" -m:1 -o $configuratorDir
+dotnet publish $setupProject -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:UseSharedCompilation=false "-p:Version=$Version" "-p:CompanyServerUrl=$CompanyServerUrl" "-p:CommandPublicKey=$CommandPublicKey" "-p:CommandKeyId=$CommandKeyId" -m:1 -o $configuratorDir
 if ($LASTEXITCODE -ne 0) { throw 'Configurator publish failed.' }
 
 $wixPath = Join-Path $projectRoot 'dist\tools4'
@@ -44,14 +50,16 @@ foreach ($extension in @('WixToolset.UI.wixext', 'WixToolset.Util.wixext')) {
     & $wixExe extension add "$extension/4.0.6"
     if ($LASTEXITCODE -ne 0) { throw "WiX extension installation failed: $extension" }
 }
-& $wixExe build (Join-Path $PSScriptRoot 'SentinelLAN.Agent.wxs') -arch x64 -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext -d "ProductVersion=$Version" -d "AgentExe=$agentExe" -d "SetupExe=$(Join-Path $configuratorDir 'SentinelLAN.Setup.exe')" -d "SetupNotice=$(Join-Path $PSScriptRoot 'setup-notice.rtf')" -d "MaintenancePopup=$(Join-Path $PSScriptRoot 'maintenance-popup.ps1')" -o $msi
+& $wixExe build (Join-Path $PSScriptRoot 'SentinelLAN.Agent.wxs') -arch x64 -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext -d "ProductVersion=$Version" -d "AgentExe=$agentExe" -d "SetupExe=$(Join-Path $configuratorDir 'SentinelLAN.Setup.exe')" -d "SetupNotice=$(Join-Path $PSScriptRoot 'setup-notice.rtf')" -d "MaintenancePopup=$(Join-Path $PSScriptRoot 'maintenance-popup.ps1')" -d "UpdateLauncher=$(Join-Path $PSScriptRoot 'run-windows-agent-update.ps1')" -d "UpdateConfiguration=$(Join-Path $PSScriptRoot 'configure-agent-updates.ps1')" -o $msi
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $msi)) { throw 'MSI build failed.' }
 # Build a separate executable embedding the finished MSI, avoiding a circular package.
-dotnet publish $setupProject -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:UseSharedCompilation=false "-p:CompanyServerUrl=$CompanyServerUrl" "-p:CommandPublicKey=$CommandPublicKey" "-p:CommandKeyId=$CommandKeyId" -m:1 "-p:MsiPackagePath=$msi" -o $outputPath
+dotnet publish $setupProject -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:UseSharedCompilation=false "-p:Version=$Version" "-p:CompanyServerUrl=$CompanyServerUrl" "-p:CommandPublicKey=$CommandPublicKey" "-p:CommandKeyId=$CommandKeyId" -m:1 "-p:MsiPackagePath=$msi" -o $outputPath
 if ($LASTEXITCODE -ne 0) { throw 'Setup EXE publish failed.' }
 $checksumLines = foreach ($asset in @('SentinelLAN.Agent.msi', 'SentinelLAN.Setup.exe', 'SentinelLAN.Agent.exe')) {
     $hash = (Get-FileHash -LiteralPath (Join-Path $outputPath $asset) -Algorithm SHA256).Hash.ToLowerInvariant()
     "$hash  $asset"
 }
 $checksumLines | Set-Content -LiteralPath (Join-Path $outputPath 'SHA256SUMS.txt') -Encoding ASCII
+@{ version = $Version; serverUrl = $CompanyServerUrl; companyPinned = [bool]$CompanyServerUrl; commandKeyId = $CommandKeyId; agentExecutable = 'SentinelLAN.Agent.exe'; installerExecutable = 'SentinelLAN.Setup.exe'; runtimeSettings = '%ProgramData%\SentinelLAN\Agent\agent-settings.json' } |
+    ConvertTo-Json | Set-Content -LiteralPath (Join-Path $outputPath 'agent-release.json') -Encoding UTF8
 Write-Host "Built $msi"

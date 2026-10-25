@@ -22,6 +22,18 @@ public sealed class EnrollmentFeedbackTests
     }
 
     [Fact]
+    public async Task EnrollmentSendsTheSameOsDescriptionAsTelemetry()
+    {
+        using var handler = new RejectedEnrollmentHandler("TokenExpired");
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://company.test") };
+        var api = new AgentApi(client, "Authorized device");
+
+        await Assert.ThrowsAsync<EnrollmentRejectedException>(() => api.EnrollAsync("one-time-secret", CancellationToken.None));
+
+        Assert.Equal(OperatingSystemDescription.GetCurrent(), handler.OsVersion);
+    }
+
+    [Fact]
     public async Task ProgressFileReportsStateWithoutCredentials()
     {
         var path = Path.Combine(Path.GetTempPath(), $"sentinellan-progress-{Guid.NewGuid():N}.json");
@@ -39,10 +51,16 @@ public sealed class EnrollmentFeedbackTests
 
     private sealed class RejectedEnrollmentHandler(string code) : HttpMessageHandler
     {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
+        public string? OsVersion { get; private set; }
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            using var body = System.Text.Json.JsonDocument.Parse(await request.Content!.ReadAsStringAsync(cancellationToken));
+            OsVersion = body.RootElement.GetProperty("osVersion").GetString();
+            return new HttpResponseMessage(HttpStatusCode.BadRequest)
             {
                 Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(new { code, detail = "untrusted-detail one-time-secret" }), Encoding.UTF8, "application/problem+json")
-            });
+            };
+        }
     }
 }

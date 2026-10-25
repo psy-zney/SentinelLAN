@@ -8,42 +8,29 @@ public sealed class AuthenticationService(
     IAccessTokenService accessTokens,
     IRefreshTokenProtector refreshTokens,
     AuthenticationSettings settings,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    ILoginAttemptLimiter? loginAttempts = null)
 {
-    public async Task<AuthenticationResult?> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
+    private const string DummyPasswordHash = "pbkdf2-sha256$600000$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+
+    private string? ResolveOrganizationCode(string? requestedCode)
     {
-        if (string.IsNullOrWhiteSpace(request.OrganizationCode) || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrEmpty(request.Password) || request.Password.Length > 1024) return null;
-        var organizationCode = request.OrganizationCode.Trim().ToLowerInvariant();
-        var email = request.Email.Trim().ToLowerInvariant();
-        if (organizationCode.Length is < 2 or > 64 || email.Length is < 3 or > 320) return null;
-
-        var user = await store.FindUserAsync(organizationCode, email, cancellationToken);
-        if (user is null || user.Status != UserStatuses.Active ||
-            user.Role is not (Roles.Admin or Roles.Employee)) return null;
-        if ((await store.FindOrganizationAsync(user.OrganizationId, cancellationToken))?.IsSuspended == true) return null;
-
-        var verification = passwordHasher.Verify(request.Password, user.PasswordHash);
-        if (verification == PasswordVerificationResult.Failed) return null;
-        if (verification == PasswordVerificationResult.SuccessNeedsRehash) user.PasswordHash = passwordHasher.Hash(request.Password);
-        user.SecurityStamp ??= Guid.NewGuid().ToString("N");
-
-        var now = timeProvider.GetUtcNow();
-        var refreshToken = refreshTokens.Generate();
-        var refreshSession = CreateRefreshSession(user, Guid.NewGuid(), refreshToken, now);
-        store.Add(refreshSession);
-        await store.SaveChangesAsync(cancellationToken);
-        return CreateResult(user, refreshSession, refreshToken, now);
+        var configuredCode = settings.OrganizationCode?.Trim().ToLowerInvariant();
+        var requested = requestedCode?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrEmpty(configuredCode) && !string.IsNullOrEmpty(requested) && requested != configuredCode)
+            return null;
+        return configuredCode ?? requested;
     }
 
-    public async Task<MobileAuthenticationResult?> LoginMobileAsync(MobileLoginRequest request, CancellationToken cancellationToken)
+    private async Task<User?> VerifyLoginAsync(string organizationCode, string email, string password, CancellationToken ct, bool mobile = false)
     {
-        if (string.IsNullOrWhiteSpace(request.OrganizationCode) || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrEmpty(request.Password) || request.Password.Length > 1024) return null;
-        var organizationCode = request.OrganizationCode.Trim().ToLowerInvariant();
-        var email = request.Email.Trim().ToLowerInvariant();
-        if (organizationCode.Length is < 2 or > 64 || email.Length is < 3 or > 320) return null;
-
-        var user = await store.FindUserAsync(organizationCode, email, cancellationToken);
-        if (user is null || user.Role is not (Roles.Admin or Roles.Employee) || user.Status != UserStatuses.Active)
+        if (loginAttempts is not null && await loginAttempts.ReserveAsync(organizationCode, email, ct) is { } retryAfter)
+            throw new LoginThrottledException(retryAfter);
+        var user = await store.FindUserAsync(organizationCode, email, ct);
+        var active = user is { Status: UserStatuses.Active, Role: Roles.Admin or Roles.Employee } &&
+            (await store.FindOrganizationAsync(user.OrganizationId, ct)) is { IsSuspended: false };
+        var verification = passwordHasher.Verify(password, active ? user!.PasswordHash : DummyPasswordHash);
+        if (!active || verification == PasswordVerificationResult.Failed)
         {
             if (user is not null)
             {
@@ -51,32 +38,46 @@ public sealed class AuthenticationService(
                 {
                     OrganizationId = user.OrganizationId,
                     ActorId = user.Id,
-                    Action = "MobileLoginFailed",
-                    Reason = "Invalid credentials or inactive status",
+                    Action = mobile ? "MobileLoginFailed" : "LoginFailed",
+                    Reason = "Invalid credentials or inactive account",
                     Outcome = "Failure"
                 });
-                await store.SaveChangesAsync(cancellationToken);
+                await store.SaveChangesAsync(ct);
             }
             return null;
         }
+        if (verification == PasswordVerificationResult.SuccessNeedsRehash) user!.PasswordHash = passwordHasher.Hash(password);
+        user!.SecurityStamp ??= Guid.NewGuid().ToString("N");
+        return user;
+    }
+    public async Task<AuthenticationResult?> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
+    {
+        var organizationCode = ResolveOrganizationCode(request.OrganizationCode);
+        if (string.IsNullOrWhiteSpace(organizationCode) || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrEmpty(request.Password) || request.Password.Length > 1024) return null;
+        var email = request.Email.Trim().ToLowerInvariant();
+        if (organizationCode.Length is < 2 or > 64 || email.Length is < 3 or > 320) return null;
 
-        if ((await store.FindOrganizationAsync(user.OrganizationId, cancellationToken))?.IsSuspended == true) return null;
-        var verification = passwordHasher.Verify(request.Password, user.PasswordHash);
-        if (verification == PasswordVerificationResult.Failed)
-        {
-            store.AddAudit(new AuditLog
-            {
-                OrganizationId = user.OrganizationId,
-                ActorId = user.Id,
-                Action = "MobileLoginFailed",
-                Reason = "Invalid credentials",
-                Outcome = "Failure"
-            });
-            await store.SaveChangesAsync(cancellationToken);
-            return null;
-        }
-        if (verification == PasswordVerificationResult.SuccessNeedsRehash) user.PasswordHash = passwordHasher.Hash(request.Password);
-        user.SecurityStamp ??= Guid.NewGuid().ToString("N");
+        var user = await VerifyLoginAsync(organizationCode, email, request.Password, cancellationToken);
+        if (user is null) return null;
+
+        var now = timeProvider.GetUtcNow();
+        var refreshToken = refreshTokens.Generate();
+        var refreshSession = CreateRefreshSession(user, Guid.NewGuid(), refreshToken, now);
+        store.Add(refreshSession);
+        await store.SaveChangesAsync(cancellationToken);
+        if (loginAttempts is not null) await loginAttempts.ResetAsync(organizationCode, email, cancellationToken);
+        return CreateResult(user, refreshSession, refreshToken, now);
+    }
+
+    public async Task<MobileAuthenticationResult?> LoginMobileAsync(MobileLoginRequest request, CancellationToken cancellationToken)
+    {
+        var organizationCode = ResolveOrganizationCode(request.OrganizationCode);
+        if (string.IsNullOrWhiteSpace(organizationCode) || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrEmpty(request.Password) || request.Password.Length > 1024) return null;
+        var email = request.Email.Trim().ToLowerInvariant();
+        if (organizationCode.Length is < 2 or > 64 || email.Length is < 3 or > 320) return null;
+
+        var user = await VerifyLoginAsync(organizationCode, email, request.Password, cancellationToken, mobile: true);
+        if (user is null) return null;
 
         var org = await store.FindOrganizationAsync(user.OrganizationId, cancellationToken);
         var orgCode = org?.Code ?? organizationCode;
@@ -96,6 +97,7 @@ public sealed class AuthenticationService(
         });
 
         await store.SaveChangesAsync(cancellationToken);
+        if (loginAttempts is not null) await loginAttempts.ResetAsync(organizationCode, email, cancellationToken);
         return CreateMobileResult(user, refreshSession, refreshToken, orgCode, now);
     }
 
@@ -210,6 +212,10 @@ public sealed class AuthenticationService(
     public async Task LogoutAllUserSessionsAsync(Guid organizationId, Guid userId, CancellationToken cancellationToken)
     {
         var now = timeProvider.GetUtcNow();
+        var user = await store.FindUserAsync(userId, organizationId, cancellationToken);
+        if (user is null) return;
+        user.SecurityStamp = Guid.NewGuid().ToString("N");
+        user.UpdatedAt = now;
         var sessions = await store.FindActiveUserSessionsAsync(organizationId, userId, now, cancellationToken);
         foreach (var session in sessions)
         {

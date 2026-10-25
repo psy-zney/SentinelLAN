@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiClient } from "@/lib/api-client";
 import { useTranslation } from "@/lib/i18n";
+import { UiIcon } from "@/components/ui-icon";
 
 export function LogoutButton() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export function LogoutButton() {
 
   return (
     <button className="logout" type="button" onClick={logout} disabled={busy}>
+      <UiIcon name={busy ? "loading" : "logout"} className={busy ? "icon-spin" : ""} />
       {label}
     </button>
   );

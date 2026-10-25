@@ -23,22 +23,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
-      - name: Check public documentation allowlist
+      - name: Check public site allowlist
         run: |
           while IFS= read -r file; do
             case "$file" in
-              docs/downloads.md|docs/site/index.html|docs/site/site.css|docs/site/downloads.js) ;;
-              *) echo "Private documentation must not be tracked: $file"; exit 1 ;;
+              docs/site/index.html|docs/site/site.css|docs/site/downloads.js) ;;
+              *) echo "Unexpected public site file: $file"; exit 1 ;;
             esac
-          done < <(git ls-files docs)
+          done < <(git ls-files docs/site)
       - name: Build static site
         run: |
           mkdir -p dist/site
+          for file in docs/site/index.html docs/site/site.css docs/site/downloads.js; do
+            test -s "$file" && test ! -L "$file"
+          done
           cp docs/site/index.html docs/site/site.css docs/site/downloads.js dist/site/
           test -s dist/site/index.html
           test -s dist/site/site.css
           test -s dist/site/downloads.js
           test "$(find dist/site -type f | wc -l)" -eq 3
+          test -z "$(find dist/site -type l -print -quit)"
       - uses: actions/upload-pages-artifact@v4
         with:
           path: dist/site

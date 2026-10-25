@@ -4,7 +4,7 @@ using SentinelLAN.Application;
 
 namespace SentinelLAN.Infrastructure;
 
-public sealed class Pbkdf2PasswordHasher : IPasswordHasher
+public sealed class Pbkdf2PasswordHasher(TimeProvider? clock = null, DateTimeOffset? legacyUntil = null, bool allowLegacySha256 = true) : IPasswordHasher
 {
     private const int Iterations = 600_000;
     private const int SaltLength = 16;
@@ -40,7 +40,7 @@ public sealed class Pbkdf2PasswordHasher : IPasswordHasher
             }
         }
 
-        return IsLegacySha256(password, passwordHash)
+        return (allowLegacySha256 || legacyUntil > (clock ?? TimeProvider.System).GetUtcNow()) && IsLegacySha256(password, passwordHash)
             ? PasswordVerificationResult.SuccessNeedsRehash
             : PasswordVerificationResult.Failed;
     }

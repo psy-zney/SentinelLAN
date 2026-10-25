@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { AppButton, AppCard, AppInput } from '../../components/common';
 import { useAuth } from '../auth/auth-context';
-import { commandCopy, requestKey, statuses, ServicePage, ServiceText, ServiceError, useActiveScreen } from './shared';
+import { commandCopy, requestKey, statuses, ServicePage, ServicePages, ServiceText, ServiceError, useActiveScreen } from './shared';
 import { ImageAttachmentPicker, type SelectedAttachment } from './image-attachment';
 
 export function RequestDetailView() {
@@ -19,6 +19,7 @@ export function RequestDetailView() {
   const active = useActiveScreen();
   const queryClient = useQueryClient();
   const [body, setBody] = useState('');
+  const [messageOffset, setMessageOffset] = useState(0);
   const [code, setCode] = useState('');
   const [error, setError] = useState<unknown>();
   const [busy, setBusy] = useState(false);
@@ -27,7 +28,7 @@ export function RequestDetailView() {
   const messageKey = useRef(requestKey());
   const pendingMessage = useRef<string | null>(null);
   const request = useQuery({ queryKey: ['support-request', requestId], queryFn: () => apiClient.supportRequest(requestId), enabled: active && id.success, refetchInterval: active ? 5000 : false, refetchIntervalInBackground: false });
-  const messages = useQuery({ queryKey: ['support-messages', requestId], queryFn: ({ signal }) => apiClient.supportMessages(requestId, signal), enabled: active && id.success, refetchInterval: active ? 5000 : false, refetchIntervalInBackground: false });
+  const messages = useQuery({ queryKey: ['support-messages', requestId, messageOffset], queryFn: ({ signal }) => apiClient.supportMessages(requestId, signal, messageOffset), enabled: active && id.success, refetchInterval: active ? 5000 : false, refetchIntervalInBackground: false });
   const attachments = useQuery({ queryKey: ['support-attachments', requestId], queryFn: () => apiClient.supportAttachments(requestId), enabled: active && id.success });
   const refresh = async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ['support-request', requestId] }), queryClient.invalidateQueries({ queryKey: ['support-messages', requestId] }), queryClient.invalidateQueries({ queryKey: ['support-attachments', requestId] }), queryClient.invalidateQueries({ queryKey: ['support-requests'] })]); };
   const perform = async (action: () => Promise<unknown>) => { if (busy) return; setBusy(true); setError(undefined); try { await action(); await refresh(); } catch (err) { setError(err); } finally { setBusy(false); } };
@@ -35,7 +36,7 @@ export function RequestDetailView() {
     const trimmed = body.trim();
     if (pendingMessage.current !== trimmed) { pendingMessage.current = trimmed; messageKey.current = requestKey(); }
     await apiClient.sendSupportMessage(requestId, trimmed, messageKey.current);
-    pendingMessage.current = null; messageKey.current = requestKey(); setBody('');
+    pendingMessage.current = null; messageKey.current = requestKey(); setBody(''); setMessageOffset(0);
   }); };
   if (!id.success) return <ServicePage><ServiceText>Không tìm thấy yêu cầu hợp lệ.</ServiceText></ServicePage>;
   const item = request.data;
@@ -70,6 +71,7 @@ export function RequestDetailView() {
     <ServiceText>IT có thể trả lời sau khi nhận yêu cầu. Tin nhắn được lưu trong yêu cầu này.</ServiceText>
     <ServiceError error={messages.error} retry={() => { void messages.refetch(); }} />
     {messages.data?.map(message => <AppCard key={message.id}><ServiceText heading>{message.authorName}</ServiceText><ServiceText>{message.body}</ServiceText><ServiceText>{new Date(message.createdAt).toLocaleString('vi-VN')}</ServiceText></AppCard>)}
+    <ServicePages offset={messageOffset} count={messages.data?.length ?? 0} onChange={setMessageOffset} />
     <AppInput label={employee ? "Tin nhắn cho IT" : "Tin nhắn cho nhân viên"} value={body} onChangeText={setBody} multiline maxLength={2000} editable={!busy} />
     <AppButton title="Gửi tin nhắn" disabled={!body.trim() || !item} loading={busy} onPress={send} />
     <ServiceText heading>Ảnh đã gửi</ServiceText>

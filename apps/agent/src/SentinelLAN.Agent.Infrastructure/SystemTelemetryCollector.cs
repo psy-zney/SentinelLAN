@@ -23,7 +23,7 @@ public sealed class SystemTelemetryCollector : ITelemetryCollector
         var root = OperatingSystem.IsWindows() ? Path.GetPathRoot(Environment.SystemDirectory)! : "/";
         var drive = new DriveInfo(root);
         var disk = drive.TotalSize == 0 ? 0 : 100d * (drive.TotalSize - drive.TotalFreeSpace) / drive.TotalSize;
-        return new TelemetrySnapshot(_cpu.Sample(idle, total), ram, disk, RuntimeInformation.OSDescription, "0.1.0");
+        return new TelemetrySnapshot(_cpu.Sample(idle, total), ram, disk, OperatingSystemDescription.GetCurrent(), AgentBuildVersion.Current);
     }
 
     private static (ulong Idle, ulong Total) ReadCpu()

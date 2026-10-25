@@ -17,6 +17,10 @@ Kinds: `Incident`, `InstallApp`, `Privilege`, `Panic`, `PauseAgent`, `UninstallA
 
 ## Routes
 
+List reads `/requests`, `/requests/{id}/messages` and `/notifications` accept `offset=0` and `limit=200`, with offset 0–1000000 and limit 1–200 (invalid ranges: 400). Tenant/employee/device checks run before SQL paging. `active=true` on requests excludes Closed/Rejected before paging. Message pages select newest first and return chronological order within the selected page; response shapes remain arrays. Web/mobile offer page controls. External clients must iterate pages for complete history.
+
+Attachment writes enforce shared tenant-locked accounting: `max(size,4096)` bytes per image, default 20 MiB/uploader/day UTC, 200 MiB/tenant/day UTC and 2 GiB/tenant total. Daily quota rejection is 429; total storage rejection is 409. No automatic deletion. See [security upgrade and configuration](security/hardening-2026-10-23.md).
+
 - GET `/requests`: employee's own requests or IT tenant queue. POST `/requests`: {kind, category, title, description?, canWork, catalogAppId?, appointmentAt?, confirmed, idempotencyKey}; derive target device from assignment for Employee.
 - GET `/requests/{id}`; GET/POST `/requests/{id}/messages` (POST {body,idempotencyKey}). Poll active conversations every 5 seconds, with visibility/background handling.
 - GET/POST `/requests/{id}/attachments`: POST JSON {fileName,contentType,base64}; GET list; GET `/requests/{id}/attachments/{attachmentId}` returns bytes. Explicit employee preview/consent.

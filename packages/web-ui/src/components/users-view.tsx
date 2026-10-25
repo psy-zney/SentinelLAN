@@ -3,8 +3,11 @@ import { portalBaseUrl } from "@/lib/portal";
 
 import { useCallback, useState } from "react";
 import { useLiveQuery } from "@/hooks/use-live-query";
+import { PageControls } from "@/components/page-controls";
+import { useCurrentSession } from "@/components/app-shell";
 import { ApiClient, ApiError } from "@/lib/api-client";
 import { useTranslation } from "@/lib/i18n";
+import { userDisplayName, userRoleLabel } from "@/lib/user-presentation";
 import type { Role, UserItem } from "@/types/api";
 
 type NewUserRole = Exclude<Role, "Agent">;
@@ -12,11 +15,12 @@ const emptyForm = { email: "", displayName: "", role: "Employee" as NewUserRole,
 
 export function UsersView() {
   const { t, lang } = useTranslation();
+  const session = useCurrentSession();
+  const [offset, setOffset] = useState(0);
   const load = useCallback(async () => {
     const client = new ApiClient();
-    const [users, org] = await Promise.all([client.users(), client.organization()]);
-    return { users, org };
-  }, []);
+    return { users: await client.users(offset, 100) };
+  }, [offset]);
   const { data, error, refresh } = useLiveQuery(load);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -79,7 +83,7 @@ export function UsersView() {
     } catch (cause) {
       setMessage(
         cause instanceof ApiError && cause.status === 409
-          ? lang === "vi" ? "Email đã tồn tại trong tổ chức." : "That email already exists in this organization."
+          ? lang === "vi" ? "Email này đã có tài khoản trong hệ thống." : "An internal account already uses this email."
           : cause instanceof ApiError && cause.status === 403
             ? lang === "vi" ? "Bạn không có quyền tạo tài khoản." : "You are not allowed to create accounts."
             : lang === "vi" ? "Không thể tạo tài khoản. Kiểm tra dữ liệu và quyền truy cập." : "Account could not be created. Check the form and your permissions."
@@ -123,9 +127,9 @@ export function UsersView() {
       await new ApiClient().revokeActivationToken(revokeTarget.id, "Admin revoked invite", true);
       setRevokeTarget(null);
       refresh();
-      setMessage(lang === "vi" ? "Đã thu hồi lời mời kích hoạt." : "Activation invite revoked.");
+      setMessage(lang === "vi" ? "Đã thu hồi liên kết kích hoạt." : "Activation link revoked.");
     } catch {
-      setMessage(lang === "vi" ? "Không thể thu hồi lời mời." : "Failed to revoke invite.");
+      setMessage(lang === "vi" ? "Không thể thu hồi liên kết kích hoạt." : "Failed to revoke activation link.");
     } finally {
       setRevoking(false);
     }
@@ -164,20 +168,15 @@ export function UsersView() {
 
   if (error) return <div className="panel" role="alert"><div className="panel-head"><h2>{t("users")}</h2></div><p className="subtitle">{t("error")}</p><button className="action" onClick={refresh}>{t("retry")}</button></div>;
   if (!data) return <p className="subtitle" role="status">{t("loading")}</p>;
-  const { users, org } = data;
+  const { users } = data;
 
   return <>
-    {org && <section className="metrics" aria-label="Organization identity">
-      <div className="metric"><span>{t("orgName")}</span><strong className="metric-text">{org.name}</strong></div>
-      <div className="metric"><span>{t("orgCode")}</span><strong className="metric-text">{org.code}</strong></div>
-      <div className="metric"><span>{lang === "vi" ? "Tổng tài khoản" : "Total Accounts"}</span><strong>{users.length}</strong></div>
-      <div className="metric"><span>{lang === "vi" ? "Khởi tạo ngày" : "Tenant Established"}</span><strong className="metric-text">{new Date(org.createdAt).toLocaleDateString()}</strong></div>
-    </section>}
     {message && <div className="panel" role="status" style={{ marginBottom: 18 }}><strong>{message}</strong></div>}
     <div className="panel" style={{ marginBottom: 24 }}>
       <div className="panel-head">
         <div>
           <h2>{t("userDirectory")}</h2>
+          <PageControls offset={offset} count={users.length} onChange={setOffset} />
           <p className="subtitle" style={{ fontSize: ".82rem" }}>{t("subtitleUsers")}</p>
         </div>
         <button className="action" onClick={() => { setMessage(null); setOpen(true); }}>
@@ -200,13 +199,14 @@ export function UsersView() {
             {users.map(user => {
               const status = user.status ?? "Active";
               const isPending = status === "PendingActivation" || user.hasActiveInvitation;
+              const isCurrentUser = user.id === session?.userId;
               return (
                 <tr key={user.id}>
-                  <td><strong>{user.displayName}</strong></td>
+                  <td><strong>{userDisplayName(user.displayName, user.role, lang)}</strong></td>
                   <td>{user.email}</td>
                   <td>
                     <span className={`badge ${user.role === "Admin" ? "badge-info" : "badge-neutral"}`}>
-                      {user.role}
+                      {userRoleLabel(user.role, lang)}
                     </span>
                   </td>
                   <td>
@@ -216,7 +216,8 @@ export function UsersView() {
                   </td>
                   <td>{new Date(user.createdAt).toLocaleDateString()}</td>
                   <td>
-                    {isPending && (
+                    {isCurrentUser && <span className="account-current">{lang === "vi" ? "Đang đăng nhập" : "Signed in"}</span>}
+                    {!isCurrentUser && isPending && (
                       <div style={{ display: "flex", gap: 6 }}>
                         <button
                           type="button"
@@ -236,7 +237,7 @@ export function UsersView() {
                         </button>
                       </div>
                     )}
-                    {(status === "Active" || status === "Locked") && (
+                    {!isCurrentUser && (status === "Active" || status === "Locked") && (
                       <button
                         type="button"
                         className="action-outline"
@@ -256,10 +257,14 @@ export function UsersView() {
     </div>
     <div className="panel">
       <div className="panel-head"><h2>{t("rbacTitle")}</h2></div>
+      <div className="staff-access-guide">
+        <div><h3>{userRoleLabel("Employee", lang)}</h3><p>{lang === "vi" ? "Xem máy tính được giao, gửi yêu cầu hỗ trợ và theo dõi phản hồi của IT." : "View the assigned computer, ask IT for help and follow the response."}</p></div>
+        <div><h3>{userRoleLabel("Admin", lang)}</h3><p>{lang === "vi" ? "Quản lý máy tính, xử lý hỗ trợ IT và cấp tài khoản cho đồng nghiệp." : "Manage computers, handle IT requests and create accounts for colleagues."}</p></div>
+      </div>
       <p className="subtitle">
         {lang === "vi"
-          ? "Quản trị viên tạo tài khoản, gửi lời mời và khóa hoặc mở khóa tài khoản. Người bị khóa sẽ mất quyền truy cập; sau khi mở khóa cần đăng nhập lại."
-          : "Admins create accounts, manage invitations and lock or unlock accounts with an audit trail. Locking removes access immediately; unlocking requires a new sign-in."}
+          ? "Quản trị viên cấp tài khoản, gửi liên kết kích hoạt và khóa hoặc mở khóa tài khoản. Người bị khóa sẽ mất quyền truy cập; sau khi mở khóa cần đăng nhập lại."
+          : "Administrators create accounts, manage activation links and lock or unlock accounts with an audit trail. Locking removes access immediately; unlocking requires a new sign-in."}
       </p>
     </div>
 
@@ -304,8 +309,8 @@ export function UsersView() {
                 value={form.role}
                 onChange={e => setForm({ ...form, role: e.target.value as NewUserRole })}
               >
-                <option value="Employee">Employee</option>
-                <option value="Admin">Admin</option>
+                <option value="Employee">{userRoleLabel("Employee", lang)}</option>
+                <option value="Admin">{userRoleLabel("Admin", lang)}</option>
               </select>
             </div>
             <div className="form-group">
@@ -435,7 +440,7 @@ export function UsersView() {
           </div>
           <p className="subtitle">
             {lang === "vi"
-              ? `Bạn có chắc chắn muốn thu hồi lời mời kích hoạt của ${revokeTarget.displayName} (${revokeTarget.email})?`
+              ? `Bạn có chắc chắn muốn thu hồi liên kết kích hoạt của ${revokeTarget.displayName} (${revokeTarget.email})?`
               : `Are you sure you want to revoke the activation invitation for ${revokeTarget.displayName} (${revokeTarget.email})?`}
           </p>
           <div className="btn-row">

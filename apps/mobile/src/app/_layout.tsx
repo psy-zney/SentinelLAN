@@ -6,6 +6,7 @@ import { I18nProvider } from '../lib/i18n';
 import { AuthProvider, useAuth } from '../features/auth/auth-context';
 import { useAppColors } from '../components/common';
 import { EmployeePushObserver } from '../features/self-service/push-observer';
+import { BackNavigation } from '../components/back-navigation';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,7 +23,7 @@ function RootNavigationLayout() {
   const segments = useSegments() as string[];
   const employeeOnly = ['my-device','incidents','incident-create','incident-detail','request-create','app-catalog','self-service-help'];
   if (status === 'authenticated' && user?.role !== 'Employee' && segments.some(part=>employeeOnly.includes(part))) return <Redirect href="/(tabs)"/>;
-  if (status === 'authenticated' && user?.role !== 'Admin' && segments.includes('company-users')) return <Redirect href="/(tabs)"/>;
+  if (status === 'authenticated' && user?.role !== 'Admin' && segments.some(part => ['company-users', 'vps-status', 'device-detail'].includes(part))) return <Redirect href="/(tabs)"/>;
 
   return (
     <>
@@ -30,6 +31,7 @@ function RootNavigationLayout() {
       <EmployeePushObserver />
       <Stack
         screenOptions={{
+          headerLeft: () => <BackNavigation />,
           headerStyle: {
             backgroundColor: colors.surface,
           },
@@ -43,7 +45,7 @@ function RootNavigationLayout() {
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="login" options={{ title: 'Đăng nhập' }} />
         <Stack.Screen name="activate" options={{ title: 'Kích hoạt tài khoản' }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="incident-create" options={{ title: 'Báo sự cố mới' }} />
@@ -51,6 +53,8 @@ function RootNavigationLayout() {
         <Stack.Screen name="request-create" options={{ title: 'Nhờ IT hỗ trợ' }} />
         <Stack.Screen name="request-detail" options={{ title: 'Tiến độ và trao đổi' }} />
         <Stack.Screen name="company-users" options={{ title: 'Tài khoản công ty' }} />
+        <Stack.Screen name="vps-status" options={{ title: 'Theo dõi VPS' }} />
+        <Stack.Screen name="device-detail" options={{ title: 'Chi tiết máy' }} />
         <Stack.Screen name="support-requests" options={{ title: 'Yêu cầu của tôi' }} />
         <Stack.Screen name="app-catalog" options={{ title: 'Phần mềm công ty' }} />
         <Stack.Screen name="self-service-help" options={{ title: 'Hướng dẫn dễ làm' }} />

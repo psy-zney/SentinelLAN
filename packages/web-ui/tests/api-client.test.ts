@@ -17,14 +17,14 @@ describe("cookie session client", () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ expiresIn: 900, role: "Admin", displayName: "Demo Admin" }), { status: 200, headers: { "Content-Type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const session = await new ApiClient().login("demo", "admin@sentinellan.local", "password");
+    const session = await new ApiClient().login("admin@sentinellan.local", "password");
 
     expect(session).toEqual({ expiresIn: 900, role: "Admin", displayName: "Demo Admin" });
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toContain("/api/v1/auth/login");
+    expect(url).toBe("/api/v1/auth/login");
     expect(init.credentials).toBe("include");
     expect(init.headers).not.toHaveProperty("Authorization");
-    expect(init.body).toContain('"organizationCode":"demo"');
+    expect(JSON.parse(String(init.body))).toEqual({ email: "admin@sentinellan.local", password: "password" });
   });
 
   it("refreshes once after an expired access cookie", async () => {

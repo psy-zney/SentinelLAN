@@ -20,13 +20,17 @@ public sealed class AgentWakeHub(AgentWakeConnectionGuard guard) : Hub
 }
 public sealed class AgentWakeConnectionGuard(IServiceScopeFactory scopes)
 {
+    private readonly object registrationGate = new();
     private readonly ConcurrentDictionary<string, (AgentContext Agent, Action Abort)> connections = new();
     public async Task<bool> RegisterAsync(string id, AgentContext agent, Action abort, CancellationToken ct)
     {
         if (!await ActiveAsync(agent, ct)) return false;
         // Limit stale/reconnecting clients without letting callers choose any group.
-        if (connections.Values.Count(x => x.Agent == agent) >= 2) return false;
-        connections[id] = (agent, abort); return true;
+        lock (registrationGate)
+        {
+            if (connections.Values.Count(x => x.Agent == agent) >= 2) return false;
+            return connections.TryAdd(id, (agent, abort));
+        }
     }
     public void Remove(string id) => connections.TryRemove(id, out _);
     public void AbortAll() { foreach (var connection in connections.ToArray()) if (connections.TryRemove(connection.Key, out var removed)) removed.Abort(); }

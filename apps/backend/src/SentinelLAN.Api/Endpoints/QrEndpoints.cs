@@ -26,11 +26,10 @@ public static class QrEndpoints
             };
         }).RequireAuthorization(AuthorizationPolicies.Admin).RequireRateLimiting("sensitive");
 
-        v1.MapDelete("/devices/{id:guid}/qr-label", async (Guid id, [FromBody] RevokeQrLabelRequest? req, HttpContext http, SentinelDbContext db, IQrManagementService qrService, CancellationToken ct) =>
+        v1.MapDelete("/devices/{id:guid}/qr-label", async (Guid id, [FromBody] RevokeQrLabelRequest request, HttpContext http, SentinelDbContext db, IQrManagementService qrService, CancellationToken ct) =>
         {
             using var developmentWrite = db.Database.IsRelational() ? null : await DevelopmentWriteGate.EnterAsync(ct);
             var actor = http.User.ToActorContext()!.Value;
-            var request = req ?? new RevokeQrLabelRequest("Revoked by technician", true);
             var (status, message) = await qrService.RevokeLabelAsync(actor, id, request, ct);
             return status switch
             {

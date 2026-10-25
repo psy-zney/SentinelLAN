@@ -49,7 +49,6 @@ test("Admin can expand individual VPS resources and port bindings, recognize old
   await page.route("**/api/v1/host/status", route => route.fulfill({ status, contentType: "application/json",
     body: JSON.stringify({ configured: true, available: true, stale, message: "fixture", snapshot }) }));
   await page.goto("/company/login");
-  await page.locator('input[name="organizationCode"]').fill("demo");
   await page.locator('input[name="email"]').fill("admin@sentinellan.local");
   await page.locator('input[name="password"]').fill("local-demo-only");
   await page.locator("form.login button[type=submit]").click();
@@ -164,7 +163,7 @@ test("Admin can expand individual VPS resources and port bindings, recognize old
   await expect(page.getByText("Dữ liệu cũ — chưa xác nhận trạng thái hiện tại", { exact: true })).toBeVisible();
   status = 403;
   await page.getByRole("button", { name: "Làm mới", exact: true }).click();
-  await expect(page.getByRole("alert").filter({ hasText: "Chỉ Admin của đơn vị vận hành" })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "Bạn cần quyền quản trị hệ thống" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "vps-test · 192.0.2.1" })).toHaveCount(0);
   await expect(docker).toHaveCount(0);
   await expect(page.locator("#vps-docker-details")).toHaveCount(0);

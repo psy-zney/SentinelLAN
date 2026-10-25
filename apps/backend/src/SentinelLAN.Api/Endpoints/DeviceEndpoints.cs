@@ -55,11 +55,28 @@ public static class DeviceEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict)
             .RequireAuthorization(AuthorizationPolicies.Admin);
 
-        v1.MapGet("/devices", async (HttpContext http, SentinelDbContext db, CancellationToken ct) =>
+        v1.MapGet("/devices", async (int? offset, int? limit, string? q, string? status, HttpContext http, SentinelDbContext db, CancellationToken ct) =>
         {
             var actor = http.User.ToActorContext()!.Value;
             var now = DateTimeOffset.UtcNow;
-            var devices = await DeviceScope.ForActor(db.Devices, actor).ToListAsync(ct);
+            var page = new PageWindow(offset ?? 0, limit ?? 200);
+            page.Validate();
+            if (q?.Length > 100) return Results.BadRequest();
+            if (status is not (null or "all" or "online" or "offline" or "revoked")) return Results.BadRequest();
+            var query = DeviceScope.ForActor(db.Devices.AsNoTracking(), actor);
+            if (!string.IsNullOrWhiteSpace(q))
+            {
+                var search = q.Trim().ToLowerInvariant();
+                // EF translates this expression to SQL LOWER; invariant/comparison overloads cannot be translated by Npgsql.
+#pragma warning disable CA1304, CA1311, CA1862
+                query = query.Where(x => (x.Name + " " + x.OsVersion).ToLower().Contains(search));
+#pragma warning restore CA1304, CA1311, CA1862
+            }
+            var cutoff = now - Device.OnlineTimeout;
+            if (status == "online") query = query.Where(x => !x.IsRevoked && x.LastSeenAt != null && x.LastSeenAt > cutoff);
+            if (status == "offline") query = query.Where(x => !x.IsRevoked && (x.LastSeenAt == null || x.LastSeenAt <= cutoff));
+            if (status == "revoked") query = query.Where(x => x.IsRevoked);
+            var devices = await query.OrderBy(x => x.Name).ThenBy(x => x.Id).Skip(page.Offset).Take(page.Limit).ToListAsync(ct);
             return Results.Ok(devices.Select(x => new DeviceDto(x.Id, x.Name, x.OsVersion, x.AgentVersion, x.LastSeenAt, x.IsOnline(now), x.AssignedUserId, x.IsRevoked)));
         }).RequireAuthorization(AuthorizationPolicies.ViewDevices);
 
@@ -92,9 +109,13 @@ public static class DeviceEndpoints
         {
             var actor = http.User.ToActorContext()!.Value;
             var now = DateTimeOffset.UtcNow;
-            var devices = await DeviceScope.ForActor(db.Devices, actor).ToListAsync(ct);
+            var query = DeviceScope.ForActor(db.Devices.AsNoTracking(), actor);
+            var total = await query.CountAsync(ct);
+            var cutoff = now - Device.OnlineTimeout;
+            var online = await query.CountAsync(x => !x.IsRevoked && x.LastSeenAt != null && x.LastSeenAt > cutoff, ct);
+            var devices = await query.OrderBy(x => x.Name).ThenBy(x => x.Id).Take(200).ToListAsync(ct);
             var dto = devices.Select(x => new DeviceDto(x.Id, x.Name, x.OsVersion, x.AgentVersion, x.LastSeenAt, x.IsOnline(now), x.AssignedUserId, x.IsRevoked)).ToList();
-            return Results.Ok(new DashboardDto(dto.Count, dto.Count(x => x.IsOnline), dto.Count(x => !x.IsOnline), await db.Alerts.CountAsync(x => x.OrganizationId == actor.OrganizationId && x.IsOpen, ct), dto));
+            return Results.Ok(new DashboardDto(total, online, total - online, await db.Alerts.CountAsync(x => x.OrganizationId == actor.OrganizationId && x.IsOpen, ct), dto));
         }).RequireAuthorization(AuthorizationPolicies.ViewDevices);
     }
 

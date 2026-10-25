@@ -5,10 +5,12 @@ namespace SentinelLAN.Application;
 
 public sealed partial class SelfServiceService
 {
-    public async Task<IReadOnlyList<SupportMessageDto>> GetMessagesAsync(ActorContext actor, Guid id, CancellationToken ct)
+    public Task<IReadOnlyList<SupportMessageDto>> GetMessagesAsync(ActorContext actor, Guid id, CancellationToken ct) => GetMessagesAsync(actor, id, new PageWindow(), ct);
+
+    public async Task<IReadOnlyList<SupportMessageDto>> GetMessagesAsync(ActorContext actor, Guid id, PageWindow page, CancellationToken ct)
     {
         await ScopedRequestAsync(actor, id, ct);
-        return (await store.GetMessagesAsync(actor.OrganizationId, id, ct)).OrderBy(m => m.CreatedAt).Select(MessageDto).ToArray();
+        return (await store.GetMessagePageAsync(actor.OrganizationId, id, page, ct)).OrderBy(m => m.CreatedAt).ThenBy(m => m.Id).Select(MessageDto).ToArray();
     }
     private static SupportMessageDto MessageDto(SelfServiceMessage message) => new(message.Id, message.RequestId, message.AuthorId, message.AuthorName, message.Body, message.CreatedAt);
     public Task<SupportMessageDto> AddMessageAsync(ActorContext actor, Guid id, CreateSupportMessage input, CancellationToken ct) => MutateAsync(actor.OrganizationId, async () =>
@@ -16,8 +18,7 @@ public sealed partial class SelfServiceService
         var request = await ScopedRequestAsync(actor, id, ct);
         var user = await ActorUserAsync(actor, ct);
         Require(!string.IsNullOrWhiteSpace(input.Body) && input.Body.Length <= 4000 && IncidentIdempotency.IsValidKey(input.IdempotencyKey), 400, "Tin nhắn cần có nội dung và dài tối đa 4000 ký tự.");
-        var messages = await store.GetMessagesAsync(actor.OrganizationId, id, ct);
-        var replay = messages.SingleOrDefault(m => m.AuthorId == actor.UserId && m.IdempotencyKey == input.IdempotencyKey);
+        var replay = await store.FindIdempotentMessageAsync(actor.OrganizationId, id, actor.UserId, input.IdempotencyKey, ct);
         if (replay is not null)
         {
             Require(replay.Body == input.Body.Trim(), 409, "Mã gửi tin nhắn đã được dùng cho nội dung khác.");
@@ -73,6 +74,13 @@ public sealed partial class SelfServiceService
         var png = content.Length >= 8 && content.AsSpan(0, 8).SequenceEqual(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 });
         var jpeg = content.Length >= 4 && content[0] == 255 && content[1] == 216 && content[2] == 255;
         Require(content.Length is > 0 and <= 2 * 1024 * 1024 && (input.ContentType == "image/png" ? png : jpeg), 400, "Nội dung ảnh không đúng định dạng hoặc vượt quá 2 MiB.");
+        var quotas = attachmentQuota ?? new AttachmentQuotaSettings();
+        var accountedBytes = Math.Max(content.Length, AttachmentQuotaSettings.MinimumAccountingBytes);
+        var usage = await store.GetAttachmentUsageAsync(actor.OrganizationId, actor.UserId, new DateTimeOffset(Now.UtcDateTime.Date, TimeSpan.Zero), ct);
+        Require(usage.UserDailyBytes <= quotas.UserDailyBytes - accountedBytes && usage.OrganizationDailyBytes <= quotas.OrganizationDailyBytes - accountedBytes,
+            429, "Đã đạt giới hạn gửi ảnh hôm nay. Hãy gửi mô tả bằng tin nhắn hoặc liên hệ IT.");
+        Require(usage.OrganizationTotalBytes <= quotas.OrganizationTotalBytes - accountedBytes,
+            409, "Kho ảnh của công ty đã đạt giới hạn. Hãy liên hệ IT để được hỗ trợ.");
         Require(await store.CountAttachmentsAsync(actor.OrganizationId, id, ct) < 10, 400, "Mỗi yêu cầu nhận tối đa 10 ảnh.");
         var attachment = new SelfServiceAttachment
         {
@@ -212,23 +220,25 @@ public sealed partial class SelfServiceService
         announcement.PublishedAt = Now;
     }
 
-    public async Task<IReadOnlyList<EmployeeNotificationDto>> GetNotificationsAsync(ActorContext actor, CancellationToken ct)
+    public Task<IReadOnlyList<EmployeeNotificationDto>> GetNotificationsAsync(ActorContext actor, CancellationToken ct) => GetNotificationsAsync(actor, new PageWindow(), ct);
+
+    public async Task<IReadOnlyList<EmployeeNotificationDto>> GetNotificationsAsync(ActorContext actor, PageWindow page, CancellationToken ct)
     {
         Human(actor);
-        return (await store.GetNotificationsAsync(actor.OrganizationId, actor.UserId, ct)).OrderByDescending(n => n.CreatedAt).Take(200).Select(NotificationDto).ToArray();
+        return (await store.GetNotificationPageAsync(actor.OrganizationId, actor.UserId, page, ct)).Select(NotificationDto).ToArray();
     }
     private static EmployeeNotificationDto NotificationDto(SelfServiceNotification notification) => new(notification.Id, notification.Title, notification.Body, notification.RequestId, notification.ReadAt, notification.CreatedAt);
     public Task<EmployeeNotificationDto> ReadNotificationAsync(ActorContext actor, Guid id, CancellationToken ct) => MutateAsync(actor.OrganizationId, async () =>
     {
         Human(actor);
-        var notification = (await store.GetNotificationsAsync(actor.OrganizationId, actor.UserId, ct)).SingleOrDefault(n => n.Id == id);
+        var notification = await store.FindNotificationAsync(actor.OrganizationId, actor.UserId, id, ct);
         Require(notification is not null, 404, "Không tìm thấy thông báo.");
         notification!.ReadAt ??= Now;
         return NotificationDto(notification);
     }, ct);
     private async Task NotifyAsync(Guid organizationId, Guid userId, string title, string body, Guid? requestId, string key, CancellationToken ct)
     {
-        if ((await store.GetNotificationsAsync(organizationId, userId, ct)).Any(n => n.DeduplicationKey == key)) return;
+        if (await store.FindNotificationByKeyAsync(organizationId, userId, key, ct) is not null) return;
         var notification = new SelfServiceNotification { OrganizationId = organizationId, UserId = userId, Title = title, Body = body, RequestId = requestId, DeduplicationKey = key, CreatedAt = Now };
         store.Add(notification);
         foreach (var push in await store.GetPushDevicesAsync(organizationId, userId, ct))

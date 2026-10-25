@@ -44,13 +44,13 @@ public static class AssetManagementEndpoints
             return Results.Ok(timeline);
         }).RequireAuthorization();
 
-        v1.MapGet("/incidents", async (Guid? deviceId, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
+        v1.MapGet("/incidents", async (Guid? deviceId, int? offset, int? limit, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
         {
             if (http.User.ToActorContext() is not { } actor)
             {
                 return Results.Unauthorized();
             }
-            var incidents = await assetService.GetIncidentsAsync(actor, deviceId, ct);
+            var incidents = await assetService.GetIncidentsAsync(actor, deviceId, new PageWindow(offset ?? 0, limit ?? 200), ct);
             return Results.Ok(incidents);
         }).RequireAuthorization();
 
@@ -84,13 +84,13 @@ public static class AssetManagementEndpoints
             };
         }).RequireAuthorization(AuthorizationPolicies.Admin);
 
-        v1.MapGet("/work-orders", async (Guid? deviceId, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
+        v1.MapGet("/work-orders", async (Guid? deviceId, int? offset, int? limit, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
         {
             if (http.User.ToActorContext() is not { } actor)
             {
                 return Results.Unauthorized();
             }
-            var workOrders = await assetService.GetWorkOrdersAsync(actor, deviceId, ct);
+            var workOrders = await assetService.GetWorkOrdersAsync(actor, deviceId, new PageWindow(offset ?? 0, limit ?? 200), ct);
             return Results.Ok(workOrders);
         }).RequireAuthorization();
 
@@ -116,14 +116,15 @@ public static class AssetManagementEndpoints
                 ManagementResultStatus.Succeeded => Results.Ok(new { message }),
                 ManagementResultStatus.NotFound => Results.NotFound(new { message }),
                 ManagementResultStatus.Forbidden => Results.Forbid(),
+                ManagementResultStatus.Conflict => Results.Conflict(new ProblemDetails { Title = "Work order already completed", Detail = message, Status = 409 }),
                 _ => Results.BadRequest(new ProblemDetails { Title = "Failed to complete work order", Detail = message })
             };
-        }).RequireAuthorization(AuthorizationPolicies.Admin);
+        }).RequireAuthorization(AuthorizationPolicies.Admin).ProducesProblem(StatusCodes.Status409Conflict);
 
-        v1.MapGet("/asset-loans", async (Guid? deviceId, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
+        v1.MapGet("/asset-loans", async (Guid? deviceId, int? offset, int? limit, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
         {
             var actor = http.User.ToActorContext()!.Value;
-            var loans = await assetService.GetAssetLoansAsync(actor, deviceId, ct);
+            var loans = await assetService.GetAssetLoansAsync(actor, deviceId, new PageWindow(offset ?? 0, limit ?? 200), ct);
             return Results.Ok(loans);
         }).RequireAuthorization(AuthorizationPolicies.Admin);
 
@@ -136,9 +137,10 @@ public static class AssetManagementEndpoints
                 ManagementResultStatus.Succeeded => Results.Created($"/api/v1/asset-loans/{loan!.Id}", loan),
                 ManagementResultStatus.NotFound => Results.NotFound(new { message }),
                 ManagementResultStatus.Forbidden => Results.Forbid(),
+                ManagementResultStatus.Conflict => Results.Conflict(new ProblemDetails { Title = "Device already on loan", Detail = message, Status = 409 }),
                 _ => Results.BadRequest(new ProblemDetails { Title = "Failed to create asset loan", Detail = message })
             };
-        }).RequireAuthorization(AuthorizationPolicies.Admin);
+        }).RequireAuthorization(AuthorizationPolicies.Admin).ProducesProblem(StatusCodes.Status409Conflict);
 
         v1.MapPut("/asset-loans/{id:guid}/return", async (Guid id, ReturnLoanRequest req, HttpContext http, IAssetManagementService assetService, CancellationToken ct) =>
         {
@@ -149,8 +151,9 @@ public static class AssetManagementEndpoints
                 ManagementResultStatus.Succeeded => Results.Ok(new { message }),
                 ManagementResultStatus.NotFound => Results.NotFound(new { message }),
                 ManagementResultStatus.Forbidden => Results.Forbid(),
+                ManagementResultStatus.Conflict => Results.Conflict(new ProblemDetails { Title = "Asset loan already returned", Detail = message, Status = 409 }),
                 _ => Results.BadRequest(new ProblemDetails { Title = "Failed to process asset return", Detail = message })
             };
-        }).RequireAuthorization(AuthorizationPolicies.Admin);
+        }).RequireAuthorization(AuthorizationPolicies.Admin).ProducesProblem(StatusCodes.Status409Conflict);
     }
 }

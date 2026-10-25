@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { AppButton, AppCard } from '../../components/common';
 import { useAuth } from '../auth/auth-context';
-import { ServicePage, ServiceText, ServiceError, useActiveScreen } from './shared';
+import { ServicePage, ServicePages, ServiceText, ServiceError, useActiveScreen } from './shared';
 import { disableEmployeePush, enableEmployeePush } from './push';
 
 export function NotificationsView() {
@@ -14,7 +14,8 @@ export function NotificationsView() {
   const [error, setError] = useState<unknown>();
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
-  const notifications = useQuery({ queryKey: ['employee-notifications'], queryFn: () => apiClient.employeeNotifications(), enabled: active, refetchInterval: active ? 15000 : false });
+  const [offset, setOffset] = useState(0);
+  const notifications = useQuery({ queryKey: ['employee-notifications', offset], queryFn: () => apiClient.employeeNotifications(offset), enabled: active, refetchInterval: active ? 15000 : false });
   const announcements = useQuery({ queryKey: ['employee-announcements'], queryFn: () => apiClient.announcements(), enabled: active, refetchInterval: active ? 15000 : false });
   const perform = async (action: () => Promise<unknown>) => { if (busy) return; setBusy(true); setError(undefined); setMessage(''); try { await action(); await Promise.all([queryClient.invalidateQueries({ queryKey: ['employee-notifications'] }), queryClient.invalidateQueries({ queryKey: ['employee-announcements'] })]); } catch (err) { setError(err); } finally { setBusy(false); } };
   return <ServicePage>
@@ -31,6 +32,7 @@ export function NotificationsView() {
       {!notification.readAt ? <AppButton title="Tôi đã đọc" variant="outline" disabled={busy} onPress={() => { void perform(() => apiClient.readEmployeeNotification(notification.id)); }} /> : null}
       {notification.requestId ? <AppButton title="Xem yêu cầu liên quan" onPress={() => router.push({ pathname: '/request-detail', params: { id: notification.requestId! } })} /> : null}
     </AppCard>)}
+    <ServicePages offset={offset} count={notifications.data?.length ?? 0} onChange={setOffset} />
     <ServiceText heading>Thông báo công ty và sự cố chung</ServiceText>
     <ServiceError error={announcements.error} retry={() => { void announcements.refetch(); }} />
     {announcements.data?.map(announcement => <AppCard key={announcement.id}>

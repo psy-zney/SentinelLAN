@@ -9,7 +9,8 @@ export function EndpointObservationPanel({ deviceId, technical = false }: { devi
   const { lang } = useTranslation();
   const vi = lang === "vi";
   const load = useCallback(() => new ApiClient().endpointObservations(deviceId), [deviceId]);
-  const { data, error, refresh } = useLiveQuery(load);
+  // The updates hub is administrator-only; employee views refresh their own API.
+  const { data, error, refresh } = useLiveQuery(load, Boolean(deviceId));
   const inventory = data?.inventory;
   const security = data?.security;
   const rows = [

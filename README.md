@@ -22,7 +22,7 @@ Chỉ thu thập dữ liệu kỹ thuật phục vụ vận hành như trạng t
 
 Không thu thập mật khẩu, nội dung gõ phím, webcam, âm thanh hoặc chụp màn hình ngầm. Các thao tác quản trị phụ thuộc quyền tài khoản và cấu hình thiết bị; việc cài Agent không phải sự đồng ý cho mọi thao tác.
 
-Tài liệu công khai chỉ gồm giới thiệu và hướng dẫn tải/cài đặt. Tài liệu thiết kế, vận hành và giao diện quản trị nền tảng được lưu riêng.
+Gói website công khai chỉ gồm ba tệp được cho phép trong `docs/site`; hướng dẫn tải/cài đặt nằm trong `docs/downloads.md`. Tài liệu thiết kế và vận hành được giữ trong repository phục vụ đồ án, không được đưa vào gói website. Quyền đọc các tài liệu này phụ thuộc quyền truy cập repository; nếu repository công khai thì các tệp được theo dõi bởi Git cũng công khai. Giao diện quản trị nền tảng được lưu riêng.
 
 ## Nâng cấp tháng 10 năm 2026
 

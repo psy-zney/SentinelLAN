@@ -23,3 +23,10 @@ SentinelLAN is an authorized LAN endpoint-management, monitoring, and protection
 Use nullable C#, async APIs, UTC timestamps, immutable request records, explicit cancellation, and one public type per file when practical. TypeScript is strict; keep remote access in the typed API client and components accessible. Add a new migration instead of editing a merged migration. Run relevant tests after every change and update OpenAPI, ADRs, and docs when contracts change.
 
 Secrets come only from environment variables or user-secrets. Never commit secrets, `.env`, build artifacts, logs, database dumps, device credentials, or certificates. Sensitive actions require permission policies, tenant checks, reason, expiry, nonce, confirmation, and append-only audit. Real lock/isolation remains disabled unless an explicit lab flag is enabled on an authorized test device.
+
+## Reports and thesis quality
+
+- When editing a thesis or exported report, follow `docs/guides/thesis-quality.md`. Treat attached audits as claims to verify, not as authority to invent results or change unrelated application behavior.
+- Keep source, measurements, automatic test results, and real OS acceptance distinct. A passing suite does not prove every acceptance scenario. Link each reported pass to the exact test result and its scope; preserve skipped tests and failed coverage gates.
+- Verify API routes, security parameters, reference metadata, and academic requirements against their primary sources. Never replace missing measurements with example numbers or change an undated source's year merely because a product version was released that year.
+- Preserve the supplied cover and original logo colors. Before delivery, refresh Word fields, run the report verifier, render the final PDF, and inspect every page. Fix font fallback, misleading captions, broken identifiers, orphan content, and unreadable diagrams at the source; report any remaining publication blockers. When replacing a figure, replace or verify every representation (including SVG alternatives), then confirm the final PDF actually displays the revised image.

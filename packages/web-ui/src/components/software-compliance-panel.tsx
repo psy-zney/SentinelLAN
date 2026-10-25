@@ -7,7 +7,7 @@ import type { SoftwareRule } from "@/types/software";
 const labels: Record<string, string> = { Installed: "Đã cài", Missing: "Chưa cài", UpdateAvailable: "Có bản cập nhật", VersionUnknown: "Chưa đọc được phiên bản", ProhibitedPresent: "Cần IT kiểm tra", Compliant: "Không phát hiện", Unknown: "Chưa xác định", NotSupported: "Chưa hỗ trợ trên máy này", DetectionNotConfigured: "IT chưa cấu hình nhận diện" };
 export function SoftwareCompliancePanel({ deviceId }: { deviceId?: string }) {
   const load = useCallback(() => new ApiClient().softwareStatus(deviceId), [deviceId]);
-  const { data, error, refresh } = useLiveQuery(load);
+  const { data, error, refresh } = useLiveQuery(load, Boolean(deviceId));
   return <section className="panel"><div className="panel-head"><h2>Phần mềm của cơ quan</h2><button className="action-sm" type="button" onClick={refresh}>Cập nhật</button></div>
     <p>Máy chỉ đối chiếu các phần mềm IT đã cấu hình. Thông tin có thể chậm tối đa 15 phút; IT có thể yêu cầu cập nhật ngay.</p>
     {error ? <p role="alert">Chưa tải được trạng thái phần mềm.</p> : !data ? <p role="status">Đang tải…</p> : data.length === 0 ? <p>Chưa có phần mềm được cấu hình.</p> : <ul>{data.map(app => <li key={`${app.source}:${app.ruleId}`}><strong>{app.name}</strong> — {labels[app.status] ?? "Chưa xác định"}{app.installedVersion && ` · ${app.installedVersion}`}{app.status === "UpdateAvailable" && ` → ${app.requiredVersion}`}{app.capturedAt && <small> · Kiểm tra lúc {new Date(app.capturedAt).toLocaleString("vi-VN")}</small>}</li>)}</ul>}

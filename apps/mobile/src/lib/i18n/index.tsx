@@ -128,7 +128,7 @@ const translations = {
     logoutAllButton: 'Thu hồi toàn bộ phiên đăng nhập',
     logoutConfirmTitle: 'Xác nhận đăng xuất',
     logoutConfirmMsg: 'Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng trên thiết bị này?',
-    logoutAllConfirmMsg: 'Hành động này sẽ đăng xuất tất cả các phiên di động của tài khoản này.',
+    logoutAllConfirmMsg: 'Hành động này sẽ đăng xuất ngay tất cả các phiên web và di động của tài khoản này.',
     loggingOut: 'Đang đăng xuất...',
   },
   en: {
@@ -255,7 +255,7 @@ const translations = {
     logoutAllButton: 'Revoke All Sessions',
     logoutConfirmTitle: 'Sign Out Confirmation',
     logoutConfirmMsg: 'Are you sure you want to sign out from this mobile device?',
-    logoutAllConfirmMsg: 'This action will revoke all mobile refresh sessions for this account.',
+    logoutAllConfirmMsg: 'This action will immediately revoke all web and mobile sessions for this account.',
     loggingOut: 'Signing out...',
   },
 };

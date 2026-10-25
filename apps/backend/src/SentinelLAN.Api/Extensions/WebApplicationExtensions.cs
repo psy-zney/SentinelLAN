@@ -26,11 +26,13 @@ public static class WebApplicationExtensions
             await next();
         });
         app.UseCors();
+        app.UseMiddleware<IngressRateLimitMiddleware>();
         app.Use(async (context, next) =>
         {
             await next();
             if (!HttpMethods.IsGet(context.Request.Method) && context.Response.StatusCode < 400 &&
-                (context.Request.Path.StartsWithSegments("/api/v1/users") || context.Request.Path.StartsWithSegments("/api/v1/auth")))
+                (context.Request.Path.StartsWithSegments("/api/v1/users") || context.Request.Path.StartsWithSegments("/api/v1/auth") ||
+                 context.Request.Path.StartsWithSegments("/api/v1/mobile/auth/logout-all")))
             {
                 var connections = context.RequestServices.GetRequiredService<RealtimeConnectionGuard>();
                 try { await connections.RevalidateAsync(CancellationToken.None); }

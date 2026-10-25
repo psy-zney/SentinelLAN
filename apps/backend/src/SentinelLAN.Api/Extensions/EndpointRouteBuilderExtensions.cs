@@ -10,6 +10,7 @@ public static class EndpointRouteBuilderExtensions
         app.MapHealthEndpoints();
 
         var v1 = app.MapGroup("/api/v1");
+        v1.AddEndpointFilter<PaginationFilter>();
         v1.MapSelfService();
         v1.MapAuthEndpoints();
         v1.MapHostMonitoringEndpoints();

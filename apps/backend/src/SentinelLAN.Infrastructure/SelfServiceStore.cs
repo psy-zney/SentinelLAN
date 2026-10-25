@@ -30,6 +30,45 @@ public sealed class SelfServiceStore(SentinelDbContext db) : ISelfServiceStore
         return new WriteScope(null, gate);
     }
     public async Task<IReadOnlyList<SelfServiceRequest>> GetRequestsAsync(Guid org, CancellationToken ct) => await db.Set<SelfServiceRequest>().Where(x => x.OrganizationId == org).ToListAsync(ct);
+    public async Task<IReadOnlyList<SelfServiceRequest>> GetRequestPageAsync(Guid org, Guid? user, Guid? device, PageWindow page, bool activeOnly, CancellationToken ct)
+    {
+        page.Validate();
+        return await db.SelfServiceRequests.AsNoTracking().Where(x => x.OrganizationId == org && (user == null || x.UserId == user && x.DeviceId == device) &&
+                (!activeOnly || x.Status != "Closed" && x.Status != "Rejected"))
+            .OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).Skip(page.Offset).Take(page.Limit).ToListAsync(ct);
+    }
+    public Task<SelfServiceMessage?> FindIdempotentMessageAsync(Guid org, Guid request, Guid user, string key, CancellationToken ct) =>
+        db.SelfServiceMessages.SingleOrDefaultAsync(x => x.OrganizationId == org && x.RequestId == request && x.AuthorId == user && x.IdempotencyKey == key, ct);
+    public async Task<IReadOnlyList<SelfServiceMessage>> GetMessagePageAsync(Guid org, Guid request, PageWindow page, CancellationToken ct)
+    {
+        page.Validate();
+        return await db.SelfServiceMessages.AsNoTracking().Where(x => x.OrganizationId == org && x.RequestId == request)
+            .OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).Skip(page.Offset).Take(page.Limit).ToListAsync(ct);
+    }
+    public async Task<IReadOnlyList<SelfServiceNotification>> GetNotificationPageAsync(Guid org, Guid user, PageWindow page, CancellationToken ct)
+    {
+        page.Validate();
+        return await db.SelfServiceNotifications.AsNoTracking().Where(x => x.OrganizationId == org && x.UserId == user)
+            .OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).Skip(page.Offset).Take(page.Limit).ToListAsync(ct);
+    }
+    public Task<SelfServiceNotification?> FindNotificationAsync(Guid org, Guid user, Guid id, CancellationToken ct) =>
+        db.SelfServiceNotifications.SingleOrDefaultAsync(x => x.OrganizationId == org && x.UserId == user && x.Id == id, ct);
+    public Task<SelfServiceNotification?> FindNotificationByKeyAsync(Guid org, Guid user, string key, CancellationToken ct)
+    {
+        // A recipient can also be an administrator in the same batch. Include
+        // notifications queued before SaveChanges so both routes share one record.
+        var pending = db.SelfServiceNotifications.Local.SingleOrDefault(x => x.OrganizationId == org && x.UserId == user && x.DeduplicationKey == key);
+        return pending is not null ? Task.FromResult<SelfServiceNotification?>(pending)
+            : db.SelfServiceNotifications.SingleOrDefaultAsync(x => x.OrganizationId == org && x.UserId == user && x.DeduplicationKey == key, ct);
+    }
+    public async Task<AttachmentUsage> GetAttachmentUsageAsync(Guid org, Guid user, DateTimeOffset dayStart, CancellationToken ct)
+    {
+        var usage = await db.SelfServiceAttachments.Where(x => x.OrganizationId == org).GroupBy(x => x.OrganizationId)
+            .Select(g => new AttachmentUsage(g.Sum(x => x.UploadedByUserId == user && x.CreatedAt >= dayStart ? (long)Math.Max(x.Size, AttachmentQuotaSettings.MinimumAccountingBytes) : 0),
+                g.Sum(x => x.CreatedAt >= dayStart ? (long)Math.Max(x.Size, AttachmentQuotaSettings.MinimumAccountingBytes) : 0),
+                g.Sum(x => (long)Math.Max(x.Size, AttachmentQuotaSettings.MinimumAccountingBytes)))).SingleOrDefaultAsync(ct);
+        return usage ?? new(0, 0, 0);
+    }
     public Task<SelfServiceRequest?> FindRequestAsync(Guid org, Guid id, CancellationToken ct) => db.Set<SelfServiceRequest>().SingleOrDefaultAsync(x => x.OrganizationId == org && x.Id == id, ct);
     public Task<SelfServiceRequest?> FindIdempotentRequestAsync(Guid org, Guid user, string key, CancellationToken ct) => db.Set<SelfServiceRequest>().SingleOrDefaultAsync(x => x.OrganizationId == org && x.UserId == user && x.IdempotencyKey == key, ct);
     public async Task<IReadOnlyList<SelfServiceMessage>> GetMessagesAsync(Guid org, Guid requestId, CancellationToken ct) => await db.Set<SelfServiceMessage>().Where(x => x.OrganizationId == org && x.RequestId == requestId).ToListAsync(ct);

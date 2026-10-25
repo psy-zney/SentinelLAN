@@ -1,5 +1,7 @@
 # SentinelLAN công ty tự quản lý
 
+Mỗi bản triển khai phục vụ một công ty nội bộ. Đăng nhập web/mobile chỉ cần email và mật khẩu; không nhập mã công ty. Máy chủ cố định công ty bằng `SENTINELLAN_LOGIN_ORG_CODE`, mặc định lấy `BOOTSTRAP_ORG_CODE`. Mã là cấu hình của IT, không phải lựa chọn của người đăng nhập. Khi đổi mã công ty trong dữ liệu, phải đồng bộ cấu hình đăng nhập và `SENTINELLAN_HOST_MONITOR_ORG_CODE` nếu có dùng theo dõi VPS.
+
 Chạy từ thư mục gốc với `docker compose --env-file deploy/lan/.env -f deploy/lan/compose.yaml up --build -d`.
 
 ## Chuẩn bị

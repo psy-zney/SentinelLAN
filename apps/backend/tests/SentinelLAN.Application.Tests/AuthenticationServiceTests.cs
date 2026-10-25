@@ -6,6 +6,37 @@ namespace SentinelLAN.Application.Tests;
 public sealed class AuthenticationServiceTests
 {
     [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" Demo ")]
+    public async Task ConfiguredCompanyAllowsWebAndMobileLoginWithoutCompanySelection(string? requestedCode)
+    {
+        var user = new User { OrganizationId = Guid.NewGuid(), Email = "admin@example.test", DisplayName = "Admin", Role = Roles.Admin, PasswordHash = "valid" };
+        var store = new FakeAuthenticationStore(user);
+        var service = new AuthenticationService(store, new FakePasswordHasher(), new FakeAccessTokens(), new SequentialRefreshTokens("web", "mobile"),
+            new AuthenticationSettings(TimeSpan.FromMinutes(15), TimeSpan.FromDays(7), "demo"), new FixedTimeProvider(DateTimeOffset.UtcNow));
+
+        Assert.Equal(Roles.Admin, (await service.LoginAsync(new LoginRequest(requestedCode, user.Email, "password"), default))?.Role);
+        var mobile = await service.LoginMobileAsync(new MobileLoginRequest(requestedCode, user.Email, "password"), default);
+        Assert.Equal(Roles.Admin, mobile?.Role);
+        Assert.Equal("demo", mobile?.OrganizationCode);
+    }
+
+    [Fact]
+    public async Task ConfiguredCompanyRejectsRequestsForAnotherCompanyOnWebAndMobile()
+    {
+        var user = new User { OrganizationId = Guid.NewGuid(), Email = "admin@example.test", DisplayName = "Admin", Role = Roles.Admin, PasswordHash = "valid" };
+        var store = new FakeAuthenticationStore(user);
+        var service = new AuthenticationService(store, new FakePasswordHasher(), new FakeAccessTokens(), new SequentialRefreshTokens(),
+            new AuthenticationSettings(TimeSpan.FromMinutes(15), TimeSpan.FromDays(7), "another-company"), new FixedTimeProvider(DateTimeOffset.UtcNow));
+
+        Assert.Null(await service.LoginAsync(new LoginRequest("demo", user.Email, "password"), default));
+        Assert.Null(await service.LoginMobileAsync(new MobileLoginRequest("demo", user.Email, "password"), default));
+        Assert.Null(await service.LoginAsync(new LoginRequest(null, user.Email, "password"), default));
+        Assert.Empty(store.Sessions);
+    }
+
+    [Theory]
     [InlineData("PlatformOwner")]
     [InlineData("SuperAdmin")]
     [InlineData("Technician")]

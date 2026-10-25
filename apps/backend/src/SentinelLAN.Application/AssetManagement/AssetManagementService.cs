@@ -4,6 +4,19 @@ namespace SentinelLAN.Application;
 
 public sealed class AssetManagementService(IAssetStore store) : IAssetManagementService
 {
+    public Task<(ManagementResultStatus Status, string Message)> UpdateAssetProfileAsync(ActorContext actor, Guid deviceId, UpdateAssetProfileRequest request, CancellationToken cancellationToken = default) =>
+        store.ExecuteWriteAsync(() => UpdateAssetProfileCoreAsync(actor, deviceId, request, cancellationToken), cancellationToken);
+    public Task<(ManagementResultStatus Status, string Message)> UpdateIncidentStatusAsync(ActorContext actor, Guid incidentId, UpdateIncidentStatusRequest request, CancellationToken cancellationToken = default) =>
+        store.ExecuteWriteAsync(() => UpdateIncidentStatusCoreAsync(actor, incidentId, request, cancellationToken), cancellationToken);
+    public Task<(ManagementResultStatus Status, WorkOrderDto? WorkOrder, string Message)> CreateWorkOrderAsync(ActorContext actor, CreateWorkOrderRequest request, CancellationToken cancellationToken = default) =>
+        store.ExecuteWriteAsync(() => CreateWorkOrderCoreAsync(actor, request, cancellationToken), cancellationToken);
+    public Task<(ManagementResultStatus Status, string Message)> CompleteWorkOrderAsync(ActorContext actor, Guid workOrderId, CompleteWorkOrderRequest request, CancellationToken cancellationToken = default) =>
+        store.ExecuteWriteAsync(() => CompleteWorkOrderCoreAsync(actor, workOrderId, request, cancellationToken), cancellationToken);
+    public Task<(ManagementResultStatus Status, AssetLoanDto? Loan, string Message)> CreateAssetLoanAsync(ActorContext actor, CreateLoanRequest request, CancellationToken cancellationToken = default) =>
+        store.ExecuteWriteAsync(() => CreateAssetLoanCoreAsync(actor, request, cancellationToken), cancellationToken);
+    public Task<(ManagementResultStatus Status, string Message)> ReturnAssetLoanAsync(ActorContext actor, Guid loanId, ReturnLoanRequest request, CancellationToken cancellationToken = default) =>
+        store.ExecuteWriteAsync(() => ReturnAssetLoanCoreAsync(actor, loanId, request, cancellationToken), cancellationToken);
+
     public async Task<DeviceAssetDetailDto?> GetDeviceAssetDetailAsync(ActorContext actor, Guid deviceId, CancellationToken cancellationToken = default)
     {
         var device = await store.FindDeviceAsync(actor.OrganizationId, deviceId, cancellationToken);
@@ -50,7 +63,7 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
         );
     }
 
-    public async Task<(ManagementResultStatus Status, string Message)> UpdateAssetProfileAsync(
+    private async Task<(ManagementResultStatus Status, string Message)> UpdateAssetProfileCoreAsync(
         ActorContext actor, Guid deviceId, UpdateAssetProfileRequest request, CancellationToken cancellationToken = default)
     {
         if (actor.Role != Roles.Admin)
@@ -127,9 +140,12 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
 
         // 3. Incidents
         var incidents = await store.GetIncidentsAsync(actor.OrganizationId, deviceId, cancellationToken);
+        var loans = await store.GetAssetLoansAsync(actor.OrganizationId, deviceId, cancellationToken);
+        var names = await store.GetUserNamesAsync(actor.OrganizationId,
+            incidents.Select(x => x.ReportedByUserId).Concat(loans.Select(x => x.BorrowerUserId)).Distinct().ToArray(), cancellationToken);
         foreach (var inc in incidents)
         {
-            var repName = await store.GetUserNameAsync(actor.OrganizationId, inc.ReportedByUserId, cancellationToken);
+            var repName = names.GetValueOrDefault(inc.ReportedByUserId);
             timeline.Add(new AssetTimelineItemDto(
                 $"inc-{inc.Id}",
                 inc.CreatedAt,
@@ -194,10 +210,9 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
         }
 
         // 6. Loans
-        var loans = await store.GetAssetLoansAsync(actor.OrganizationId, deviceId, cancellationToken);
         foreach (var loan in loans)
         {
-            var borrower = await store.GetUserNameAsync(actor.OrganizationId, loan.BorrowerUserId, cancellationToken);
+            var borrower = names.GetValueOrDefault(loan.BorrowerUserId);
             timeline.Add(new AssetTimelineItemDto(
                 $"loan-{loan.Id}",
                 loan.BorrowedAt,
@@ -223,19 +238,24 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
         return timeline.OrderByDescending(t => t.Timestamp).ToList();
     }
 
-    public async Task<IReadOnlyList<IncidentDto>> GetIncidentsAsync(ActorContext actor, Guid? deviceId = null, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<IncidentDto>> GetIncidentsAsync(ActorContext actor, Guid? deviceId = null, CancellationToken cancellationToken = default) => GetIncidentsAsync(actor, deviceId, new PageWindow(), cancellationToken);
+
+    public async Task<IReadOnlyList<IncidentDto>> GetIncidentsAsync(ActorContext actor, Guid? deviceId, PageWindow page, CancellationToken cancellationToken = default)
     {
-        var incidents = await store.GetIncidentsAsync(actor.OrganizationId, deviceId, cancellationToken);
+        if (actor.Role is not (Roles.Admin or Roles.Employee)) return [];
+        var incidents = await store.GetIncidentPageAsync(actor.OrganizationId, deviceId, actor.Role == Roles.Employee ? actor.UserId : null, page, cancellationToken);
+        var devices = await store.GetDeviceReferencesAsync(actor.OrganizationId, incidents.Select(x => x.DeviceId).ToArray(), cancellationToken);
+        var names = await store.GetUserNamesAsync(actor.OrganizationId, incidents.SelectMany(x => x.AssignedTechnicianId is Guid id ? new[] { x.ReportedByUserId, id } : new[] { x.ReportedByUserId }).ToArray(), cancellationToken);
         var result = new List<IncidentDto>(incidents.Count);
 
         foreach (var inc in incidents)
         {
-            var dev = await store.FindDeviceAsync(actor.OrganizationId, inc.DeviceId, cancellationToken);
+            var dev = devices.GetValueOrDefault(inc.DeviceId);
             if (actor.Role == Roles.Employee && (dev?.AssignedUserId != actor.UserId || dev?.IsRevoked == true))
                 continue;
 
-            var reportedBy = await store.GetUserNameAsync(actor.OrganizationId, inc.ReportedByUserId, cancellationToken);
-            var tech = await store.GetUserNameAsync(actor.OrganizationId, inc.AssignedTechnicianId, cancellationToken);
+            var reportedBy = names.GetValueOrDefault(inc.ReportedByUserId);
+            var tech = inc.AssignedTechnicianId is Guid technician ? names.GetValueOrDefault(technician) : null;
 
             result.Add(new IncidentDto(
                 inc.Id,
@@ -338,7 +358,7 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
             incident.AssignedTechnicianId, null, incident.ResolvedAt, incident.ResolutionNotes, incident.CreatedAt);
     }
 
-    public async Task<(ManagementResultStatus Status, string Message)> UpdateIncidentStatusAsync(
+    private async Task<(ManagementResultStatus Status, string Message)> UpdateIncidentStatusCoreAsync(
         ActorContext actor, Guid incidentId, UpdateIncidentStatusRequest request, CancellationToken cancellationToken = default)
     {
         if (actor.Role != Roles.Admin)
@@ -388,18 +408,23 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
         return (ManagementResultStatus.Succeeded, "Incident updated successfully.");
     }
 
-    public async Task<IReadOnlyList<WorkOrderDto>> GetWorkOrdersAsync(ActorContext actor, Guid? deviceId = null, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<WorkOrderDto>> GetWorkOrdersAsync(ActorContext actor, Guid? deviceId = null, CancellationToken cancellationToken = default) => GetWorkOrdersAsync(actor, deviceId, new PageWindow(), cancellationToken);
+
+    public async Task<IReadOnlyList<WorkOrderDto>> GetWorkOrdersAsync(ActorContext actor, Guid? deviceId, PageWindow page, CancellationToken cancellationToken = default)
     {
-        var workOrders = await store.GetWorkOrdersAsync(actor.OrganizationId, deviceId, cancellationToken);
+        if (actor.Role is not (Roles.Admin or Roles.Employee)) return [];
+        var workOrders = await store.GetWorkOrderPageAsync(actor.OrganizationId, deviceId, actor.Role == Roles.Employee ? actor.UserId : null, page, cancellationToken);
+        var devices = await store.GetDeviceReferencesAsync(actor.OrganizationId, workOrders.Select(x => x.DeviceId).ToArray(), cancellationToken);
+        var names = await store.GetUserNamesAsync(actor.OrganizationId, workOrders.Where(x => x.AssignedTechnicianId != null).Select(x => x.AssignedTechnicianId!.Value).ToArray(), cancellationToken);
         var result = new List<WorkOrderDto>(workOrders.Count);
 
         foreach (var wo in workOrders)
         {
-            var dev = await store.FindDeviceAsync(actor.OrganizationId, wo.DeviceId, cancellationToken);
+            var dev = devices.GetValueOrDefault(wo.DeviceId);
             if (actor.Role == Roles.Employee && (dev?.AssignedUserId != actor.UserId || dev?.IsRevoked == true))
                 continue;
 
-            var tech = await store.GetUserNameAsync(actor.OrganizationId, wo.AssignedTechnicianId, cancellationToken);
+            var tech = wo.AssignedTechnicianId is Guid technician ? names.GetValueOrDefault(technician) : null;
 
             result.Add(new WorkOrderDto(
                 wo.Id,
@@ -433,7 +458,7 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
             .ToList();
     }
 
-    public async Task<(ManagementResultStatus Status, WorkOrderDto? WorkOrder, string Message)> CreateWorkOrderAsync(
+    private async Task<(ManagementResultStatus Status, WorkOrderDto? WorkOrder, string Message)> CreateWorkOrderCoreAsync(
         ActorContext actor, CreateWorkOrderRequest request, CancellationToken cancellationToken = default)
     {
         if (actor.Role != Roles.Admin)
@@ -519,7 +544,7 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
         return (ManagementResultStatus.Succeeded, dto, "Work order created successfully.");
     }
 
-    public async Task<(ManagementResultStatus Status, string Message)> CompleteWorkOrderAsync(
+    private async Task<(ManagementResultStatus Status, string Message)> CompleteWorkOrderCoreAsync(
         ActorContext actor, Guid workOrderId, CompleteWorkOrderRequest request, CancellationToken cancellationToken = default)
     {
         if (actor.Role != Roles.Admin)
@@ -561,15 +586,20 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
         return (ManagementResultStatus.Succeeded, "Work order completed successfully.");
     }
 
-    public async Task<IReadOnlyList<AssetLoanDto>> GetAssetLoansAsync(ActorContext actor, Guid? deviceId = null, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<AssetLoanDto>> GetAssetLoansAsync(ActorContext actor, Guid? deviceId = null, CancellationToken cancellationToken = default) => GetAssetLoansAsync(actor, deviceId, new PageWindow(), cancellationToken);
+
+    public async Task<IReadOnlyList<AssetLoanDto>> GetAssetLoansAsync(ActorContext actor, Guid? deviceId, PageWindow page, CancellationToken cancellationToken = default)
     {
-        var loans = await store.GetAssetLoansAsync(actor.OrganizationId, deviceId, cancellationToken);
+        if (actor.Role != Roles.Admin) return [];
+        var loans = await store.GetLoanPageAsync(actor.OrganizationId, deviceId, page, cancellationToken);
+        var devices = await store.GetDeviceReferencesAsync(actor.OrganizationId, loans.Select(x => x.DeviceId).ToArray(), cancellationToken);
+        var names = await store.GetUserNamesAsync(actor.OrganizationId, loans.Select(x => x.BorrowerUserId).ToArray(), cancellationToken);
         var result = new List<AssetLoanDto>(loans.Count);
 
         foreach (var loan in loans)
         {
-            var dev = await store.FindDeviceAsync(actor.OrganizationId, loan.DeviceId, cancellationToken);
-            var borrower = await store.GetUserNameAsync(actor.OrganizationId, loan.BorrowerUserId, cancellationToken);
+            var dev = devices.GetValueOrDefault(loan.DeviceId);
+            var borrower = names.GetValueOrDefault(loan.BorrowerUserId);
 
             result.Add(new AssetLoanDto(
                 loan.Id,
@@ -592,7 +622,7 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
         return result.OrderByDescending(l => l.CreatedAt).ToList();
     }
 
-    public async Task<(ManagementResultStatus Status, AssetLoanDto? Loan, string Message)> CreateAssetLoanAsync(
+    private async Task<(ManagementResultStatus Status, AssetLoanDto? Loan, string Message)> CreateAssetLoanCoreAsync(
         ActorContext actor, CreateLoanRequest request, CancellationToken cancellationToken = default)
     {
         if (actor.Role != Roles.Admin)
@@ -660,7 +690,7 @@ public sealed class AssetManagementService(IAssetStore store) : IAssetManagement
         return (ManagementResultStatus.Succeeded, dto, "Asset loan created successfully.");
     }
 
-    public async Task<(ManagementResultStatus Status, string Message)> ReturnAssetLoanAsync(
+    private async Task<(ManagementResultStatus Status, string Message)> ReturnAssetLoanCoreAsync(
         ActorContext actor, Guid loanId, ReturnLoanRequest request, CancellationToken cancellationToken = default)
     {
         if (actor.Role != Roles.Admin)

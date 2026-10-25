@@ -1,5 +1,7 @@
-import { OperatorDeviceSchema, OperatorUserSchema, OperatorDashboardSchema } from '../validation/operator';
+import { OperatorDeviceSchema, OperatorDeviceDetailSchema, OperatorUserSchema, OperatorDashboardSchema } from '../validation/operator';
+import { VpsHostStatusSchema } from '../validation/vps';
 import Constants from 'expo-constants';
+import { DEFAULT_SERVER_ORIGIN, normalizeMobileOrigin } from '../server-origin';
 import {
   MobileAuthSessionResponseSchema,
   MobileRefreshResponseSchema,
@@ -8,6 +10,7 @@ import {
   MyDeviceDtoSchema,
   IncidentDtoSchema,
   AuthenticatedQrResolveSchema,
+  TelemetrySnapshotSchema,
   MobileLoginRequest,
   MobileAuthSessionResponse,
   MobileBootstrapResponse,
@@ -60,9 +63,9 @@ export function setOnSessionExpired(cb: () => void): void {
 function getBaseUrl(): string {
   const extra = Constants.expoConfig?.extra;
   if (extra?.apiUrl && typeof extra.apiUrl === 'string') {
-    return extra.apiUrl.replace(/\/+$/, '');
+    return normalizeMobileOrigin(extra.apiUrl, typeof __DEV__ !== 'undefined' && __DEV__);
   }
-  return 'https://localhost:7147';
+  return DEFAULT_SERVER_ORIGIN;
 }
 
 export class MobileApiClient {
@@ -70,7 +73,7 @@ export class MobileApiClient {
   get serverOrigin(): string { return new URL(this.baseUrl).origin; }
 
   constructor(customBaseUrl?: string) {
-    this.baseUrl = customBaseUrl ? customBaseUrl.replace(/\/+$/, '') : getBaseUrl();
+    this.baseUrl = customBaseUrl ? normalizeMobileOrigin(customBaseUrl, typeof __DEV__ !== 'undefined' && __DEV__) : getBaseUrl();
   }
 
   private async send(path: string, init?: RequestInit): Promise<Response> {
@@ -105,7 +108,7 @@ export class MobileApiClient {
     const isAuthEndpoint =
       path.includes('/mobile/auth/login') ||
       path.includes('/mobile/auth/refresh') ||
-      path.includes('/mobile/auth/logout');
+      path.endsWith('/mobile/auth/logout');
 
     if (response.status === 401 && retryOn401 && !isAuthEndpoint) {
       const refreshOutcome = await this.performSingleFlightRefresh();
@@ -208,8 +211,8 @@ export class MobileApiClient {
       false
     );
     const parsed = MobileAuthSessionResponseSchema.parse(data);
-    setInMemoryAccessToken(parsed.accessToken);
     await TokenVault.saveRefreshToken(parsed.refreshToken);
+    setInMemoryAccessToken(parsed.accessToken);
     await TokenVault.saveCachedUser(parsed.user);
     return parsed;
   }
@@ -234,14 +237,10 @@ export class MobileApiClient {
   }
 
   async logoutAll(): Promise<void> {
-    try {
-      await this.send('/api/v1/mobile/auth/logout-all', {
-        method: 'POST',
-      });
-    } finally {
-      await TokenVault.wipeAll();
-      setInMemoryAccessToken(null);
-    }
+    // Keep the session available for retry until the server confirms revocation.
+    await this.executeWithRefresh<void>('/api/v1/mobile/auth/logout-all', { method: 'POST' });
+    await TokenVault.wipeAll();
+    setInMemoryAccessToken(null);
   }
 
   async validateActivationToken(token: string): Promise<ValidateActivationTokenResponse> {
@@ -313,10 +312,27 @@ export class MobileApiClient {
     return this.executeWithRefresh<unknown>(`/api/v1/self-service${path}`, init);
   }
 
-  async supportRequests() { return z.array(SupportRequestSchema).parse(await this.selfService('/requests')); }
+  async supportRequests(offset = 0, limit = 100) { return z.array(SupportRequestSchema).parse(await this.selfService(`/requests?offset=${offset}&limit=${limit}`)); }
   async operatorDashboard() { return OperatorDashboardSchema.parse(await this.executeWithRefresh('/api/v1/dashboard')); }
-  async operatorDevices() { return z.array(OperatorDeviceSchema).parse(await this.executeWithRefresh('/api/v1/devices')); }
-  async operatorUsers() { return z.array(OperatorUserSchema).parse(await this.executeWithRefresh('/api/v1/users')); }
+  async hostStatus(signal?: AbortSignal) {
+    return VpsHostStatusSchema.parse(await this.executeWithRefresh('/api/v1/host/status', { method: 'GET', signal }));
+  }
+  async operatorDevices(offset = 0, limit = 100, filter?: { search?: string; status?: 'all' | 'online' | 'offline' | 'revoked' }, signal?: AbortSignal) {
+    const search = filter?.search?.trim();
+    const params = `offset=${offset}&limit=${limit}${search ? `&q=${encodeURIComponent(search)}` : ''}${filter?.status && filter.status !== 'all' ? `&status=${filter.status}` : ''}`;
+    return z.array(OperatorDeviceSchema).parse(await this.executeWithRefresh(`/api/v1/devices?${params}`, { signal }));
+  }
+  async operatorDeviceDetail(id: string, signal?: AbortSignal) {
+    const deviceId = z.string().uuid().parse(id);
+    return OperatorDeviceDetailSchema.refine(device => device.id === deviceId).parse(
+      await this.executeWithRefresh(`/api/v1/devices/${deviceId}/asset-detail`, { method: 'GET', signal }));
+  }
+  async operatorDeviceTelemetry(id: string, signal?: AbortSignal) {
+    const deviceId = z.string().uuid().parse(id);
+    return z.array(TelemetrySnapshotSchema).refine(rows => rows.every(row => row.deviceId === deviceId)).parse(
+      await this.executeWithRefresh(`/api/v1/devices/${deviceId}/telemetry`, { method: 'GET', signal }));
+  }
+  async operatorUsers(offset = 0, limit = 100) { return z.array(OperatorUserSchema).parse(await this.executeWithRefresh(`/api/v1/users?offset=${offset}&limit=${limit}`)); }
   async createCompanyUser(input: {email: string; displayName: string; role: 'Employee' | 'Admin'; reason: string; confirmed: boolean}) {
     return z.object({ activationUrl: z.string().nullable(), activationTokenExpiresAt: z.string().nullable().optional() }).passthrough().parse(await this.executeWithRefresh('/api/v1/users', { method: 'POST', body: JSON.stringify(input) }));
   }
@@ -337,7 +353,7 @@ export class MobileApiClient {
     const body = CreateSupportRequestSchema.parse(input);
     return SupportRequestSchema.parse(await this.selfService('/requests', { method: 'POST', body: JSON.stringify(body) }));
   }
-  async supportMessages(id: string, signal?: AbortSignal) { return z.array(SupportMessageSchema).parse(await this.selfService(`/requests/${z.string().uuid().parse(id)}/messages`, { signal })); }
+  async supportMessages(id: string, signal?: AbortSignal, offset = 0, limit = 100) { return z.array(SupportMessageSchema).parse(await this.selfService(`/requests/${z.string().uuid().parse(id)}/messages?offset=${offset}&limit=${limit}`, { signal })); }
   async sendSupportMessage(id: string, body: string, idempotencyKey: string) {
     const input = z.object({ body: z.string().trim().min(1).max(2000), idempotencyKey: z.string().uuid() }).parse({ body, idempotencyKey });
     return SupportMessageSchema.parse(await this.selfService(`/requests/${z.string().uuid().parse(id)}/messages`, { method: 'POST', body: JSON.stringify(input) }));
@@ -357,7 +373,7 @@ export class MobileApiClient {
   async announcements() { return z.array(AnnouncementSchema).parse(await this.selfService('/announcements')); }
   async acknowledgeAnnouncement(id: string) { await this.selfService(`/announcements/${z.string().uuid().parse(id)}/acknowledge`, { method: 'POST' }); }
   async markAnnouncementAffected(id: string) { await this.selfService(`/announcements/${z.string().uuid().parse(id)}/affected`, { method: 'POST' }); }
-  async employeeNotifications() { return z.array(EmployeeNotificationSchema).parse(await this.selfService('/notifications')); }
+  async employeeNotifications(offset = 0, limit = 100) { return z.array(EmployeeNotificationSchema).parse(await this.selfService(`/notifications?offset=${offset}&limit=${limit}`)); }
   async readEmployeeNotification(id: string) { await this.selfService(`/notifications/${z.string().uuid().parse(id)}/read`, { method: 'POST' }); }
   async helpArticles() { return z.array(HelpArticleSchema).parse(await this.selfService('/help')); }
   async registerPushDevice(token: string, platform: 'ios' | 'android') {

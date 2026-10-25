@@ -6,7 +6,7 @@ import { useEffect } from "react";
 export function useDeviceUpdates(onUpdate: () => void, enabled = true) {
   useEffect(() => {
     if (!enabled) return;
-    const api = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+    const api = process.env.NEXT_PUBLIC_API_URL ?? "";
     const connection = new HubConnectionBuilder()
       .withUrl(`${api}/hubs/updates`, {
         withCredentials: true,

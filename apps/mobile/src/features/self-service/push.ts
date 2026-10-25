@@ -1,10 +1,10 @@
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { z } from 'zod';
 import type { MobileApiClient } from '../../lib/api/client';
+import { nativeNotifications } from './notification-runtime';
 
 const PUSH_TOKEN_KEY = 'sentinellan_push_registration';
 const RegistrationSchema = z.object({ token: z.string().min(1), userId: z.string().uuid() });
@@ -14,6 +14,8 @@ export function notificationRequestId(data: unknown): string | null {
 }
 export async function enableEmployeePush(api: MobileApiClient, userId: string) {
   if (!Device.isDevice || (Platform.OS !== 'ios' && Platform.OS !== 'android')) throw new Error('Hãy bật thông báo trên điện thoại thật.');
+  const Notifications = nativeNotifications();
+  if (!Notifications) throw new Error('Hãy dùng bản SentinelLAN do IT cung cấp để bật thông báo trên điện thoại.');
   const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
   if (typeof projectId !== 'string' || !projectId) throw new Error('IT cần cấu hình EAS projectId cho bản mobile trước khi bật thông báo.');
   if (Platform.OS === 'android') await Notifications.setNotificationChannelAsync('support', { name: 'Thông báo IT', importance: Notifications.AndroidImportance.HIGH });
@@ -32,6 +34,8 @@ async function storedPushRegistration() {
 export async function refreshEmployeePush(api: MobileApiClient, userId: string) {
   const previous = await storedPushRegistration();
   if (!previous || previous.userId !== userId) return;
+  const Notifications = nativeNotifications();
+  if (!Notifications) return;
   const permission = await Notifications.getPermissionsAsync();
   if (!permission.granted) { await disableEmployeePush(api, userId); return; }
   await enableEmployeePush(api, userId);

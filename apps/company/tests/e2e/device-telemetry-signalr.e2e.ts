@@ -15,14 +15,13 @@ test("Enrollment, live inventory, telemetry, simulated command, audit and heartb
     });
   });
   await page.goto("/company/login");
-  await page.locator('input[name="organizationCode"]').fill("demo");
   await page.locator('input[name="email"]').fill("admin@sentinellan.local");
   await page.locator('input[name="password"]').fill("local-demo-only");
   await page.locator("form.login button[type=submit]").click();
   await expect(page).toHaveURL(/\/dashboard$/);
   await page.getByRole("button", { name: "Chuyển sang tiếng Anh" }).click();
   await page.goto("/company/devices");
-  await expect(page.getByText("EMPLOYEE-DEMO-PC")).toBeVisible();
+  await expect(page.getByRole("link", { name: "EMPLOYEE-DEMO-PC", exact: true })).toBeVisible();
   await expect.poll(() => hubReady).toBe(true);
 
   const agent = await playwright.request.newContext({ baseURL: apiUrl });
@@ -83,7 +82,6 @@ test("Enrollment, live inventory, telemetry, simulated command, audit and heartb
 
 test("API failures are visible and never replaced by demo inventory", async ({ page }) => {
   await page.goto("/company/login");
-  await page.locator('input[name="organizationCode"]').fill("demo");
   await page.locator('input[name="email"]').fill("admin@sentinellan.local");
   await page.locator('input[name="password"]').fill("local-demo-only");
   await page.locator("form.login button[type=submit]").click();
@@ -93,13 +91,14 @@ test("API failures are visible and never replaced by demo inventory", async ({ p
   await page.reload();
   await expect(page.getByRole("alert").filter({ hasText: "An error occurred" })).toBeVisible();
   await expect(page.getByText("TRAINING-PC-01")).toHaveCount(0);
-  await page.route("**/api/v1/devices", route => route.fulfill({ status: 503, body: "Unavailable" }));
+  const deviceListUrl = /\/api\/v1\/devices(?:\?.*)?$/;
+  await page.route(deviceListUrl, route => route.fulfill({ status: 503, body: "Unavailable" }));
   await page.goto("/company/devices");
   await expect(page.getByRole("alert").filter({ hasText: "An error occurred" })).toBeVisible();
-  await page.unroute("**/api/v1/devices");
+  await page.unroute(deviceListUrl);
   await expect(async () => {
     const retry = page.getByRole("button", { name: "Retry" });
     if (await retry.isVisible()) await retry.click({ timeout: 1000 });
-    await expect(page.getByText("EMPLOYEE-DEMO-PC")).toBeVisible({ timeout: 1000 });
+    await expect(page.getByRole("link", { name: "EMPLOYEE-DEMO-PC", exact: true })).toBeVisible({ timeout: 1000 });
   }).toPass({ timeout: 15_000 });
 });

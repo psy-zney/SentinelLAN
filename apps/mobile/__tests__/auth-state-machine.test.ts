@@ -2,6 +2,29 @@ import { TokenVault } from '../src/lib/security/secure-store';
 import { MobileApiClient, setInMemoryAccessToken } from '../src/lib/api/client';
 
 describe('Auth State Machine and Token Rotation', () => {
+  it.each([401, 429, 500])('does not claim logout-all succeeded on HTTP %s', async (status) => {
+    const client = new MobileApiClient('https://sentinellan.local');
+    await TokenVault.saveRefreshToken('retry-token');
+    setInMemoryAccessToken('access-token');
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, status, json: async () => ({}) });
+    await expect(client.logoutAll()).rejects.toThrow();
+    if (status !== 401) expect(await TokenVault.getRefreshToken()).toBe('retry-token');
+  });
+
+  it('refreshes an expired access token before confirming logout-all', async () => {
+    const client = new MobileApiClient('https://sentinellan.local');
+    await TokenVault.saveRefreshToken('refresh-token');
+    setInMemoryAccessToken('expired');
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce({ ok: false, status: 401 })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ accessToken: 'renewed', expiresIn: 900,
+        refreshToken: 'rotated', refreshTokenExpiresAt: new Date(Date.now() + 86400000).toISOString(), tokenType: 'Bearer' }) })
+      .mockResolvedValueOnce({ ok: true, status: 204 });
+    await client.logoutAll();
+    expect(global.fetch).toHaveBeenCalledTimes(3);
+    expect(await TokenVault.getRefreshToken()).toBeNull();
+  });
+
   beforeEach(async () => {
     await TokenVault.wipeAll();
     setInMemoryAccessToken(null);

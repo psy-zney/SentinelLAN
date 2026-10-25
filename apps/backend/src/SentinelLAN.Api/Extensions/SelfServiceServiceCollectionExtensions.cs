@@ -12,6 +12,14 @@ public static class SelfServiceServiceCollectionExtensions
         services.AddScoped<ISelfServiceCommands, SelfServiceCommands>();
         services.AddScoped<ISelfServiceAudit, SelfServiceAudit>();
         services.AddScoped<SelfServiceService>();
+        var attachmentQuota = new AttachmentQuotaSettings(
+            configuration.GetValue("SENTINELLAN_ATTACHMENT_USER_DAILY_BYTES", 20L * 1024 * 1024),
+            configuration.GetValue("SENTINELLAN_ATTACHMENT_ORGANIZATION_DAILY_BYTES", 200L * 1024 * 1024),
+            configuration.GetValue("SENTINELLAN_ATTACHMENT_ORGANIZATION_TOTAL_BYTES", 2L * 1024 * 1024 * 1024));
+        if (attachmentQuota.UserDailyBytes <= 0 || attachmentQuota.OrganizationDailyBytes < attachmentQuota.UserDailyBytes ||
+            attachmentQuota.OrganizationTotalBytes < attachmentQuota.OrganizationDailyBytes || attachmentQuota.OrganizationTotalBytes > 1024L * 1024 * 1024 * 1024)
+            throw new InvalidOperationException("Attachment quotas must be positive, ordered user daily <= organization daily <= total, and at most 1 TiB.");
+        services.AddSingleton(attachmentQuota);
         services.AddSingleton<IMaintenanceCodeProtector>(new MaintenanceCodeProtector(serverVaultKey));
         var labIds = (configuration["SENTINELLAN_PANIC_LAB_DEVICE_IDS"] ?? "")
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)

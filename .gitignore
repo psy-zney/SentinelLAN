@@ -52,6 +52,7 @@ playwright-report/
 
 # OS and temporary files
 /scratch/
+/.tmp-verification/
 *.user
 *.suo
 *.log

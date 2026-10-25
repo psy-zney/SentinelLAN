@@ -3,7 +3,7 @@
            Version="$(var.ProductVersion)" UpgradeCode="A8F534F6-65F9-417A-B985-055721867CD4"
            Scope="perMachine">
     <SummaryInformation Description="Authorized SentinelLAN endpoint agent" />
-    <MajorUpgrade DowngradeErrorMessage="A newer SentinelLAN Agent is already installed." />
+    <MajorUpgrade Schedule="afterInstallInitialize" DowngradeErrorMessage="A newer SentinelLAN Agent is already installed." />
     <MediaTemplate EmbedCab="yes" />
     <ui:WixUI Id="WixUI_Minimal" />
     <WixVariable Id="WixUILicenseRtf" Value="$(var.SetupNotice)" />
@@ -33,11 +33,8 @@
                         Description="Authorized endpoint telemetry and management agent."
                         Start="demand" Account="NT AUTHORITY\LocalService" ErrorControl="normal">
           <PermissionEx Sddl="D:P(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLORC;;;BU)" />
-          <ServiceConfigFailureActions OnInstall="yes" OnReinstall="yes" ResetPeriod="86400">
-            <Failure Action="restartService" Delay="5000" />
-            <Failure Action="restartService" Delay="15000" />
-            <Failure Action="restartService" Delay="60000" />
-          </ServiceConfigFailureActions>
+          <!-- MsiConfigureServices failure actions are broken in Windows Installer (error 1939).
+               configure-windows-agent.ps1 sets recovery with sc.exe before starting the service. -->
         </ServiceInstall>
         <RegistryValue Root="HKLM" Key="SOFTWARE\SentinelLAN\Agent" Name="ProductCode" Value="[ProductCode]" Type="string" />
         <ServiceControl Id="ServiceController" Name="SentinelLANAgent"
@@ -48,6 +45,12 @@
         <Shortcut Id="MaintenanceShortcut" Directory="AgentMenuFolder" Name="SentinelLAN - IT approval"
                   Target="[#AgentExe]" Arguments="--maintenance" WorkingDirectory="INSTALLFOLDER" />
         <RemoveFolder Id="RemoveAgentMenuFolder" Directory="AgentMenuFolder" On="uninstall" />
+      </Component>
+      <Component Id="UpdateLauncher" Guid="23198C71-5696-405C-957C-E7D07A1A6723">
+        <File Id="UpdateLauncherScript" Source="$(var.UpdateLauncher)" KeyPath="yes" />
+      </Component>
+      <Component Id="UpdateConfiguration" Guid="246D4D98-C07A-42F0-8666-29DF1E7FF4F3">
+        <File Id="UpdateConfigurationScript" Source="$(var.UpdateConfiguration)" KeyPath="yes" />
       </Component>
     </ComponentGroup>
     <Feature Id="MainFeature" Title="SentinelLAN Agent" Level="1">

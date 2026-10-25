@@ -256,6 +256,8 @@ namespace SentinelLAN.Infrastructure.Migrations
 
                     b.HasIndex("OrganizationId", "DeviceId");
 
+                    b.HasIndex("OrganizationId", "CreatedAt", "Id");
+
                     b.ToTable("AssetLoans");
                 });
 
@@ -834,11 +836,35 @@ namespace SentinelLAN.Infrastructure.Migrations
 
                     b.HasIndex("OrganizationId", "DeviceId");
 
+                    b.HasIndex("OrganizationId", "CreatedAt", "Id");
+
                     b.HasIndex("OrganizationId", "ReportedByUserId", "IdempotencyKey")
                         .IsUnique()
                         .HasFilter("\"IdempotencyKey\" IS NOT NULL");
 
                     b.ToTable("Incidents");
+                });
+
+            modelBuilder.Entity("SentinelLAN.Domain.LoginAttemptBucket", b =>
+                {
+                    b.Property<string>("PartitionHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("NextAllowedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("PartitionHash");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.ToTable("LoginAttemptBucket");
                 });
 
             modelBuilder.Entity("SentinelLAN.Domain.OperationalOutboxMessage", b =>
@@ -1395,6 +1421,8 @@ namespace SentinelLAN.Infrastructure.Migrations
 
                     b.HasIndex("OrganizationId", "RequestId");
 
+                    b.HasIndex("OrganizationId", "CreatedAt", "UploadedByUserId");
+
                     b.ToTable("SelfServiceAttachments");
                 });
 
@@ -1504,6 +1532,8 @@ namespace SentinelLAN.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_SSMessage_Dedupe");
 
+                    b.HasIndex("OrganizationId", "RequestId", "CreatedAt", "Id");
+
                     b.ToTable("SelfServiceMessages");
                 });
 
@@ -1551,6 +1581,8 @@ namespace SentinelLAN.Infrastructure.Migrations
                     b.HasIndex("OrganizationId", "UserId", "DeduplicationKey")
                         .IsUnique()
                         .HasDatabaseName("IX_SSNotification_Dedupe");
+
+                    b.HasIndex("OrganizationId", "UserId", "CreatedAt", "Id");
 
                     b.ToTable("SelfServiceNotifications");
                 });
@@ -1759,6 +1791,8 @@ namespace SentinelLAN.Infrastructure.Migrations
                     b.HasIndex("OrganizationId", "UserId", "IdempotencyKey")
                         .IsUnique();
 
+                    b.HasIndex("OrganizationId", "UserId", "DeviceId", "CreatedAt", "Id");
+
                     b.ToTable("SelfServiceRequests");
                 });
 
@@ -1877,6 +1911,8 @@ namespace SentinelLAN.Infrastructure.Migrations
 
                     b.HasIndex("OrganizationId", "Email")
                         .IsUnique();
+
+                    b.HasIndex("OrganizationId", "DisplayName", "Id");
 
                     b.ToTable("Users");
                 });

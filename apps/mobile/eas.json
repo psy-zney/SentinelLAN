@@ -4,6 +4,7 @@
   },
   "build": {
     "development": {
+      "node": "24.17.0",
       "developmentClient": true,
       "distribution": "internal",
       "android": {
@@ -14,17 +15,28 @@
         "simulator": true
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://10.0.2.2:5000"
+        "EXPO_PUBLIC_API_URL": "https://manager.zney295.id.vn",
+        "EXPO_PUBLIC_WEB_URL": "https://manager.zney295.id.vn"
       }
     },
     "preview": {
+      "node": "24.17.0",
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://manager.zney295.id.vn",
+        "EXPO_PUBLIC_WEB_URL": "https://manager.zney295.id.vn"
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
+      "node": "24.17.0",
       "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://manager.zney295.id.vn",
+        "EXPO_PUBLIC_WEB_URL": "https://manager.zney295.id.vn"
+      },
       "android": {
         "buildType": "app-bundle"
       },

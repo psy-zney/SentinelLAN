@@ -17,7 +17,8 @@ public static class SelfServiceApi
             try { return await next(context); }
             catch (SelfServiceException exception) { return Results.Problem(exception.Message, statusCode: exception.StatusCode); }
         });
-        group.MapGet("/requests", (HttpContext http, SelfServiceService service, CancellationToken ct) => service.GetRequestsAsync(Actor(http), ct));
+        group.MapGet("/requests", (int? offset, int? limit, bool? active, HttpContext http, SelfServiceService service, CancellationToken ct) =>
+            service.GetRequestPageAsync(Actor(http), new PageWindow(offset ?? 0, limit ?? 200), active ?? false, ct));
         group.MapPost("/requests", async (CreateSupportRequest request, HttpContext http, SelfServiceService service, CancellationToken ct) =>
         {
             var created = await service.CreateAsync(Actor(http), request, ct);
@@ -27,7 +28,8 @@ public static class SelfServiceApi
         group.MapPatch("/requests/{id:guid}", (Guid id, UpdateSupportRequest request, HttpContext http, SelfServiceService service, CancellationToken ct) => service.UpdateAsync(Actor(http), id, request, ct));
         group.MapPost("/requests/{id:guid}/decision", (Guid id, DecideSupportRequest request, HttpContext http, SelfServiceService service, CancellationToken ct) => service.DecideAsync(Actor(http), id, request, ct)).RequireRateLimiting("sensitive");
         group.MapPost("/requests/{id:guid}/redeem", (Guid id, RedeemMaintenanceRequest request, HttpContext http, SelfServiceService service, CancellationToken ct) => service.RedeemAsync(Actor(http), id, request, ct)).RequireRateLimiting("sensitive");
-        group.MapGet("/requests/{id:guid}/messages", (Guid id, HttpContext http, SelfServiceService service, CancellationToken ct) => service.GetMessagesAsync(Actor(http), id, ct));
+        group.MapGet("/requests/{id:guid}/messages", (Guid id, int? offset, int? limit, HttpContext http, SelfServiceService service, CancellationToken ct) =>
+            service.GetMessagesAsync(Actor(http), id, new PageWindow(offset ?? 0, limit ?? 200), ct));
         group.MapPost("/requests/{id:guid}/messages", (Guid id, CreateSupportMessage request, HttpContext http, SelfServiceService service, CancellationToken ct) => service.AddMessageAsync(Actor(http), id, request, ct)).RequireRateLimiting("sensitive");
         group.MapGet("/requests/{id:guid}/attachments", (Guid id, HttpContext http, SelfServiceService service, CancellationToken ct) => service.GetAttachmentsAsync(Actor(http), id, ct));
         group.MapPost("/requests/{id:guid}/attachments", (Guid id, CreateSupportAttachment request, HttpContext http, SelfServiceService service, CancellationToken ct) => service.AddAttachmentAsync(Actor(http), id, request, ct)).RequireRateLimiting("sensitive");
@@ -46,7 +48,8 @@ public static class SelfServiceApi
         group.MapPost("/announcements", (CreateAnnouncement request, HttpContext http, SelfServiceService service, CancellationToken ct) => service.CreateAnnouncementAsync(Actor(http), request, ct));
         group.MapPost("/announcements/{id:guid}/acknowledge", (Guid id, HttpContext http, SelfServiceService service, CancellationToken ct) => service.ReceiptAsync(Actor(http), id, false, ct));
         group.MapPost("/announcements/{id:guid}/affected", (Guid id, HttpContext http, SelfServiceService service, CancellationToken ct) => service.ReceiptAsync(Actor(http), id, true, ct));
-        group.MapGet("/notifications", (HttpContext http, SelfServiceService service, CancellationToken ct) => service.GetNotificationsAsync(Actor(http), ct));
+        group.MapGet("/notifications", (int? offset, int? limit, HttpContext http, SelfServiceService service, CancellationToken ct) =>
+            service.GetNotificationsAsync(Actor(http), new PageWindow(offset ?? 0, limit ?? 200), ct));
         group.MapPost("/notifications/{id:guid}/read", (Guid id, HttpContext http, SelfServiceService service, CancellationToken ct) => service.ReadNotificationAsync(Actor(http), id, ct));
         group.MapPost("/push-devices", (RegisterPushDevice request, HttpContext http, SelfServiceService service, CancellationToken ct) => service.RegisterPushAsync(Actor(http), request, ct)).RequireRateLimiting("sensitive");
         group.MapDelete("/push-devices", ([FromBody] DeletePushDevice request, HttpContext http, SelfServiceService service, CancellationToken ct) => service.RemovePushAsync(Actor(http), request.Token, ct)).RequireRateLimiting("sensitive");

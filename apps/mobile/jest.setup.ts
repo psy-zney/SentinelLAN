@@ -2,6 +2,13 @@
 // Mock expo-secure-store in memory for Jest tests
 const mockStore: Record<string, string> = {};
 
+// RN's default mock drops refresh props; expose them for user-event tests.
+jest.mock('react-native/Libraries/Components/RefreshControl/RefreshControl', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return { __esModule: true, default: (props: any) => React.createElement(View, props) };
+});
+
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(async (key: string) => mockStore[key] ?? null),
   setItemAsync: jest.fn(async (key: string, value: string) => {
@@ -56,7 +63,7 @@ jest.mock('expo-image-picker', () => ({
   launchCameraAsync: jest.fn(async () => ({ canceled: true, assets: [] })),
 }));
 
-jest.mock('expo-device', () => ({ isDevice: true }));
+jest.mock('expo-device', () => ({ __esModule: true, isDevice: true }));
 jest.mock('expo-notifications', () => ({
   setNotificationHandler: jest.fn(),
   getPermissionsAsync: jest.fn(async () => ({ granted: true })),
@@ -92,7 +99,9 @@ jest.mock('expo-router', () => ({
 }));
 
 // Set AppState.currentState to 'active' in Jest environment
-const { AppState } = require('react-native');
+const { AppState, AccessibilityInfo } = require('react-native');
+// Component tests use reduced motion unless a test explicitly exercises animations.
+jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
 if (AppState) {
   try {
     AppState.currentState = 'active';

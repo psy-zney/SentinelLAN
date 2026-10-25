@@ -8,6 +8,16 @@ namespace SentinelLAN.Infrastructure;
 
 public sealed class ManagementStore(SentinelDbContext db) : IManagementStore
 {
+    public async Task<IReadOnlyList<UserSummaryDto>> GetUserPageAsync(Guid organizationId, PageWindow page, DateTimeOffset now, CancellationToken ct)
+    {
+        page.Validate();
+        return await db.Users.AsNoTracking().Where(x => x.OrganizationId == organizationId && (x.Role == Roles.Admin || x.Role == Roles.Employee))
+            .OrderBy(x => x.DisplayName).ThenBy(x => x.Id).Skip(page.Offset).Take(page.Limit)
+            .Select(x => new UserSummaryDto(x.Id, x.Email, x.DisplayName, x.Role, x.Status, x.CreatedAt,
+                db.AccountActivationTokens.Any(t => t.OrganizationId == organizationId && t.UserId == x.Id && t.UsedAt == null && t.RevokedAt == null && t.ExpiresAt > now)))
+            .ToListAsync(ct);
+    }
+
     public Task<User?> FindUserAsync(Guid organizationId, Guid userId, CancellationToken cancellationToken) =>
         db.Users.SingleOrDefaultAsync(user => user.OrganizationId == organizationId && user.Id == userId, cancellationToken);
 

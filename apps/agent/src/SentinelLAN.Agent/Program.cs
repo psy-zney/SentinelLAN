@@ -1,6 +1,19 @@
 using SentinelLAN.Agent;
 using SentinelLAN.Agent.Core;
 using SentinelLAN.Agent.Infrastructure;
+using System.Reflection;
+using System.Text.Json;
+
+if (args.Contains("--update-agent", StringComparer.Ordinal))
+{
+    try { Environment.ExitCode = await AgentUpdateRunner.RunAsync(CancellationToken.None); }
+    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or System.Security.Cryptography.CryptographicException or HttpRequestException or OperationCanceledException or JsonException)
+    {
+        Console.Error.WriteLine("Agent update could not complete. IT must inspect the protected update status and Windows Installer events.");
+        Environment.ExitCode = 1;
+    }
+    return;
+}
 
 var desktopCompanion = args.Contains("--desktop-companion", StringComparer.Ordinal);
 var maintenanceDialog = args.Contains("--maintenance", StringComparer.Ordinal);
@@ -10,7 +23,8 @@ if (maintenanceDialog)
     await WindowsMaintenanceBridge.ShowDialogAsync(CancellationToken.None);
     return;
 }
-var builder = Host.CreateApplicationBuilder(args.Where(argument => argument != "--desktop-companion").ToArray());
+var checkConfiguration = args.Contains("--check-configuration", StringComparer.Ordinal);
+var builder = Host.CreateApplicationBuilder(args.Where(argument => argument is not ("--desktop-companion" or "--check-configuration")).ToArray());
 if (OperatingSystem.IsWindows())
 {
     builder.Services.AddWindowsService(options => options.ServiceName = "SentinelLANAgent");
@@ -43,11 +57,27 @@ if (desktopCompanion)
     return;
 }
 
-var baseUrl = builder.Configuration["SENTINELLAN_API_URL"] ?? "http://localhost:8080";
-if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var apiUrl) || apiUrl.Scheme is not ("http" or "https") ||
-    (apiUrl.Scheme != "https" && !apiUrl.IsLoopback) || !string.IsNullOrEmpty(apiUrl.UserInfo) ||
-    !string.IsNullOrEmpty(apiUrl.Query) || !string.IsNullOrEmpty(apiUrl.Fragment))
-    throw new InvalidOperationException("SENTINELLAN_API_URL must use trusted HTTPS outside loopback and contain no credentials, query or fragment.");
+string? Metadata(string key) => Assembly.GetExecutingAssembly().GetCustomAttributes<AssemblyMetadataAttribute>()
+    .SingleOrDefault(attribute => attribute.Key == key)?.Value is { Length: > 0 } value ? value : null;
+var companyServer = Metadata("CompanyServerUrl");
+var apiUrl = AgentServerConfiguration.Resolve(builder.Configuration["SENTINELLAN_API_URL"], companyServer, builder.Environment.IsDevelopment());
+var commandPublicKey = Metadata("CommandPublicKey") ?? builder.Configuration["SENTINELLAN_COMMAND_PUBLIC_KEY"];
+var commandKeyId = Metadata("CommandKeyId") ?? builder.Configuration["SENTINELLAN_COMMAND_KEY_ID"];
+if (companyServer is not null && (string.IsNullOrWhiteSpace(commandPublicKey) || string.IsNullOrWhiteSpace(commandKeyId)))
+    throw new InvalidOperationException("The company Agent is missing its command verification key. Obtain a complete company installer.");
+if (checkConfiguration)
+{
+    Console.WriteLine(JsonSerializer.Serialize(new
+    {
+        ServerUrl = apiUrl.AbsoluteUri.TrimEnd('/'),
+        CompanyPinned = companyServer is not null,
+        CommandKeyId = commandKeyId,
+        HasCommandPublicKey = !string.IsNullOrWhiteSpace(commandPublicKey),
+        Version = Assembly.GetExecutingAssembly().GetName().Version?.ToString()
+    }));
+    return;
+}
+
 var dataDir = builder.Configuration["SENTINELLAN_AGENT_DATA_DIR"] ??
     (builder.Environment.IsProduction()
         ? OperatingSystem.IsWindows()
@@ -87,10 +117,9 @@ builder.Services.AddSingleton<ICommandExecutor>(OperatingSystem.IsLinux() ? new 
     new AgentMaintenanceExecutor(executionOptions, maintenanceStore, msiPlatform)));
 builder.Services.AddSingleton<IAgentPolicyApplier>(new WindowsPolicyApplier(executionOptions));
 builder.Services.AddSingleton<CommandVerifier>();
-var commandPublicKey = builder.Configuration["SENTINELLAN_COMMAND_PUBLIC_KEY"];
 builder.Services.AddSingleton<ICommandSignatureVerifier>(string.IsNullOrWhiteSpace(commandPublicKey)
     ? new HmacCommandVerifier(builder.Configuration["SENTINELLAN_SIGNING_KEY"])
-    : new RsaCommandVerifier(commandPublicKey, builder.Configuration["SENTINELLAN_COMMAND_KEY_ID"] ?? ""));
+    : new RsaCommandVerifier(commandPublicKey, commandKeyId ?? ""));
 var enrollmentAttemptPath = Path.Combine(dataDir, "enrollment-attempt.dat");
 var enrollmentAttempts = new FileEnrollmentAttemptStore(enrollmentAttemptPath,
     builder.Environment.IsProduction()

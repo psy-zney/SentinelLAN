@@ -75,5 +75,134 @@
         ]
       }
     ]
+  },
+  {
+    "name": "decode-uri-component",
+    "version": "0.2.2",
+    "advisory": "https://github.com/advisories/GHSA-vcc3-ghjq-m6fr",
+    "reference": "https://github.com/SamVerschueren/decode-uri-component/blob/v0.5.0/index.js",
+    "files": [
+      {
+        "path": "index.js",
+        "beforeSha256": "3b8ba0a765e1089d11bba9a919d0d8789ecd9a6833ea078d8d9114e1db093863",
+        "afterSha256": "2dc7da134a4c59d83ea4f01e96436aba65a1c361d80f30eb28f36b50dd7af04b",
+        "replacements": [
+          {
+            "from": "function decodeComponents(components, split) {\n\ttry {\n\t\t// Try to decode the entire string first\n\t\treturn [decodeURIComponent(components.join(''))];\n\t} catch (err) {\n\t\t// Do nothing\n\t}\n\n\tif (components.length === 1) {\n\t\treturn components;\n\t}\n\n\tsplit = split || 1;\n\n\t// Split the array in 2 parts\n\tvar left = components.slice(0, split);\n\tvar right = components.slice(split);\n\n\treturn Array.prototype.concat.call([], decodeComponents(left), decodeComponents(right));\n}\n\nfunction decode(input) {\n\ttry {\n\t\treturn decodeURIComponent(input);\n\t} catch (err) {\n\t\tvar tokens = input.match(singleMatcher) || [];\n\n\t\tfor (var i = 1; i < tokens.length; i++) {\n\t\t\tinput = decodeComponents(tokens, i).join('');\n\n\t\t\ttokens = input.match(singleMatcher) || [];\n\t\t}\n\n\t\treturn input;\n\t}\n}\n\n",
+            "to": "var decode = require('./decode-linear');\n\n"
+          },
+          {
+            "from": "input = input.replace(new RegExp(key, 'g'), replaceMap[key]);",
+            "to": "input = input.split(key).join(replaceMap[key]);"
+          }
+        ]
+      },
+      {
+        "path": "decode-linear.js",
+        "beforeSha256": null,
+        "afterSha256": "bbb2deb180b7edf835604a71001c9a9ff16fdbe6375086afd7fbe46db79cf725",
+        "source": "./decode-linear.cjs"
+      }
+    ]
+  },
+  {
+    "name": "zod",
+    "version": "3.25.76",
+    "advisory": "https://github.com/advisories/GHSA-mrhx-c7xc-m3w5",
+    "reference": "https://github.com/colinhacks/zod/commit/a0ebf97",
+    "files": [
+      {
+        "path": "v3/types.cjs",
+        "beforeSha256": "06487cc05ed45c5dd29789bf0aa75734d1ce06592a7f2665ba4ca90a68e8a3e1",
+        "afterSha256": "674e29beb1bafb0ac61ad688431322e9397ab9b91272173f19dcf11e310f8e3a",
+        "replacements": [
+          {
+            "from": "                    message: def.exactLength.message,\n                });\n                status.dirty();",
+            "to": "                    message: def.exactLength.message,\n                });\n                if (tooBig) return parseUtil_js_1.INVALID;\n                status.dirty();"
+          },
+          {
+            "from": "                    message: def.maxLength.message,\n                });\n                status.dirty();",
+            "to": "                    message: def.maxLength.message,\n                });\n                return parseUtil_js_1.INVALID;"
+          },
+          {
+            "from": "                    message: def.maxSize.message,\n                });\n                status.dirty();",
+            "to": "                    message: def.maxSize.message,\n                });\n                return parseUtil_js_1.INVALID;"
+          }
+        ]
+      },
+      {
+        "path": "v4/core/schemas.cjs",
+        "beforeSha256": "f5d17a7db487c943c9d07cc624010ebb6d93683eabd14339846f4912cc88b51f",
+        "afterSha256": "679b4a595eddd4cb7a17c86846fca52d39f86cc8b637e3607166a717c9bd22f4",
+        "replacements": [
+          {
+            "from": "        const runChecks = (payload, checks, ctx) => {",
+            "to": "        const runChecks = (payload, checks, ctx) => {\n            if (payload.sentinelCollectionSizeRejected === true) return payload;"
+          },
+          {
+            "from": "        payload.value = Array(input.length);",
+            "to": "        if (sentinelCollectionSizeGate(payload, def, input.length)) return payload;\n        payload.value = Array(input.length);"
+          },
+          {
+            "from": "        const proms = [];\n        payload.value = new Set();",
+            "to": "        if (sentinelCollectionSizeGate(payload, def, input.size)) return payload;\n        const proms = [];\n        payload.value = new Set();"
+          },
+          {
+            "from": "        const proms = [];\n        payload.value = new Map();",
+            "to": "        if (sentinelCollectionSizeGate(payload, def, input.size)) return payload;\n        const proms = [];\n        payload.value = new Map();"
+          },
+          {
+            "from": "function handleArrayResult(",
+            "to": "\n// Backport GHSA-mrhx-c7xc-m3w5: enforce size caps before allocating or walking elements.\n// Follows upstream a0ebf97; overwrites end the leading size gate.\nfunction sentinelCollectionSizeGate(payload, def, size) {\n    for (const check of def.checks ?? []) {\n        const constraint = check._zod.def;\n        if (constraint.check === \"overwrite\") break;\n        let maximum;\n        switch (constraint.check) {\n            case \"max_length\": case \"max_size\": maximum = constraint.maximum; break;\n            case \"length_equals\": maximum = constraint.length; break;\n            case \"size_equals\": maximum = constraint.size; break;\n            default: continue;\n        }\n        if (size <= maximum) continue;\n        if (constraint.when && !constraint.when(payload)) continue;\n        const before = payload.issues.length;\n        check._zod.check(payload);\n        if (payload.issues.length > before) {\n            for (let i = before; i < payload.issues.length; i++) payload.issues[i].continue = false;\n            payload.sentinelCollectionSizeRejected = true;\n            return true;\n        }\n    }\n    return false;\n}\n\nfunction handleArrayResult("
+          }
+        ]
+      },
+      {
+        "path": "v3/types.js",
+        "beforeSha256": "9763a2938f0e7f983363ef4bf6530e7583e3f2d54f8a4a6684efad58febc6e8e",
+        "afterSha256": "7b994f7652ae24855e9fe3066de3463f9bfd1083ca7d56d22434942fcddfbffe",
+        "replacements": [
+          {
+            "from": "                    message: def.exactLength.message,\n                });\n                status.dirty();",
+            "to": "                    message: def.exactLength.message,\n                });\n                if (tooBig) return INVALID;\n                status.dirty();"
+          },
+          {
+            "from": "                    message: def.maxLength.message,\n                });\n                status.dirty();",
+            "to": "                    message: def.maxLength.message,\n                });\n                return INVALID;"
+          },
+          {
+            "from": "                    message: def.maxSize.message,\n                });\n                status.dirty();",
+            "to": "                    message: def.maxSize.message,\n                });\n                return INVALID;"
+          }
+        ]
+      },
+      {
+        "path": "v4/core/schemas.js",
+        "beforeSha256": "d466582c022b08a3f9eb1a65d5970d8ca25064d73a5a838d76414ae36440a76b",
+        "afterSha256": "4130b03f354cf705f05d6d920de8d16ca3bac7659c674676c9b7e56561057801",
+        "replacements": [
+          {
+            "from": "        const runChecks = (payload, checks, ctx) => {",
+            "to": "        const runChecks = (payload, checks, ctx) => {\n            if (payload.sentinelCollectionSizeRejected === true) return payload;"
+          },
+          {
+            "from": "        payload.value = Array(input.length);",
+            "to": "        if (sentinelCollectionSizeGate(payload, def, input.length)) return payload;\n        payload.value = Array(input.length);"
+          },
+          {
+            "from": "        const proms = [];\n        payload.value = new Set();",
+            "to": "        if (sentinelCollectionSizeGate(payload, def, input.size)) return payload;\n        const proms = [];\n        payload.value = new Set();"
+          },
+          {
+            "from": "        const proms = [];\n        payload.value = new Map();",
+            "to": "        if (sentinelCollectionSizeGate(payload, def, input.size)) return payload;\n        const proms = [];\n        payload.value = new Map();"
+          },
+          {
+            "from": "function handleArrayResult(",
+            "to": "\n// Backport GHSA-mrhx-c7xc-m3w5: enforce size caps before allocating or walking elements.\n// Follows upstream a0ebf97; overwrites end the leading size gate.\nfunction sentinelCollectionSizeGate(payload, def, size) {\n    for (const check of def.checks ?? []) {\n        const constraint = check._zod.def;\n        if (constraint.check === \"overwrite\") break;\n        let maximum;\n        switch (constraint.check) {\n            case \"max_length\": case \"max_size\": maximum = constraint.maximum; break;\n            case \"length_equals\": maximum = constraint.length; break;\n            case \"size_equals\": maximum = constraint.size; break;\n            default: continue;\n        }\n        if (size <= maximum) continue;\n        if (constraint.when && !constraint.when(payload)) continue;\n        const before = payload.issues.length;\n        check._zod.check(payload);\n        if (payload.issues.length > before) {\n            for (let i = before; i < payload.issues.length; i++) payload.issues[i].continue = false;\n            payload.sentinelCollectionSizeRejected = true;\n            return true;\n        }\n    }\n    return false;\n}\n\nfunction handleArrayResult("
+          }
+        ]
+      }
+    ]
   }
 ]

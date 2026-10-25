@@ -2,7 +2,7 @@
 
 Các flow Maestro dùng app ID `com.sentinellan.employee`. Cần Android emulator hoặc thiết bị Android có `adb`, Maestro CLI, ứng dụng đã cài, và API thử nghiệm truy cập được từ thiết bị. Chạy luồng trên tenant/thiết bị thử được ủy quyền. Flow `00` kích hoạt tài khoản Employee mới bằng `MAESTRO_ACTIVATION_LINK` một lần; nếu tài khoản đã kích hoạt, bắt đầu từ `01`. Link HTTPS chỉ mở app khi domain đã phục vụ `/.well-known/assetlinks.json` (Android) và `/.well-known/apple-app-site-association` (iOS) đúng app ID và chứng chỉ ký. Scheme `sentinellan://activate?token=...` dùng để thử route app trước khi cấu hình liên kết domain.
 
-Trước khi chạy, cấp các biến môi trường `MAESTRO_ORG_CODE`, `MAESTRO_EMPLOYEE_EMAIL`, `MAESTRO_EMPLOYEE_PASSWORD`, `MAESTRO_ASSIGNED_QR_CODE` và `MAESTRO_FORBIDDEN_QR_CODE` từ fixture thử nghiệm. Flow `00` cần thêm `MAESTRO_ACTIVATION_LINK` chứa token mới; mật khẩu đó phải trùng `MAESTRO_EMPLOYEE_PASSWORD` dùng ở `01`. Mã QR bị từ chối phải là tem **có thật** của thiết bị không được gán cho Employee đang đăng nhập; mã ngẫu nhiên chỉ kiểm tra nhánh 404. Không ghi mật khẩu hoặc mã tem vào file repo hay dòng lệnh lưu trong lịch sử shell.
+Trước khi chạy, cấp các biến môi trường `MAESTRO_EMPLOYEE_EMAIL`, `MAESTRO_EMPLOYEE_PASSWORD`, `MAESTRO_ASSIGNED_QR_CODE` và `MAESTRO_FORBIDDEN_QR_CODE` từ fixture thử nghiệm. Flow `00` cần thêm `MAESTRO_ACTIVATION_LINK` chứa token mới; mật khẩu đó phải trùng `MAESTRO_EMPLOYEE_PASSWORD` dùng ở `01`. Mã QR bị từ chối phải là tem **có thật** của thiết bị không được gán cho Employee đang đăng nhập; mã ngẫu nhiên chỉ kiểm tra nhánh 404. Không ghi mật khẩu hoặc mã tem vào file repo hay dòng lệnh lưu trong lịch sử shell.
 
 Chạy flow theo thứ tự số để dùng chung phiên đăng nhập:
 

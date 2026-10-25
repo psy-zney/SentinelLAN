@@ -19,7 +19,7 @@ async function renderWithProviders(ui: React.ReactElement) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  const result = render(
+  const result = await render(
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
         <AuthProvider><AuthStatusProbe />{ui}</AuthProvider>
@@ -64,7 +64,7 @@ describe('Component & View Smoke Tests', () => {
             },
       }));
 
-      fireEvent.press(screen.getByText('Retry session'));
+      await fireEvent.press(screen.getByText('Retry session'));
       await waitFor(() => expect(screen.getByTestId('auth-status').props.children).toBe('authenticated'));
       expect(await TokenVault.getRefreshToken()).toBe('rotated-refresh-token');
     });
@@ -80,24 +80,24 @@ describe('Component & View Smoke Tests', () => {
     queryClient.setQueryData(['my-device'], { hostname: 'previous-account-device' });
     jest.spyOn(MobileApiClient.prototype, 'logout').mockResolvedValueOnce();
 
-    fireEvent.press(screen.getByText('Sign out'));
+    await fireEvent.press(screen.getByText('Sign out'));
     await waitFor(() => expect(queryClient.getQueryData(['my-device'])).toBeUndefined());
     expect(screen.getByTestId('auth-status').props.children).toBe('unauthenticated');
   });
 
   describe('Common UI Components', () => {
-    it('renders AppButton and handles press', () => {
+    it('renders AppButton and handles press', async () => {
       const onPressMock = jest.fn();
-      render(<AppButton title="Test Button" onPress={onPressMock} />);
+      await render(<AppButton title="Test Button" onPress={onPressMock} />);
 
       const button = screen.getByText('Test Button');
       expect(button).toBeTruthy();
-      fireEvent.press(button);
+      await fireEvent.press(button);
       expect(onPressMock).toHaveBeenCalledTimes(1);
     });
 
-    it('renders AppInput with label and error', () => {
-      render(
+    it('renders AppInput with label and error', async () => {
+      await render(
         <AppInput
           label="Email Address"
           placeholder="user@test.local"
@@ -110,13 +110,13 @@ describe('Component & View Smoke Tests', () => {
       expect(screen.getByText('Email is required')).toBeTruthy();
     });
 
-    it('renders AppBadge with text', () => {
-      render(<AppBadge text="Online" variant="success" />);
+    it('renders AppBadge with text', async () => {
+      await render(<AppBadge text="Online" variant="success" />);
       expect(screen.getByText('Online')).toBeTruthy();
     });
 
-    it('renders OfflineBanner with alert role', () => {
-      render(<OfflineBanner message="Offline mode active" />);
+    it('renders OfflineBanner with alert role', async () => {
+      await render(<OfflineBanner message="Offline mode active" />);
       expect(screen.getByText('⚠️ Offline mode active')).toBeTruthy();
     });
   });
@@ -139,7 +139,7 @@ describe('Component & View Smoke Tests', () => {
 
       const manualBtn = screen.getByTestId('manual-entry-button');
       expect(manualBtn).toBeTruthy();
-      fireEvent.press(manualBtn);
+      await fireEvent.press(manualBtn);
 
       await waitFor(() => {
         expect(screen.getByTestId('manual-code-input')).toBeTruthy();
@@ -161,7 +161,7 @@ describe('Component & View Smoke Tests', () => {
         expect(screen.getByTestId('grant-camera-button')).toBeTruthy();
       });
 
-      fireEvent.press(screen.getByText('Hoặc nhập mã thiết bị thủ công'));
+      await fireEvent.press(screen.getByText('Hoặc nhập mã thiết bị thủ công'));
       expect(screen.getByTestId('manual-code-input')).toBeTruthy();
     });
 
@@ -170,7 +170,7 @@ describe('Component & View Smoke Tests', () => {
       (Camera.scanFromURLAsync as jest.Mock).mockResolvedValueOnce([]);
       await renderWithProviders(<ScannerView />);
 
-      fireEvent.press(screen.getByText(/Chọn ảnh QR từ thư viện/));
+      await fireEvent.press(screen.getByText(/Chọn ảnh QR từ thư viện/));
 
       await waitFor(() => {
         expect(Camera.scanFromURLAsync).toHaveBeenCalledWith('file://mock/qr-image.png', ['qr']);
@@ -197,21 +197,19 @@ describe('Component & View Smoke Tests', () => {
       const { LoginView } = require('../src/features/auth/login-view');
       await renderWithProviders(<LoginView />);
 
-      const orgInput = screen.getByTestId('org-code-input');
       const emailInput = screen.getByTestId('email-input');
       const passInput = screen.getByTestId('password-input');
       const submitBtn = screen.getByTestId('login-submit-button');
 
-      expect(orgInput).toBeTruthy();
+      expect(screen.queryByTestId('org-code-input')).toBeNull();
       expect(emailInput).toBeTruthy();
       expect(passInput).toBeTruthy();
       expect(submitBtn).toBeTruthy();
 
-      fireEvent.changeText(orgInput, 'sentinel-corp');
-      fireEvent.changeText(emailInput, 'user@sentinellan.local');
-      fireEvent.changeText(passInput, 'SecurePass123!');
+      await fireEvent.changeText(emailInput, 'user@sentinellan.local');
+      await fireEvent.changeText(passInput, 'SecurePass123!');
 
-      fireEvent.press(submitBtn);
+      await fireEvent.press(submitBtn);
 
       await waitFor(() => {
         expect(screen.getByTestId('login-submit-button')).toBeTruthy();
@@ -249,7 +247,7 @@ describe('Component & View Smoke Tests', () => {
       const titleInput = screen.getByTestId('incident-title-input');
       expect(titleInput).toBeTruthy();
 
-      fireEvent.changeText(titleInput, 'Mất kết nối mạng LAN đột ngột');
+      await fireEvent.changeText(titleInput, 'Mất kết nối mạng LAN đột ngột');
 
       const submitBtn = screen.getByTestId('submit-incident-button');
       expect(submitBtn).toBeTruthy();

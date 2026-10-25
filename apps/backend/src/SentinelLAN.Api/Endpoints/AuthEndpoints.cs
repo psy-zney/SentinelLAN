@@ -17,7 +17,7 @@ public static class AuthEndpoints
             if (session is null) return Results.Unauthorized();
             cookies.Write(http, session);
             return Results.Ok(new AuthSessionResponse((int)(session.AccessTokenExpiresAt - DateTimeOffset.UtcNow).TotalSeconds, session.Role, session.DisplayName));
-        }).RequireRateLimiting("sensitive");
+        }).RequireRateLimiting("sensitive").AddEndpointFilter<LoginThrottleFilter>();
 
         v1.MapPost("/auth/refresh", async (HttpContext http, SentinelLAN.Application.AuthenticationService authentication, AuthCookieManager cookies, CancellationToken ct) =>
         {
@@ -44,7 +44,7 @@ public static class AuthEndpoints
             var user = await db.Users
                 .AsNoTracking()
                 .SingleAsync(item => item.Id == actor.UserId && item.OrganizationId == actor.OrganizationId, ct);
-            return Results.Ok(new CurrentSessionResponse(user.Role, user.DisplayName));
+            return Results.Ok(new CurrentSessionResponse(user.Role, user.DisplayName, user.Id));
         }).RequireAuthorization();
 
         v1.MapPost("/auth/activation/validate", async (ValidateActivationTokenRequest req, UserManagementService users, HttpContext http, CancellationToken ct) =>

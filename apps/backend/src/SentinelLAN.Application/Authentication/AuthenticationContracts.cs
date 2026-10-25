@@ -41,7 +41,7 @@ public interface IAuthenticationStore
     Task<bool> TrySaveChangesAsync(CancellationToken cancellationToken);
 }
 
-public sealed record AuthenticationSettings(TimeSpan AccessTokenLifetime, TimeSpan RefreshTokenLifetime);
+public sealed record AuthenticationSettings(TimeSpan AccessTokenLifetime, TimeSpan RefreshTokenLifetime, string? OrganizationCode = null);
 
 public sealed record AuthenticationResult(
     string AccessToken,
@@ -61,7 +61,7 @@ public enum RefreshStatus
 public sealed record RefreshResult(RefreshStatus Status, AuthenticationResult? Session = null);
 
 public sealed record MobileLoginRequest(
-    string OrganizationCode,
+    string? OrganizationCode,
     string Email,
     string Password,
     string? AppVersion = null,

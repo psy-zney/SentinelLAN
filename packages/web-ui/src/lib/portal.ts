@@ -1,7 +1,7 @@
 import type { Role } from "@/types/api";
 
 export const portal = process.env.NEXT_PUBLIC_PORTAL === "employee" ? "employee" : "company";
-export const portalTitle = portal === "employee" ? "Nhân viên" : "Quản trị công ty";
+export const portalTitle = portal === "employee" ? "Nhân viên" : "Quản trị nội bộ";
 export function portalAllows(role: Role) {
   return portal === "employee" ? role === "Employee" : role === "Admin";
 }

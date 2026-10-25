@@ -8,7 +8,8 @@ namespace SentinelLAN.Application;
 public sealed partial class SelfServiceService(ISelfServiceStore store, ISelfServiceDirectory directory,
     ISelfServiceCommands commands, ISelfServiceAudit audit, IMaintenanceCodeProtector codes,
     SelfServiceSettings settings, TimeProvider timeProvider, IAdministrativeRequestJournal administrativeJournal,
-    IMonitoringSettingsStore? monitoringSettings = null, ISoftwareDetectionQuota? softwareQuota = null, IAttachmentObjectStore? attachmentObjects = null) : IOperationalNotificationSink
+    IMonitoringSettingsStore? monitoringSettings = null, ISoftwareDetectionQuota? softwareQuota = null, IAttachmentObjectStore? attachmentObjects = null,
+    AttachmentQuotaSettings? attachmentQuota = null) : IOperationalNotificationSink
 {
     private static readonly HashSet<string> Kinds = ["Incident", "InstallApp", "Privilege", "Panic", "PauseAgent", "UninstallAgent", "Appointment"];
     private static readonly HashSet<string> Categories = ["Network", "Printer", "Slow", "Application", "Suspicious", "Other"];
@@ -59,19 +60,18 @@ public sealed partial class SelfServiceService(ISelfServiceStore store, ISelfSer
         Require(device is { IsRevoked: false } && device.AssignedUserId == request.UserId && owner is { Status: UserStatuses.Active, Role: Roles.Employee }, 409, "Máy hoặc người dùng đã thay đổi; vui lòng gửi yêu cầu mới.");
         return device!;
     }
-    private async Task<SupportRequestDto> DtoAsync(SelfServiceRequest request, CancellationToken ct)
+    private async Task<SupportRequestDto> DtoAsync(SelfServiceRequest request, CancellationToken ct) =>
+        Dto(request, request.CommandId is Guid id ? await commands.GetAsync(request.OrganizationId, id, ct) : default);
+
+    private SupportRequestDto Dto(SelfServiceRequest request, (DeviceCommand? Command, CommandResult? Result) commandState)
     {
         var commandStatus = request.CommandStatus;
         var commandMessage = request.CommandMessage;
-        if (request.CommandId is Guid commandId)
+        if (commandState.Command is { } command)
         {
-            var (command, result) = await commands.GetAsync(request.OrganizationId, commandId, ct);
-            if (command is not null)
-            {
-                commandStatus = command.ExpiresAt <= Now && command.Status is DeviceCommandStatus.Pending or DeviceCommandStatus.Delivered
-                    ? "Expired" : command.Status.ToString();
-                commandMessage = result?.Message ?? (commandStatus == "Expired" ? "Máy chưa hoàn tất thao tác trong thời hạn cho phép." : request.CommandMessage);
-            }
+            commandStatus = command.ExpiresAt <= Now && command.Status is DeviceCommandStatus.Pending or DeviceCommandStatus.Delivered
+                ? "Expired" : command.Status.ToString();
+            commandMessage = commandState.Result?.Message ?? (commandStatus == "Expired" ? "Máy chưa hoàn tất thao tác trong thời hạn cho phép." : request.CommandMessage);
         }
         return new(request.Id, request.DeviceId, request.DeviceName, request.UserId, request.UserName,
             request.Kind, request.Category, request.Title, request.Description, request.CanWork, request.Status,
@@ -79,18 +79,26 @@ public sealed partial class SelfServiceService(ISelfServiceStore store, ISelfSer
             commandStatus, commandMessage, request.AppointmentAt, request.CreatedAt, request.UpdatedAt, request.ApprovalExpiresAt);
     }
 
-    public async Task<IReadOnlyList<SupportRequestDto>> GetRequestsAsync(ActorContext actor, CancellationToken ct)
+    public Task<IReadOnlyList<SupportRequestDto>> GetRequestsAsync(ActorContext actor, CancellationToken ct) => GetRequestsAsync(actor, new PageWindow(), ct);
+
+    public Task<IReadOnlyList<SupportRequestDto>> GetRequestsAsync(ActorContext actor, PageWindow page, CancellationToken ct) => GetRequestPageAsync(actor, page, false, ct);
+
+    public async Task<IReadOnlyList<SupportRequestDto>> GetRequestPageAsync(ActorContext actor, PageWindow page, bool activeOnly, CancellationToken ct)
     {
         Human(actor);
-        var requests = await store.GetRequestsAsync(actor.OrganizationId, ct);
+        page.Validate();
+        Guid? userId = null;
+        Guid? deviceId = null;
         if (actor.Role == Roles.Employee)
         {
             var device = await directory.FindAssignedDeviceAsync(actor.OrganizationId, actor.UserId, ct);
-            requests = requests.Where(r => r.UserId == actor.UserId && r.DeviceId == device?.Id).ToArray();
+            if (device is null) return [];
+            userId = actor.UserId;
+            deviceId = device.Id;
         }
-        var result = new List<SupportRequestDto>();
-        foreach (var request in requests.OrderByDescending(r => r.CreatedAt).Take(200)) result.Add(await DtoAsync(request, ct));
-        return result;
+        var requests = await store.GetRequestPageAsync(actor.OrganizationId, userId, deviceId, page, activeOnly, ct);
+        var commandStates = await commands.GetManyAsync(actor.OrganizationId, requests.Where(x => x.CommandId != null).Select(x => x.CommandId!.Value).ToArray(), ct);
+        return requests.Select(request => Dto(request, request.CommandId is Guid id && commandStates.TryGetValue(id, out var state) ? state : default)).ToArray();
     }
     public async Task<SupportRequestDto> GetRequestAsync(ActorContext actor, Guid id, CancellationToken ct) => await DtoAsync(await ScopedRequestAsync(actor, id, ct), ct);
 

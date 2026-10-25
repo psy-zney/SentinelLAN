@@ -10,7 +10,7 @@ public sealed class UpdatesHub(RealtimeConnectionGuard connections) : Hub
     {
         var actor = Context.User?.ToActorContext();
         if (actor is null) { Context.Abort(); return; }
-        connections.Register(Context.ConnectionId, actor.Value, Context.Abort);
+        if (!connections.Register(Context.ConnectionId, actor.Value, Context.Abort)) { Context.Abort(); return; }
         await Groups.AddToGroupAsync(Context.ConnectionId, TenantGroup.Name(actor.Value.OrganizationId));
         await connections.RevalidateAsync(Context.ConnectionAborted);
         await base.OnConnectedAsync();

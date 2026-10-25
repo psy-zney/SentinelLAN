@@ -6,13 +6,14 @@ import { ApiClient } from "@/lib/api-client";
 import { homePathForRole } from "@/lib/auth-routing";
 import { useTranslation } from "@/lib/i18n";
 import { portal, portalAllows, portalBaseUrl, portalHomeUrl } from "@/lib/portal";
+import { UiIcon } from "@/components/ui-icon";
 
 export function LoginForm() {
   const router = useRouter();
   const { lang, setLang, t } = useTranslation();
-  const [orgCode, setOrgCode] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -23,7 +24,6 @@ export function LoginForm() {
     setError("");
     try {
       const session = await new ApiClient().login(
-        orgCode.trim(),
         email.trim(),
         password
       );
@@ -40,7 +40,6 @@ export function LoginForm() {
   }
 
   function fillDemo(roleType: "admin" | "technician" | "employee") {
-    setOrgCode("demo");
     setPassword("local-demo-only");
     setError("");
     if (roleType === "admin") {
@@ -56,9 +55,9 @@ export function LoginForm() {
   const otherPortalLabel = portal === "employee" ? (lang === "vi" ? "Đăng nhập cho quản trị viên và IT" : "Administrator and IT sign in") : (lang === "vi" ? "Đăng nhập cho nhân viên" : "Employee sign in");
 
   return (
-    <form className="login" onSubmit={submit}>
+    <form className="login" onSubmit={submit} aria-busy={busy}>
       <div className="login-brand">
-        <div className="brand"><span className="brand-mark" aria-hidden="true">S</span><span>SentinelLAN</span></div>
+        <div className="brand"><span className="brand-mark" aria-hidden="true"><UiIcon name="shield" /></span><span>SentinelLAN</span></div>
         <button
           type="button"
           className="lang-btn"
@@ -68,25 +67,12 @@ export function LoginForm() {
           {lang === "vi" ? "EN" : "VI"}
         </button>
       </div>
-      <p className="eyebrow">{portal === "employee" ? (lang === "vi" ? "Dành cho nhân viên" : "For employees") : (lang === "vi" ? "Quản trị công ty" : "Company management")}</p>
+      <p className="eyebrow">{portal === "employee" ? (lang === "vi" ? "Dành cho nhân viên" : "For employees") : (lang === "vi" ? "Quản trị nội bộ" : "Internal administration")}</p>
       <h1>{t("signInBtn")}</h1>
       <p className="subtitle">
         {portal === "employee" ? (lang === "vi" ? "Nhờ IT hỗ trợ và xem máy tính của bạn." : "Get IT help and view your computer.") : (lang === "vi" ? "Quản lý thiết bị và hỗ trợ nhân viên." : "Manage devices and help your team.")}
       </p>
 
-      <label className="field">
-        {t("orgCodePrompt")}
-        <input
-          name="organizationCode"
-          type="text"
-          autoComplete="organization"
-          required
-          value={orgCode}
-          onChange={(e) => setOrgCode(e.target.value)}
-          placeholder={lang === "vi" ? "Ví dụ: sentinellan" : "Example: sentinellan"}
-        />
-        <small>{lang === "vi" ? "Mã do quản trị viên công ty cung cấp." : "Provided by your company administrator."}</small>
-      </label>
       <label className="field">
         {t("emailPrompt")}
         <input
@@ -99,22 +85,27 @@ export function LoginForm() {
           placeholder="user@congty.vn"
         />
       </label>
-      <label className="field">
-        {t("passwordPrompt")}
+      <div className="field">
+        <label htmlFor="login-password">{t("passwordPrompt")}</label>
+        <span className="password-input">
         <input
+          id="login-password"
           name="password"
-          type="password"
+          type={showPassword ? "text" : "password"}
           autoComplete="current-password"
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
         />
-      </label>
+        <button type="button" className="password-toggle" onClick={() => setShowPassword(value => !value)} aria-label={lang === "vi" ? (showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu") : (showPassword ? "Hide password" : "Show password")} aria-controls="login-password"><UiIcon name={showPassword ? "eye-off" : "eye"} /></button>
+        </span>
+      </div>
 
       {error && <p role="alert" className="login-error">{error}</p>}
 
       <button className="action login-submit" type="submit" disabled={busy}>
+        <UiIcon name={busy ? "loading" : "arrow"} className={busy ? "icon-spin" : ""} />
         {busy ? t("signingIn") : t("signInBtn")}
       </button>
 

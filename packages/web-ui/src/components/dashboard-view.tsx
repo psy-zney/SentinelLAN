@@ -1,6 +1,7 @@
 "use client";
 
 import { DeviceTable } from "@/components/device-table";
+import Link from "next/link";
 import { useLiveQuery } from "@/hooks/use-live-query";
 import { ApiClient } from "@/lib/api-client";
 import { useTranslation } from "@/lib/i18n";
@@ -45,6 +46,7 @@ export function DashboardView() {
         </div>
       </section>
       <DeviceTable initialDevices={data.devices} />
+      {data.totalDevices > data.devices.length && <p>{data.devices.length} / {data.totalDevices} · <Link href="/devices">{t("devices")}</Link></p>}
     </>
   );
 }

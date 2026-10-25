@@ -17,26 +17,42 @@
     "test:dependency-security": "node --test scripts/dependency-security/backports.test.mjs",
     "audit:dependencies": "node scripts/dependency-security/audit.mjs",
     "dev": "npm run dev --workspace=@sentinellan/company",
-    "dev:mobile": "npm run start --workspace=@sentinellan/mobile",
+    "dev:mobile": "npm run start --workspace=@sentinellan/mobile --",
     "lint": "npm run lint --workspace=@sentinellan/company && npm run lint --workspace=@sentinellan/employee && npm run lint --workspace=@sentinellan/web-ui",
     "lint:mobile": "npm run lint --workspace=@sentinellan/mobile",
     "typecheck": "npm run typecheck --workspace=@sentinellan/company && npm run typecheck --workspace=@sentinellan/employee && npm run typecheck --workspace=@sentinellan/web-ui",
     "typecheck:mobile": "npm run typecheck --workspace=@sentinellan/mobile",
-    "test": "npm run test --workspace=@sentinellan/web-ui",
-    "test:mobile": "npm run test --workspace=@sentinellan/mobile",
-    "test:e2e": "npm run test:e2e --workspace=@sentinellan/company",
+    "test": "npm run test --workspace=@sentinellan/web-ui --",
+    "test:mobile": "npm run test --workspace=@sentinellan/mobile --",
+    "test:e2e": "npm run test:e2e --workspace=@sentinellan/company --",
     "build": "npm run build --workspace=@sentinellan/company && npm run build --workspace=@sentinellan/employee",
     "dev:company": "npm run dev --workspace=@sentinellan/company",
-    "dev:employee": "npm run dev --workspace=@sentinellan/employee"
+    "dev:employee": "npm run dev --workspace=@sentinellan/employee",
+    "test:coverage": "npm run test:coverage --workspace=@sentinellan/web-ui --",
+    "audit:dependencies:all": "node scripts/dependency-security/audit.mjs --include-dev"
   },
   "overrides": {
+    "expo": "~58.0.19",
+    "react-native": "0.88.0",
+    "react-native-svg": "15.16.0",
+    "react-native-safe-area-context": "5.10.1",
+    "react-native-screens": "~4.30.0",
     "sharp": "0.35.5",
     "shell-quote": "1.12.0",
     "source-map-js": "1.2.2",
     "braces": "3.0.3",
-    "node-forge": "1.4.0"
+    "node-forge": "1.4.0",
+    "react-native-reanimated": "4.7.1",
+    "react-native-worklets": "0.13.0",
+    "zod": "3.25.76"
   },
   "dependencies": {
     "@zxing/library": "0.23.0"
+  },
+  "devDependencies": {
+    "decode-uri-component": "0.2.2",
+    "expo": "~58.0.19",
+    "react-native": "0.88.0",
+    "react-native-svg": "15.16.0"
   }
 }

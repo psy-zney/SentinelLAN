@@ -43,7 +43,7 @@ import type {
 import type { Announcement, CatalogApp, CreateSupportRequest, EmployeeNotification, HelpArticle, SaveAnnouncement, SaveCatalogApp, SupportAttachment, SupportDecision, SupportMessage, SupportRequest, SupportStatus } from "@/types/self-service";
 import type { EndpointObservation, MonitoringSettings } from "@/types/endpoint";
 
-const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 type MyDeviceApiResponse = {
   device: Device;
@@ -66,6 +66,13 @@ type MyDeviceApiResponse = {
 };
 
 export class ApiClient {
+  private pagePath(path: string, offset: number, limit: number) {
+    const [base, query = ""] = path.split("?");
+    const params = new URLSearchParams(query);
+    if (offset !== 0) params.set("offset", String(offset));
+    if (limit !== 200) params.set("limit", String(limit));
+    return `${base}${params.size ? `?${params}` : ""}`;
+  }
   endpointObservations(deviceId?: string) {
     return this.request<EndpointObservation>(deviceId ? `/api/v1/devices/${encodeURIComponent(deviceId)}/observations` : "/api/v1/my-device/observations");
   }
@@ -123,8 +130,8 @@ export class ApiClient {
     return ApiClient.refreshInFlight;
   }
 
-  login(organizationCode: string, email: string, password: string) {
-    return this.request<AuthSession>("/api/v1/auth/login", { method: "POST", body: JSON.stringify({ organizationCode, email, password }) }, false);
+  login(email: string, password: string) {
+    return this.request<AuthSession>("/api/v1/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }, false);
   }
 
   logout() {
@@ -143,8 +150,21 @@ export class ApiClient {
     return this.request<import("@/types/host-status").VpsHostStatus>("/api/v1/host/status", { signal });
   }
 
-  devices() {
-    return this.request<Device[]>("/api/v1/devices");
+  devicePage(offset = 0, limit = 200, query = "", status = "all") {
+    const params = new URLSearchParams();
+    if (query) params.set("q", query);
+    if (status !== "all") params.set("status", status);
+    return this.request<Device[]>(this.pagePath(`/api/v1/devices${params.size ? `?${params}` : ""}`, offset, limit));
+  }
+
+  async devices() {
+    // Existing device pickers can still load the complete authorized directory.
+    const all: Device[] = [];
+    for (let offset = 0; ; offset += 200) {
+      const page = await this.devicePage(offset);
+      all.push(...page);
+      if (page.length < 200) return all;
+    }
   }
 
   createUser(data: { email: string; displayName: string; role: Exclude<Role, "Agent">; password?: string; reason: string; confirmed: boolean }) {
@@ -338,8 +358,17 @@ export class ApiClient {
   }
 
   // USERS & ORG
-  users() {
-    return this.request<UserItem[]>("/api/v1/users");
+  async allUsers() {
+    const all: UserItem[] = [];
+    for (let offset = 0; ; offset += 200) {
+      const page = await this.users(offset);
+      all.push(...page);
+      if (page.length < 200) return all;
+    }
+  }
+
+  users(offset = 0, limit = 200) {
+    return this.request<UserItem[]>(this.pagePath("/api/v1/users", offset, limit));
   }
 
   organization() {
@@ -363,9 +392,9 @@ export class ApiClient {
     return this.request<AssetTimelineItem[]>(`/api/v1/devices/${id}/timeline`);
   }
 
-  getIncidents(deviceId?: string) {
-    const path = deviceId ? `/api/v1/incidents?deviceId=${deviceId}` : "/api/v1/incidents";
-    return this.request<IncidentItem[]>(path);
+  getIncidents(deviceId?: string, offset = 0, limit = 200) {
+    const path = deviceId ? `/api/v1/incidents?deviceId=${encodeURIComponent(deviceId)}` : "/api/v1/incidents";
+    return this.request<IncidentItem[]>(this.pagePath(path, offset, limit));
   }
 
   createIncident(data: CreateIncidentRequest) {
@@ -383,9 +412,9 @@ export class ApiClient {
     });
   }
 
-  getWorkOrders(deviceId?: string) {
-    const path = deviceId ? `/api/v1/work-orders?deviceId=${deviceId}` : "/api/v1/work-orders";
-    return this.request<WorkOrderItem[]>(path);
+  getWorkOrders(deviceId?: string, offset = 0, limit = 200) {
+    const path = deviceId ? `/api/v1/work-orders?deviceId=${encodeURIComponent(deviceId)}` : "/api/v1/work-orders";
+    return this.request<WorkOrderItem[]>(this.pagePath(path, offset, limit));
   }
 
   createWorkOrder(data: CreateWorkOrderRequest) {
@@ -402,9 +431,9 @@ export class ApiClient {
     });
   }
 
-  getAssetLoans(deviceId?: string) {
-    const path = deviceId ? `/api/v1/asset-loans?deviceId=${deviceId}` : "/api/v1/asset-loans";
-    return this.request<AssetLoanItem[]>(path);
+  getAssetLoans(deviceId?: string, offset = 0, limit = 200) {
+    const path = deviceId ? `/api/v1/asset-loans?deviceId=${encodeURIComponent(deviceId)}` : "/api/v1/asset-loans";
+    return this.request<AssetLoanItem[]>(this.pagePath(path, offset, limit));
   }
 
   createAssetLoan(data: CreateLoanRequest) {
@@ -447,7 +476,7 @@ export class ApiClient {
     return this.request<AuthenticatedQrResolveResponse>(`/api/v1/qr/${encodeURIComponent(code)}`);
   }
 
-  supportRequests() { return this.request<SupportRequest[]>("/api/v1/self-service/requests"); }
+  supportRequests(offset = 0, limit = 200, activeOnly = false) { return this.request<SupportRequest[]>(this.pagePath(`/api/v1/self-service/requests${activeOnly ? "?active=true" : ""}`, offset, limit)); }
   supportRequest(id: string) { return this.request<SupportRequest>(`/api/v1/self-service/requests/${encodeURIComponent(id)}`); }
   createSupportRequest(data: CreateSupportRequest) {
     return this.request<SupportRequest>("/api/v1/self-service/requests", { method: "POST", body: JSON.stringify(data) });
@@ -462,7 +491,7 @@ export class ApiClient {
     return this.request<SupportRequest>(`/api/v1/self-service/requests/${encodeURIComponent(id)}/redeem`, { method: "POST", body: JSON.stringify({ code, confirmed }) });
   }
   supportTeam() { return this.request<{ id: string; displayName: string }[]>("/api/v1/self-service/team"); }
-  supportMessages(id: string) { return this.request<SupportMessage[]>(`/api/v1/self-service/requests/${encodeURIComponent(id)}/messages`); }
+  supportMessages(id: string, offset = 0, limit = 200) { return this.request<SupportMessage[]>(this.pagePath(`/api/v1/self-service/requests/${encodeURIComponent(id)}/messages`, offset, limit)); }
   sendSupportMessage(id: string, body: string, idempotencyKey: string) {
     return this.request<SupportMessage>(`/api/v1/self-service/requests/${encodeURIComponent(id)}/messages`, { method: "POST", body: JSON.stringify({ body, idempotencyKey }) });
   }
@@ -508,7 +537,7 @@ export class ApiClient {
   createAnnouncement(data: SaveAnnouncement) { return this.request<Announcement>("/api/v1/self-service/announcements", { method: "POST", body: JSON.stringify(data) }); }
   acknowledgeAnnouncement(id: string) { return this.request<void>(`/api/v1/self-service/announcements/${encodeURIComponent(id)}/acknowledge`, { method: "POST" }); }
   markAnnouncementAffected(id: string) { return this.request<void>(`/api/v1/self-service/announcements/${encodeURIComponent(id)}/affected`, { method: "POST" }); }
-  employeeNotifications() { return this.request<EmployeeNotification[]>("/api/v1/self-service/notifications"); }
+  employeeNotifications(offset = 0, limit = 200) { return this.request<EmployeeNotification[]>(this.pagePath("/api/v1/self-service/notifications", offset, limit)); }
   readEmployeeNotification(id: string) { return this.request<void>(`/api/v1/self-service/notifications/${encodeURIComponent(id)}/read`, { method: "POST" }); }
   helpArticles() { return this.request<HelpArticle[]>("/api/v1/self-service/help"); }
 }

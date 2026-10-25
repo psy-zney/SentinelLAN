@@ -94,7 +94,8 @@ public sealed class AgentRequestSigningTests(SentinelApiFactory factory) : IClas
     {
         using var scope = api.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<SentinelDbContext>();
-        var org = new Organization { Code = $"signing-{Guid.NewGuid():N}", Name = "Request signing fixture" };
+        var fixtureId = Guid.NewGuid().ToString("N");
+        var org = new Organization { Code = $"signing-{fixtureId}", Name = $"Request signing fixture {fixtureId}" };
         var device = new Device { OrganizationId = org.Id, Name = "Signed fixture", OsVersion = "Fixture", AgentVersion = "test" };
         var secret = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
         var envelope = AgentRequestKey.Create(scope.ServiceProvider.GetRequiredService<SensitiveDataCipher>(), org.Id, device.Id, out var encoded);

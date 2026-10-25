@@ -8,6 +8,16 @@ public interface IManagementStore
     Task<User?> FindUserByIdAsync(Guid userId, CancellationToken cancellationToken) => Task.FromResult<User?>(null);
     Task<User?> FindUserByEmailAsync(Guid organizationId, string email, CancellationToken cancellationToken);
     Task<IReadOnlyList<User>> GetUsersAsync(Guid organizationId, CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<User>>([]);
+    async Task<IReadOnlyList<UserSummaryDto>> GetUserPageAsync(Guid organizationId, PageWindow page, DateTimeOffset now, CancellationToken ct)
+    {
+        page.Validate();
+        var users = (await GetUsersAsync(organizationId, ct)).OrderBy(x => x.DisplayName).ThenBy(x => x.Id).Skip(page.Offset).Take(page.Limit);
+        var result = new List<UserSummaryDto>();
+        foreach (var user in users)
+            result.Add(new(user.Id, user.Email, user.DisplayName, user.Role, user.Status, user.CreatedAt,
+                (await GetActiveActivationTokensByUserAsync(organizationId, user.Id, ct)).Any(x => x.ExpiresAt > now)));
+        return result;
+    }
     Task<int> CountActiveAdminsAsync(Guid organizationId, CancellationToken cancellationToken) => Task.FromResult(1);
     Task<IReadOnlyList<RefreshSession>> GetActiveUserSessionsAsync(Guid organizationId, Guid userId, DateTimeOffset now, CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<RefreshSession>>([]);
     Task<bool> HasActiveDeviceAssignmentAsync(Guid organizationId, Guid userId, Guid? excludingDeviceId, CancellationToken cancellationToken);

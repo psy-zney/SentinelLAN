@@ -14,6 +14,43 @@ const forge = require('node-forge');
 const pattern = '{'.repeat(4000) + 'a,b' + '}'.repeat(4000);
 const nestingError = { name: 'SyntaxError', message: /safe nesting limit/ };
 
+for (const [name, load] of [
+  ['v3 CommonJS', () => require('zod')],
+  ['v3 ESM', () => import('zod')],
+  ['v4 CommonJS', () => require('zod/v4')],
+  ['v4 ESM', () => import('zod/v4')],
+]) {
+  test('zod ' + name + ' rejects oversized collections before visiting their elements', async () => {
+    const { z } = await load();
+    let visits = 0;
+    const element = z.string().refine(() => { visits++; return true; });
+    const values = Array.from({ length: 1000 }, (_, i) => String(i));
+    for (const schema of [z.array(element).max(2, 'limit'), z.array(element).length(2, 'limit')]) {
+      const result = schema.safeParse(values);
+      assert.equal(result.success, false);
+      assert.equal(result.error.issues.length, 1);
+      assert.equal(result.error.issues[0].message, 'limit');
+    }
+    for (const schema of [z.set(element).max(2), z.set(element).size(2)]) {
+      assert.equal(schema.safeParse(new Set(values)).success, false);
+    }
+    const asyncElement = z.string().refine(async () => { visits++; return true; });
+    assert.equal((await z.array(asyncElement).max(2).safeParseAsync(values)).success, false);
+    assert.equal(visits, 0);
+    const ordinary = z.array(element).max(2).parse(['one', 'two']);
+    assert.deepEqual(ordinary, ['one', 'two']);
+    assert.equal(visits, 2);
+    assert.equal(z.array(z.number()).max(2).safeParse(['bad', 'bad']).error.issues.length, 2);
+    assert.equal(z.array(z.string()).max(2).safeParse('wrong type').error.issues[0].code, 'invalid_type');
+    if (name.startsWith('v4')) {
+      const map = z.map(element, element).check(z.maxSize(1));
+      assert.equal(map.safeParse(new Map([['a', 'b'], ['c', 'd']])).success, false);
+      assert.equal(visits, 2);
+      assert.deepEqual(z.array(z.string()).overwrite(a => a.slice(0, 2)).max(2).parse(values), ['0', '1']);
+    }
+  });
+}
+
 for (const method of ['parse', 'compile', 'expand', 'stringify']) {
   test('braces.' + method + ' rejects excessive nesting before recursion', () => {
     assert.throws(() => braces[method](pattern), nestingError);
@@ -117,4 +154,30 @@ test('the audit refuses incomplete reports and unverified backports', () => {
   assert.equal(evaluateAudit(report([known], [])).blocked, true);
   assert.throws(() => evaluateAudit(report(['missing-dependency'])), /Audit dependency is missing/);
   assert.throws(() => evaluateAudit(report(['braces'])), /no root advisories/);
+});
+import { spawnSync } from 'node:child_process';
+import vm from 'node:vm';
+const decodeUri = require('decode-uri-component');
+
+test('decode-uri-component keeps the legacy CommonJS API and decoding behavior', () => {
+  const patch = manifest.find(item => item.name === 'decode-uri-component');
+  const original = patch.files[0].replacements.reduceRight(
+    (source, replacement) => source.replace(replacement.to, replacement.from),
+    readFileSync(require.resolve('decode-uri-component'), 'utf8'));
+  const legacy = { exports: {} };
+  vm.runInNewContext(original, { module: legacy });
+  for (const value of ['hello+world', '%20%2B', '%C3%A5', '%F0%9F%98%80', '%FE%FF', '%FF%FE', '%C2', '%C2%41', '%E0%A4%A', '%', '%GG', 'plain%41-%FF-%C3%A5', '%ED%A0%80']) {
+    assert.equal(decodeUri(value), legacy.exports(value), value);
+  }
+  assert.throws(() => decodeUri(null), TypeError);
+});
+
+test('decode-uri-component bounds malformed percent decoding without exponential recursion', () => {
+  const child = spawnSync(process.execPath, ['-e', "const decode=require('decode-uri-component'); const input='%FF'.repeat(20000)+'%41'; if(decode(input)!=='%FF'.repeat(20000)+'A') process.exit(2)"], { cwd: root, timeout: 5000 });
+  assert.ifError(child.error);
+  assert.equal(child.status, 0, child.stderr?.toString());
+});
+test('the audit blocks unpatched moderate advisories including development checks', () => {
+  const moderate = { url: 'https://example.test/moderate', severity: 'moderate' };
+  assert.equal(evaluateAudit(report([moderate])).blocked, true);
 });

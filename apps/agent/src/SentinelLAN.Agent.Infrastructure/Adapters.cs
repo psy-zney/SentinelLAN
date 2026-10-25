@@ -215,7 +215,7 @@ public sealed class AgentApi(HttpClient httpClient, string deviceName, IEnrollme
             ? volatileSecret ??= Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
             : await enrollmentAttempts.GetOrCreateSecretAsync(token, httpClient.BaseAddress!.AbsoluteUri, cancellationToken);
         var inventory = inventoryCollector is null ? null : await inventoryCollector.GetInventoryAsync(cancellationToken);
-        using var response = await httpClient.PostAsJsonAsync("/api/v1/agent/enroll", new { token, deviceName, deviceSecret, osVersion = RuntimeInformation.OSDescription, agentVersion = "0.1.0", inventory }, cancellationToken);
+        using var response = await httpClient.PostAsJsonAsync("/api/v1/agent/enroll", new { token, deviceName, deviceSecret, osVersion = OperatingSystemDescription.GetCurrent(), agentVersion = AgentBuildVersion.Current, inventory }, cancellationToken);
         if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
         {
             var code = "EnrollmentRejected";

@@ -35,7 +35,7 @@ export function evaluateAudit(report, verify = verifyPatch) {
     }
   }
   if (Object.keys(vulnerabilities).length && !advisories) throw new Error('Audit report has no root advisories');
-  return { patched, remaining, blocked: remaining.some(item => ranks[item.severity] >= ranks.high) };
+  return { patched, remaining, blocked: remaining.some(item => ranks[item.severity] >= ranks.moderate) };
 }
 
 function run() {
@@ -46,7 +46,7 @@ function run() {
     cwd: root, stdio: 'inherit', timeout: 30000
   });
   if (tests.error || tests.status !== 0) throw new Error('Dependency security regression tests failed');
-  const result = spawnSync(process.execPath, [npm, 'audit', '--omit=dev', '--json'], {
+  const result = spawnSync(process.execPath, [npm, 'audit', ...(process.argv.includes('--include-dev') ? [] : ['--omit=dev']), '--json'], {
     cwd: root, encoding: 'utf8', timeout: 120000, maxBuffer: 16 * 1024 * 1024
   });
   if (result.error || ![0, 1].includes(result.status)) throw new Error('npm audit could not complete');
@@ -58,7 +58,7 @@ function run() {
     console.log('Unpatched ' + advisory.severity + ': ' + advisory.name + ' ' + advisory.advisory);
   }
   if (outcome.blocked) process.exitCode = 1;
-  else console.log('Dependency audit passed: no unpatched high or critical advisories.');
+  else console.log('Dependency audit passed: no unpatched moderate, high or critical advisories.');
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) run();

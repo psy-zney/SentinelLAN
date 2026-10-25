@@ -33,5 +33,6 @@ public sealed class SystemTelemetryTests
         Assert.InRange(sample.RamPercent, 0.01, 100);
         Assert.InRange(sample.DiskPercent, 0, 100);
         Assert.False(string.IsNullOrWhiteSpace(sample.OsVersion));
+        Assert.Equal(OperatingSystemDescription.GetCurrent(), sample.OsVersion);
     }
 }

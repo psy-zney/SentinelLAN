@@ -16,7 +16,7 @@ export const translations = {
     commands: "Thao tác trên máy",
     alerts: "Cảnh báo",
     auditLogs: "Lịch sử hoạt động",
-    users: "Tài khoản",
+    users: "Tài khoản nội bộ",
     vpsStatus: "Tình trạng VPS",
     subtitleVpsStatus: "CPU, RAM, ổ đĩa và dịch vụ của máy chủ đang chạy SentinelLAN. Dữ liệu cập nhật mỗi phút.",
     myDevice: "Máy tính của tôi",
@@ -73,7 +73,7 @@ export const translations = {
     subtitleCommands: "Gửi yêu cầu đến thiết bị và xem kết quả. Thao tác có nhãn “Mô phỏng” chỉ dùng để thử nghiệm.",
     subtitleAlerts: "Các cảnh báo do IT ghi nhận để theo dõi và xử lý.",
     subtitleAudit: "Xem ai đã thực hiện thao tác, lý do và kết quả.",
-    subtitleUsers: "Tạo tài khoản, gửi lời mời và quản lý quyền của từng người trong công ty.",
+    subtitleUsers: "Cấp tài khoản cho đồng nghiệp, chọn quyền phù hợp và gửi liên kết kích hoạt qua kênh nội bộ.",
     subtitleMyDevice: "Thông tin máy tính được công ty giao cho bạn.",
 
     // Dashboard View
@@ -161,11 +161,11 @@ export const translations = {
     orgDetails: "Thông tin công ty",
     orgCode: "Mã công ty",
     orgName: "Tên công ty",
-    userDirectory: "Tài khoản trong công ty",
+    userDirectory: "Nhân viên và quản trị viên",
     userEmail: "Email",
     userDisplayName: "Tên hiển thị",
     userRole: "Vai trò",
-    rbacTitle: "Quyền của từng vai trò",
+    rbacTitle: "Quyền sử dụng hệ thống",
 
     // My Device View
     myDeviceHeader: "Máy tính được giao cho bạn",
@@ -182,7 +182,7 @@ export const translations = {
     passwordPrompt: "Mật khẩu",
     signInBtn: "Đăng nhập",
     signingIn: "Đang đăng nhập…",
-    loginError: "Mã công ty, email hoặc mật khẩu chưa đúng.",
+    loginError: "Email hoặc mật khẩu chưa đúng.",
 
     // Cloud VPS
     vpsNodes: "Máy chủ",
@@ -299,13 +299,13 @@ export const translations = {
     publicAssetTag: "Thông tin trên tem thiết bị",
 
     // Users & Invitation
-    createPendingUser: "Mời người dùng",
+    createPendingUser: "Cấp tài khoản nội bộ",
     activationLinkTitle: "Liên kết kích hoạt tài khoản",
     activationLinkWarning: "Sao chép và gửi riêng cho người được mời. Liên kết dùng một lần, hết hạn sau 24 giờ và chỉ hiển thị ở đây một lần.",
     copyLink: "Sao chép liên kết",
     linkCopied: "Đã sao chép liên kết!",
     reissueInvite: "Cấp lại liên kết",
-    revokeInvite: "Thu hồi lời mời",
+    revokeInvite: "Thu hồi liên kết",
     statusPending: "Chờ kích hoạt",
     statusActive: "Hoạt động",
     statusLocked: "Đã khóa",
@@ -335,7 +335,7 @@ export const translations = {
     commands: "Commands",
     alerts: "Alerts & Incidents",
     auditLogs: "Audit logs",
-    users: "People & Access",
+    users: "Internal accounts",
     vpsStatus: "VPS status",
     subtitleVpsStatus: "CPU, memory, disk and services on the SentinelLAN host. Data updates every minute.",
     myDevice: "My device",
@@ -391,8 +391,8 @@ export const translations = {
     subtitlePolicies: "Store and assign policy settings; the Agent does not yet enforce screen lock or USB modes.",
     subtitleCommands: "Signed commands with reasons and audit. Check receipts for execution results; Simulate commands only simulate.",
     subtitleAlerts: "Alerts and incidents recorded by authorized users; telemetry threshold rules are not active.",
-    subtitleAudit: "Sensitive action records protected from edits through the application; no independent WORM store.",
-    subtitleUsers: "Multi-tenant user identity, role assignments, and organizational access boundaries.",
+    subtitleAudit: "See who performed an action, why, and the recorded outcome.",
+    subtitleUsers: "Create accounts for colleagues, choose the appropriate access and share activation links internally.",
     subtitleMyDevice: "Transparency view: inspect exactly what metrics and telemetry are monitored on your assigned device.",
 
     // Dashboard View
@@ -480,11 +480,11 @@ export const translations = {
     orgDetails: "Organization Profile",
     orgCode: "Organization Code",
     orgName: "Organization Name",
-    userDirectory: "Authorized User Directory",
+    userDirectory: "Employees and administrators",
     userEmail: "Email Address",
     userDisplayName: "Display Name",
     userRole: "Role",
-    rbacTitle: "Role-Based Access Control (RBAC) Matrix",
+    rbacTitle: "System access",
 
     // My Device View
     myDeviceHeader: "Your Assigned Corporate Device",
@@ -501,7 +501,7 @@ export const translations = {
     passwordPrompt: "Password",
     signInBtn: "Sign In",
     signingIn: "Signing in...",
-    loginError: "Invalid organization code, email, or password.",
+    loginError: "Invalid email or password.",
 
     // Cloud VPS
     vpsNodes: "VPS (optional)",
@@ -572,7 +572,7 @@ export const translations = {
 
     // Account Activation
     activationTitle: "Activate Your SentinelLAN Account",
-    activationSubtitle: "Set up a secure initial password to begin using the platform.",
+    activationSubtitle: "Choose your password to access the internal IT system.",
     activationSuccess: "Your account has been activated successfully!",
     activationFailed: "Failed to activate account. The activation token may be invalid or expired.",
     newPassword: "New Password",
@@ -618,13 +618,13 @@ export const translations = {
     publicAssetTag: "Public Asset Tag Information",
 
     // Users & Invitation
-    createPendingUser: "Create Account & Generate Activation Link",
+    createPendingUser: "Create internal account",
     activationLinkTitle: "One-Time Account Activation Link",
     activationLinkWarning: "SECURITY WARNING: This link is displayed ONLY ONCE and contains a single-use activation token. Copy and send it directly to the employee via a secure channel. Token expires in 24 hours.",
     copyLink: "Copy Link",
     linkCopied: "Link copied!",
     reissueInvite: "Reissue Link",
-    revokeInvite: "Revoke Invite",
+    revokeInvite: "Revoke activation link",
     statusPending: "Pending Activation",
     statusActive: "Active",
     statusLocked: "Locked",

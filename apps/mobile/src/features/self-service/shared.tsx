@@ -8,6 +8,11 @@ import type { SupportRequest } from '../../lib/validation/self-service';
 
 export const categories = { Network: 'Không vào mạng', Printer: 'Không in được', Slow: 'Máy chậm', Application: 'Phần mềm không mở', Suspicious: 'Có thông báo đáng ngờ', Other: 'Vấn đề khác' } as const;
 export const statuses: Record<SupportRequest['status'], string> = { Open: 'Đã nhận yêu cầu', InProgress: 'IT đang xử lý', AwaitingEmployee: 'Chờ bạn kiểm tra', Approved: 'IT đã duyệt', Rejected: 'IT chưa duyệt', Resolved: 'IT đã xử lý', Closed: 'Bạn đã xác nhận dùng được' };
+export function ServicePages({ offset, count, onChange }: { offset: number; count: number; onChange: (offset: number) => void }) {
+  return <><ServiceText>Trang {Math.floor(offset / 100) + 1}</ServiceText>
+    <AppButton title="Trang trước" variant="outline" disabled={offset === 0} onPress={() => onChange(Math.max(0, offset - 100))} />
+    <AppButton title="Trang sau" variant="outline" disabled={count < 100} onPress={() => onChange(offset + 100)} /></>;
+}
 export function requestKey() { return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.floor(Math.random() * 16); return (c === 'x' ? r : (r & 3) | 8).toString(16); }); }
 export function useActiveScreen() {
   const [focused, setFocused] = useState(false);

@@ -1,7 +1,9 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
+import { DEFAULT_SERVER_ORIGIN, normalizeMobileOrigin } from './src/lib/server-origin.ts';
 
-const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL;
-const configuredWebUrl = process.env.EXPO_PUBLIC_WEB_URL;
+const releaseBuild = process.env.EAS_BUILD_PROFILE === 'preview' || process.env.EAS_BUILD_PROFILE === 'production';
+const configuredApiUrl = normalizeMobileOrigin(process.env.EXPO_PUBLIC_API_URL || DEFAULT_SERVER_ORIGIN, !releaseBuild);
+const configuredWebUrl = normalizeMobileOrigin(process.env.EXPO_PUBLIC_WEB_URL || configuredApiUrl, !releaseBuild);
 const webUrl = configuredWebUrl ?? configuredApiUrl;
 const webOrigin = (() => {
   try { return webUrl ? new URL(webUrl) : null; } catch { return null; }
@@ -86,8 +88,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-notifications',
   ],
   extra: {
-    apiUrl: configuredApiUrl || 'https://localhost:7147',
-    webUrl: configuredWebUrl || configuredApiUrl || 'https://localhost:7147',
+    apiUrl: configuredApiUrl,
+    webUrl: configuredWebUrl,
     ...(process.env.EXPO_PUBLIC_EAS_PROJECT_ID ? { eas: { projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID } } : {}),
   },
 });

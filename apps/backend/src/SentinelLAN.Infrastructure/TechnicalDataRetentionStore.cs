@@ -9,6 +9,12 @@ public sealed class TechnicalDataRetentionStore(SentinelDbContext db, TimeProvid
     public async Task<int> DeleteBatchAsync(DateTimeOffset before, int batchSize, CancellationToken cancellationToken)
     {
         var now = (clock ?? TimeProvider.System).GetUtcNow();
+        var expiredLogins = await db.Set<LoginAttemptBucket>().Where(x => x.ExpiresAt < now)
+            .OrderBy(x => x.ExpiresAt).Take(batchSize).Select(x => x.PartitionHash).ToArrayAsync(cancellationToken);
+        if (db.Database.IsRelational())
+            await db.Set<LoginAttemptBucket>().Where(x => expiredLogins.Contains(x.PartitionHash) && x.ExpiresAt < now).ExecuteDeleteAsync(cancellationToken);
+        else
+            db.RemoveRange(await db.Set<LoginAttemptBucket>().Where(x => expiredLogins.Contains(x.PartitionHash) && x.ExpiresAt < now).ToListAsync(cancellationToken));
         var nonces = await db.Set<AgentRequestNonce>().Where(value => value.ExpiresAt < now.AddMinutes(-1))
             .OrderBy(value => value.ExpiresAt).Take(batchSize).Select(value => value.Id).ToArrayAsync(cancellationToken);
         var adminNonces = await db.Set<AdministrativeRequestNonce>().Where(value => value.ExpiresAt < now.AddDays(-1))
@@ -37,7 +43,7 @@ public sealed class TechnicalDataRetentionStore(SentinelDbContext db, TimeProvid
             db.Heartbeats.RemoveRange(await db.Heartbeats.Where(h => heartbeats.Contains(h.Id)).ToListAsync(cancellationToken));
             await db.SaveChangesAsync(cancellationToken);
         }
-        return telemetry.Count + heartbeats.Count + nonces.Length + adminNonces.Length + security.Length + software.Length + outbox.Length;
+        return telemetry.Count + heartbeats.Count + nonces.Length + adminNonces.Length + security.Length + software.Length + outbox.Length + expiredLogins.Length;
     }
 
     private async Task DeleteAsync<T>(Guid[] ids, CancellationToken ct) where T : Entity

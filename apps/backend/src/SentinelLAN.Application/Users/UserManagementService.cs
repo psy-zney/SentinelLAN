@@ -265,16 +265,11 @@ public sealed class UserManagementService(
         return (ManagementResultStatus.Succeeded, "Account activated successfully.");
     }
 
-    public async Task<IReadOnlyList<UserSummaryDto>> GetUsersAsync(ActorContext actor, CancellationToken cancellationToken)
+    public Task<IReadOnlyList<UserSummaryDto>> GetUsersAsync(ActorContext actor, CancellationToken cancellationToken) => GetUsersAsync(actor, new PageWindow(), cancellationToken);
+
+    public async Task<IReadOnlyList<UserSummaryDto>> GetUsersAsync(ActorContext actor, PageWindow page, CancellationToken cancellationToken)
     {
         if (actor.Role != Roles.Admin) return [];
-        var users = await store.GetUsersAsync(actor.OrganizationId, cancellationToken);
-        var result = new List<UserSummaryDto>(users.Count);
-        foreach (var u in users)
-        {
-            var activeTokens = await store.GetActiveActivationTokensByUserAsync(actor.OrganizationId, u.Id, cancellationToken);
-            result.Add(new UserSummaryDto(u.Id, u.Email, u.DisplayName, u.Role, u.Status, u.CreatedAt, activeTokens.Count > 0));
-        }
-        return result;
+        return await store.GetUserPageAsync(actor.OrganizationId, page, DateTimeOffset.UtcNow, cancellationToken);
     }
 }

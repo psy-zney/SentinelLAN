@@ -14,6 +14,14 @@ public static class ServiceCollectionExtensions
         var deployment = DeploymentSettings.FromConfiguration(configuration);
         services.AddSingleton(deployment);
         services.AddProblemDetails();
+        // Invalid or missing JSON bodies are client errors in every environment.
+        // Throwing in Development would let the exception middleware turn them into 500s.
+        services.Configure<Microsoft.AspNetCore.Routing.RouteHandlerOptions>(options => options.ThrowOnBadRequest = false);
+        services.Configure<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions>(options =>
+        {
+            options.Limits.MaxRequestBodySize = 4 * 1024 * 1024;
+            options.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(15);
+        });
         services.AddOpenApi(options =>
         {
             options.AddDocumentTransformer<AuthenticationOpenApiTransformer>();
@@ -43,10 +51,34 @@ public static class ServiceCollectionExtensions
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.OnRejected = (context, _) =>
+            {
+                context.HttpContext.Response.Headers.RetryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var delay)
+                    ? Math.Max(1, (int)Math.Ceiling(delay.TotalSeconds)).ToString(System.Globalization.CultureInfo.InvariantCulture) : "1";
+                return ValueTask.CompletedTask;
+            };
+            options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+            {
+                var agent = context.User.ToAgentContext();
+                var actor = context.User.ToActorContext();
+                var key = agent is { } device ? $"device:{device.OrganizationId}:{device.DeviceId}"
+                    : actor is { } user ? $"user:{user.OrganizationId}:{user.UserId}" : null;
+                return key is null ? RateLimitPartition.GetNoLimiter("anonymous") : RateLimitPartition.GetTokenBucketLimiter(key,
+                    _ => new TokenBucketRateLimiterOptions
+                    {
+                        TokenLimit = 300,
+                        TokensPerPeriod = 300,
+                        ReplenishmentPeriod = TimeSpan.FromMinutes(1),
+                        AutoReplenishment = true,
+                        QueueLimit = 0
+                    });
+            });
             options.AddPolicy("sensitive", context => RateLimitPartition.GetFixedWindowLimiter(
                 $"{(context.GetEndpoint() as Microsoft.AspNetCore.Routing.RouteEndpoint)?.RoutePattern.RawText?.ToLowerInvariant() ?? "unknown"}|{context.User.ToAgentContext()?.DeviceId.ToString() ?? context.User.ToActorContext()?.UserId.ToString() ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}",
                 _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }));
         });
+        services.AddSingleton<IngressRequestBudget>();
+        services.AddScoped<ILoginAttemptLimiter, LoginAttemptLimiter>();
 
         var connectionString = configuration.GetConnectionString("SentinelLAN");
         if (!environment.IsDevelopment() && string.IsNullOrWhiteSpace(connectionString))
@@ -102,9 +134,23 @@ public static class ServiceCollectionExtensions
         }
         else services.AddSingleton<ICommandSigner>(new HmacCommandSigner(signingKey));
         services.AddSingleton<IAccessTokenService>(new AccessTokenService(accessTokenSigningKey));
-        services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
+        DateTimeOffset? legacyPasswordUntil = null;
+        if (configuration["SENTINELLAN_LEGACY_PASSWORD_HASHES_UNTIL"] is { Length: > 0 } legacyValue)
+        {
+            if (!DateTimeOffset.TryParse(legacyValue, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal, out var until) ||
+                until > DateTimeOffset.UtcNow.AddDays(7))
+                throw new InvalidOperationException("Legacy password verification expiry must be a UTC timestamp no more than seven days ahead.");
+            legacyPasswordUntil = until;
+        }
+        services.AddSingleton<IPasswordHasher>(_ => new Pbkdf2PasswordHasher(legacyUntil: legacyPasswordUntil, allowLegacySha256: environment.IsDevelopment()));
         services.AddSingleton<IRefreshTokenProtector, RefreshTokenProtector>();
-        services.AddSingleton(new AuthenticationSettings(TimeSpan.FromMinutes(15), TimeSpan.FromDays(7)));
+        var loginOrganizationCode = (configuration["SENTINELLAN_LOGIN_ORG_CODE"] ?? configuration["SENTINELLAN_BOOTSTRAP_ORG_CODE"] ??
+            (environment.IsDevelopment() ? "demo" : "")).Trim().ToLowerInvariant();
+        if (loginOrganizationCode.Length is < 3 or > 50 || loginOrganizationCode[0] is < 'a' or > 'z' ||
+            !loginOrganizationCode.All(c => c is >= 'a' and <= 'z' or >= '0' and <= '9' or '-'))
+            throw new InvalidOperationException("Configure SENTINELLAN_LOGIN_ORG_CODE for the single company hosted by this server.");
+        services.AddSingleton(new AuthenticationSettings(TimeSpan.FromMinutes(15), TimeSpan.FromDays(7), loginOrganizationCode));
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton(AgentRequestAuthenticationSettings.FromConfiguration(configuration, environment));
         services.AddScoped<AgentCredentialProvisioner>();

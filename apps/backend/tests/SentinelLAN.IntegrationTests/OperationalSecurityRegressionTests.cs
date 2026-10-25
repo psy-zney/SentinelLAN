@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using SentinelLAN.Application;
 using SentinelLAN.Api;
 using SentinelLAN.Domain;
@@ -19,7 +20,10 @@ public sealed class OperationalSecurityRegressionTests
     [Fact]
     public async Task UpdatingCompanyAccountDoesNotDisconnectAnotherTenantsRealtimeClient()
     {
-        await using var factory = new SentinelApiFactory();
+        await using var baseFactory = new SentinelApiFactory();
+        // Exercise tenant isolation independently of the single-company sign-in setting.
+        await using var factory = baseFactory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+            services.Replace(ServiceDescriptor.Singleton(new AuthenticationSettings(TimeSpan.FromMinutes(15), TimeSpan.FromDays(7))))));
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<SentinelDbContext>();
@@ -99,7 +103,7 @@ public sealed class OperationalSecurityRegressionTests
         {
             var path = i % 2 == 0 ? "/api/v1/auth/login" : "/API/V1/AUTH/LOGIN";
             Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync(path,
-                new LoginRequest("demo", "missing@example.test", "invalid"))).StatusCode);
+                new LoginRequest("demo", $"missing-{i}@example.test", "invalid"))).StatusCode);
         }
         Assert.Equal(HttpStatusCode.TooManyRequests, (await client.PostAsJsonAsync("/Api/V1/Auth/Login",
             new LoginRequest("demo", "missing@example.test", "invalid"))).StatusCode);
@@ -113,8 +117,14 @@ public sealed class OperationalSecurityRegressionTests
         await using var setupScope = factory.Services.CreateAsyncScope();
         var setupDb = setupScope.ServiceProvider.GetRequiredService<SentinelDbContext>();
         var demo = await setupDb.Organizations.SingleAsync(o => o.Code == "demo");
-        setupDb.Add(new User { OrganizationId = demo.Id, Email = "realtime-admin@example.test", DisplayName = "Realtime Admin", Role = Roles.Admin,
-            PasswordHash = setupScope.ServiceProvider.GetRequiredService<IPasswordHasher>().Hash("dummy-realtime-password") });
+        setupDb.Add(new User
+        {
+            OrganizationId = demo.Id,
+            Email = "realtime-admin@example.test",
+            DisplayName = "Realtime Admin",
+            Role = Roles.Admin,
+            PasswordHash = setupScope.ServiceProvider.GetRequiredService<IPasswordHasher>().Hash("dummy-realtime-password")
+        });
         await setupDb.SaveChangesAsync();
         var login = await client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest("demo", "realtime-admin@example.test", "dummy-realtime-password"));
         var access = Cookie(login, "sentinellan.access");

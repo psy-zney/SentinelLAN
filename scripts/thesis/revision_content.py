@@ -1,0 +1,137 @@
+"""Reviewed additions for the 2026-10-24 SentinelLAN report revision."""
+
+ADDITIONS = {
+    "1.5": [
+        "Phạm vi đánh giá được chia theo tài nguyên và mức tác động. Dữ liệu quan sát gồm CPU, RAM, dung lượng đĩa, cấu hình phần cứng, phần mềm và trạng thái bảo vệ; dữ liệu hỗ trợ do nhân viên chủ động nhập hoặc chọn gửi. Hệ thống không có chức năng thu mật khẩu, ghi bàn phím hay chụp màn hình ngầm. Mỗi yêu cầu đọc hoặc thay đổi đều được xét trong tổ chức đã xác thực.",
+        "Đối với nghiệp vụ quản trị, bản ghi lệnh chỉ thể hiện ý định đã được phê duyệt. Agent còn phải xác thực chữ ký, thiết bị đích, hạn và nonce trước khi gọi adapter. Một yêu cầu HTTP thành công hoặc trạng thái Delivered chưa chứng minh tác động trên hệ điều hành. Báo cáo vì vậy đánh giá riêng việc tạo lệnh, giao lệnh, biên lai và điều kiện nghiệm thu tại máy thử.",
+        "Các nhóm kết quả có thể tái kiểm tra gồm bất biến miền, quyền trên tài nguyên, xử lý cạnh tranh, phục hồi yêu cầu sau lỗi mạng và trạng thái giao diện. Khả năng phục hồi mạng thực, mức tiêu thụ tài nguyên và độ trễ cần dữ liệu theo thời gian trên máy lab. Việc xác định ranh giới này giúp chọn đúng bằng chứng cho từng mục tiêu và tránh dùng một ảnh minh họa để suy ra chất lượng vận hành dài hạn.",
+    ],
+    "2.2": [
+        "Quy tắc phụ thuộc hướng vào nghiệp vụ cho phép thay adapter lưu trữ hoặc hệ điều hành mà không chuyển quyền quyết định sang lớp giao tiếp. Domain biểu diễn bất biến; Application điều phối ca sử dụng và hợp đồng; Infrastructure thực hiện các cổng; Api lắp ghép và kiểm tra dữ liệu vận chuyển. Cách tổ chức này vận dụng nguyên tắc phụ thuộc của Martin (2017), với kiểm thử kiến trúc để phát hiện tham chiếu dự án sai hướng.",
+    ],
+    "2.4": [
+        "HMAC sử dụng khóa bí mật để xác thực thông điệp và kiểm tra tính toàn vẹn (Krawczyk et al., 1997). Trong giao tiếp Agent, thông điệp ký ràng buộc phương thức HTTP, đường dẫn, nội dung và thời gian; nonce giúp từ chối phát lại. Khóa xác thực yêu cầu của từng máy được tách khỏi khóa RSA dùng ký lệnh của máy chủ. Việc tách khóa giới hạn hậu quả khi một thiết bị bị lộ thông tin xác thực.",
+    ],
+    "3.9": [
+        "Hồ sơ tài sản CNTT (ITAM) liên kết thiết bị kỹ thuật với thông tin quản lý: SerialNumber, Manufacturer, Model, AssetType, PurchaseDate, PurchaseCost, WarrantyExpiresAt, VendorName và AssetStatus. Vị trí được phân thành LocationCampus, LocationBuilding, LocationFloor và LocationRoom. Các trường quản trị tài sản bổ sung ngữ cảnh xử lý và kế hoạch thay thế; chúng không phải số liệu Agent tự suy đoán từ hệ điều hành.",
+        "Nghiệp vụ cho mượn dùng AssetLoan để ghi BorrowerUserId, ApprovedByUserId, thời điểm mượn, ExpectedReturnDate và thời điểm trả. ConditionBefore và ConditionAfter lưu tình trạng trước và sau bàn giao. Dịch vụ kiểm tra thiết bị, người mượn và người duyệt trong cùng tổ chức. Trả thiết bị cập nhật vòng đời khoản mượn; việc đổi người được giao còn phải cập nhật quyền Employee ở các ca sử dụng tương ứng.",
+        "Nghiệp vụ bảo trì dùng WorkOrder theo mô hình quản lý bảo trì bằng máy tính (CMMS). Phiếu Corrective phục vụ sửa chữa, phiếu Preventive phục vụ phòng ngừa. WorkOrderNumber, mức ưu tiên và ChecklistJson nhận diện nội dung công việc. Khi hoàn tất, hệ thống ghi LaborHours, PartsCost và LaborCost; TotalCost bằng PartsCost cộng LaborCost. Giờ lao động là dữ liệu theo dõi riêng, không tự nhân vào chi phí lần thứ hai.",
+        "DeviceQrLabel tách tem tài sản khỏi credential của Agent. Máy chủ sinh mã opaque, chỉ lưu CodeHash và tiền tố nhận diện; mã gốc được trả khi tạo tem. Endpoint GET /api/v1/qr/{code}/public trả thẻ tối giản gồm tên, mã TAG rút gọn, trạng thái và hướng dẫn liên hệ IT. Thẻ không trả UUID nội bộ, người được giao, telemetry hoặc toàn bộ serial; mã TAG hiện được rút từ tối đa tám ký tự đầu của serial khi có.",
+        "Endpoint GET /api/v1/qr/{code} yêu cầu xác thực và tra tem trong tổ chức của người dùng. Hệ thống ghi LastScannedAt và sự kiện DeviceQrScanned bằng tiền tố tem, không ghi mã gốc vào audit. Admin nhận đường điều hướng tới chi tiết thiết bị; Employee chỉ được điều hướng tới /my-device khi thiết bị còn được giao cho mình. Tem hết hạn, đã thu hồi hoặc máy bị thu hồi không cấp quyền truy cập mới.",
+    ],
+    "3.6": [
+        "Cổng tự phục vụ hỗ trợ bảy loại SelfServiceRequest: Incident, InstallApp, Privilege, Panic, PauseAgent, UninstallAgent và Appointment. Sáu nhóm sự cố là Network, Printer, Slow, Application, Suspicious và Other. Nhân viên mô tả tình trạng và khả năng tiếp tục công việc qua CanWork; giao diện tự xác định máy được giao, giảm thao tác chọn nhầm thiết bị.",
+        "Incident tiếp nhận mô tả và ảnh PNG/JPEG do nhân viên lựa chọn, tối đa mười ảnh trên yêu cầu, mỗi ảnh không quá 2 MiB và phải đúng dấu hiệu định dạng tệp. InstallApp tham chiếu SelfServiceCatalogApp; mục có RequiresApproval = false được xếp lệnh InstallApprovedApp theo cấu hình IT đã công bố. Privilege vẫn qua phê duyệt và chỉ cấp hành động được giới hạn, không mở đường thực thi tùy ý.",
+        "Panic ghi cảnh báo Critical để IT xử lý. Tự động xếp lệnh IsolateNetwork 30 giây còn phụ thuộc PanicLabEnabled và danh sách thiết bị lab; phía Agent tiếp tục kiểm tra quyền thực thi cục bộ. Gửi báo động thành công vì vậy không được thông báo là máy đã cô lập khi chưa có biên lai. Appointment chỉ chấp nhận thời điểm lớn hơn năm phút và không quá ba mươi ngày kể từ lúc tạo.",
+        "SelfServiceAnnouncement phục vụ thông báo sự cố hoặc bảo trì diện rộng. AcknowledgedAt thể hiện nhân viên đã xem; AffectedAt thể hiện họ báo bị ảnh hưởng. Hai dữ liệu phản ánh hai hành vi khác nhau và không được gộp thành số ca sự cố đã xử lý. HelpArticleDto cung cấp hướng dẫn tự khắc phục để nhân viên thử các bước phù hợp trước hoặc trong khi chờ IT.",
+    ],
+    "3.8": [
+        "PauseAgent và UninstallAgent yêu cầu Admin phê duyệt trước khi cấp mã OTP tám chữ số. Máy chủ lưu mã qua bộ bảo vệ mã bảo trì, gắn với yêu cầu và thiết bị; mã hết hiệu lực sau năm phút, dùng một lần và khóa sau năm lần nhập sai. Sau khi đổi người được giao hoặc thu hồi máy, hệ thống phải kiểm tra lại đích đang hoạt động trước khi cấp lệnh.",
+        "PauseAgent dùng thời lượng từ cấu hình MaintenancePauseMinutes của tổ chức; cấu hình mặc định là 15 phút, không phải hằng số áp dụng cho mọi tổ chức. Redeem chỉ xếp một lệnh đã ký; tiến trình Agent còn phải chấp nhận cửa sổ phê duyệt và điều kiện cục bộ. Trạng thái yêu cầu hỗ trợ, trạng thái lệnh và việc tác động trên OS được lưu tách biệt để IT xử lý trường hợp chưa xác nhận.",
+    ],
+    "4.3": [
+        "Pbkdf2PasswordHasher sử dụng PBKDF2-HMAC-SHA256 với 600.000 vòng lặp, salt ngẫu nhiên 16 byte và kết quả băm 32 byte. Chuỗi lưu theo định dạng pbkdf2-sha256$600000$<salt>$<hash>; phép so sánh dùng CryptographicOperations.FixedTimeEquals. Khi xác minh thành công một chuỗi có số vòng lặp thấp hơn cấu hình hiện tại, SuccessNeedsRehash yêu cầu nâng cấp. Cơ chế dẫn xuất khóa từ mật khẩu được mô tả trong RFC 8018 (Moriarty et al., 2017); số vòng lặp nêu trên là lựa chọn triển khai của dự án.",
+        "Refresh Token Rotation liên kết các phiên qua FamilyId. Mỗi lần POST /api/v1/auth/refresh hợp lệ tạo phiên thay thế và ghi ReplacedBySessionId. Việc dùng lại token đã thay thế được nhận diện là ReuseDetected và dẫn đến RevokeFamilyAsync. Cơ chế này thu hồi chuỗi phiên liên quan, không thu hồi tùy tiện phiên của tổ chức hoặc người dùng khác.",
+        "SecurityStamp thay đổi khi trạng thái hoặc quyền tài khoản thay đổi. RealtimeConnectionGuard xác minh lại các kết nối đã đăng ký; RealtimeAuthorizationWorker kích hoạt kiểm tra theo chu kỳ năm giây. Kết nối không còn hợp lệ bị Abort và rời nhóm tổ chức; lỗi xác minh làm đóng kết nối theo hướng từ chối mặc định. Khoảng kiểm tra nền cần được phân biệt với thu hồi tức thời tại mọi thời điểm hoặc chờ JWT hết hạn.",
+    ],
+    "4.6": [
+        "Khôi phục đăng ký xử lý trường hợp máy chủ đã tiêu thụ token nhưng phản hồi bị mất. Agent tạo DeviceSecret 32 byte biểu diễn bằng 64 ký tự hex và lưu bền vững trước HTTP. TryRecoverEnrollmentAsync chỉ phục hồi khi token còn hạn, tên máy và bằng chứng secret khớp máy đã đăng ký, credential chưa thu hồi và RequestSigningConfirmedAt chưa được ghi. Giới hạn cuối đóng cửa sổ bootstrap sau lần xác thực yêu cầu đã ký đầu tiên.",
+        "Với bằng chứng hợp lệ, máy chủ trả lại DeviceId đã tạo và ghi AgentEnrollmentRecovered thay vì tạo thiết bị thứ hai. Thử lại bằng secret khác không được xem là phục hồi. Biện pháp này kết hợp tính dùng một lần của token với khả năng retry có kiểm soát; nó không biến token cũ thành mã đăng ký dùng chung cho nhiều máy.",
+    ],
+    "4.10": [
+        "SensitiveDataCipher mã hóa bằng AES-256-GCM với khóa 32 byte riêng cho dữ liệu. Phong bì nhị phân gồm Magic năm byte 53 4C 4E 00 01, nonce ngẫu nhiên 12 byte, tag xác thực 16 byte và bản mã. Chuỗi văn bản có tiền tố sln:v1:. GCM kết hợp bảo mật nội dung và kiểm tra tính toàn vẹn; nonce phải được quản lý đúng với khóa đang sử dụng (Dworkin, 2007). Đổi khóa cần quy trình đọc và chuyển đổi dữ liệu cũ, không chỉ thay biến môi trường.",
+        "Dữ liệu xác thực bổ sung AAD nhận từ purpose, phân biệt request.title, request.description, message.body, message.author, attachment.filename và attachment.content trong bộ chuyển đổi EF. Khi bản mã ở một cột bị chuyển sang cột có purpose khác, kiểm tra tag thất bại. Ràng buộc theo tên cột không tự tạo ràng buộc cho mọi hàng dữ liệu; quyền tenant và liên kết tài nguyên vẫn phải được kiểm tra độc lập. Với object storage, lớp lưu trữ ảnh còn ràng buộc đối tượng với tổ chức, yêu cầu và attachment.",
+        "Khi đọc dữ liệu, phong bì sai định dạng, sai khóa hoặc sai purpose không được xử lý như nội dung hợp lệ. Bộ kiểm thử tích hợp kiểm tra nonce khác nhau, phát hiện sửa bản mã, từ chối sai khóa hoặc sai purpose và tách mô hình dữ liệu theo khóa. Bằng chứng đó đánh giá cơ chế mã hóa trong ứng dụng; việc quản lý khóa, phân quyền đọc bản sao lưu và phục hồi sau thay khóa còn thuộc quy trình vận hành cần kiểm chứng riêng.",
+    ],
+    "5.5": [
+        "WindowsAgentProtection bảo vệ tiến trình dịch vụ đang chạy ở Session 0 bằng SetKernelObjectSecurity trong advapi32.dll. ProcessSddl là D:P(A;;0x1fffff;;;SY)(A;;0x1fffff;;;BA)(A;;0x1fffff;;;LS), cấp quyền cho SYSTEM, Built-in Administrators và LocalService. ServiceSddl giới hạn quyền điều khiển dịch vụ; Builtin Users được giữ quyền quan sát cần thiết, không có quyền dừng dịch vụ tương đương quản trị viên. DACL này không chống lại người có đặc quyền Administrator hoặc hệ điều hành đã bị chiếm quyền.",
+        "Windows Service ở Session 0 không thao tác trực tiếp với desktop tương tác của nhân viên. WindowsDesktopBridge dùng named pipe có ACL và xác minh PID cùng phiên console đang hoạt động; Desktop Companion thực hiện ShowNotification, LockWorkstation hoặc RefreshPolicy phù hợp quyền cục bộ. Phản hồi phải khớp CommandId. Với khóa máy, bridge còn kiểm tra trạng thái phiên thay vì chỉ tin thông báo thành công của tiến trình phụ.",
+        "WindowsDesktopActions dùng các API Windows Terminal Services như WTSSendMessage và WTSQuerySessionInformation cho thông báo hoặc quan sát phiên. Thiếu companion, sai phiên hoặc quá thời hạn phải trả kết quả chưa thực hiện/xác nhận được. Các kiểm thử adapter xác nhận quyết định và điều kiện gọi; việc tác động tới màn hình người dùng cần nghiệm thu trên máy lab đã được cho phép.",
+    ],
+    "5.7": [
+        "Cô lập mạng thật trong WindowsCommandExecutor chỉ được xét khi SENTINELLAN_LAB_EXECUTION bật và DeviceId khớp thiết bị thử đã cho phép. IsolateAsync còn yêu cầu quyền Administrator, IPv4 API từ SENTINELLAN_ISOLATION_SERVER_IPV4 không phải loopback và khớp phân giải DNS. Thời lượng cho phép là 30–60 giây; lệnh còn phải đủ thời gian để áp dụng và gửi kết quả.",
+        "IsolationScript kiểm tra ba profile Domain, Private và Public đang thực thi rule cục bộ, đồng thời từ chối nếu có tác vụ cứu hộ cô lập khác đang chờ. Script đăng ký SentinelLAN-Isolation-<CommandId> chạy bằng SYSTEM với RunLevel Highest, gồm trigger sau thời lượng đã chọn và trigger AtStartup. Chỉ sau khi đọc lại được Scheduled Task, script mới áp dụng rule chặn; đây là điều kiện tiên quyết để tránh cô lập mà thiếu đường khôi phục độc lập.",
+        "Bốn rule in4, out4, in6 và out6 được tạo trong PersistentStore rồi kiểm tra ở ActiveStore. Hai dải IPv4 chặn mọi địa chỉ trừ IPv4 API; IPv6 dùng ::/0. Nếu tạo hoặc xác minh rule thất bại, catch dọn các rule đã tạo. Tác vụ cứu hộ xóa rule, kiểm tra chúng đã biến mất rồi tự hủy đăng ký. Thời điểm trigger 30–60 giây là cấu hình lập lịch, không bảo đảm mạng phục hồi chính xác tới giây khi OS đang bận, tắt máy hoặc gặp lỗi Task Scheduler.",
+        "ApprovedAppInstaller bảo vệ chuỗi cung ứng theo bốn lớp. Lớp nguồn tải chỉ chấp nhận HTTPS trong TrustedPackageHosts; HttpClientHandler tắt chuyển hướng và cookie. Lớp dữ liệu đọc từng khối 64 KiB, chặn quá MaxPackageBytes và tính IncrementalHash SHA256. Lớp nhận diện đối chiếu hash bằng FixedTimeEquals rồi kiểm tra đầu tệp D0 CF 11 E0 A1 B1 1A E1 của định dạng MSI compound document. Lớp nhà phát hành gọi VerifyPublisherAsync để xác minh Authenticode và PublisherThumbprint trước InstallAsync.",
+        "Ngay trước khi gọi Windows Installer, Agent kiểm tra lại hạn phê duyệt và hạn lệnh. Tệp tải tạm được dọn trong finally. Hash đúng chỉ chứng minh tệp khớp bản IT đã duyệt, không chứng minh phần mềm không có lỗ hổng; chữ ký nhà phát hành cũng không thay thế đánh giá nguồn cung ứng. Bằng chứng từ test phải được phân biệt với cài đặt MSI thực tế trên máy Windows sạch.",
+    ],
+}
+
+USE_CASES = [
+    ("3.4", "UC01", "Đăng ký và phân công thiết bị", "Admin; Endpoint Agent",
+     "Admin thuộc tổ chức; máy có token riêng còn hạn và đã lưu secret trước khi gửi.",
+     "Một danh tính máy được tạo; phân công cùng tổ chức; ghi audit.",
+     "1. Admin cấp token. 2. Agent lưu secret và đăng ký. 3. Máy chủ tiêu thụ token cùng giao dịch tạo máy. 4. Admin gán Employee. 5. Agent gửi heartbeat ký HMAC.",
+     "Token hết hạn hoặc bằng chứng khác bị từ chối. Mất phản hồi chỉ được phục hồi trong cửa sổ bootstrap bằng đúng secret.",
+     "Token dùng một lần; không tạo máy thứ hai khi retry; tài nguyên cùng tenant."),
+    ("3.5", "UC02", "Báo sự cố và chọn ảnh minh chứng", "Employee",
+     "Tài khoản hoạt động và có máy đang được giao.",
+     "Yêu cầu hỗ trợ gắn đúng chủ thể và máy; ảnh chỉ gửi sau thao tác đồng ý.",
+     "1. Chọn loại sự cố và khả năng tiếp tục công việc. 2. Nhập mô tả. 3. Gửi yêu cầu. 4. Tự chọn ảnh. 5. Xem trước, xác nhận rồi tải ảnh.",
+     "Sai máy, ảnh sai định dạng, vượt hạn hoặc thiếu quyền đọc nội dung bị từ chối; lỗi mạng được hướng dẫn thử lại.",
+     "Không chụp ngầm; PNG/JPEG ≤ 2 MiB; tối đa 10 ảnh; kiểm tra quyền trên endpoint nội dung."),
+    ("3.6", "UC03", "Trao đổi và xử lý yêu cầu hỗ trợ", "Admin; Employee",
+     "Yêu cầu tồn tại trong tổ chức; Employee còn đủ quyền trên yêu cầu của mình.",
+     "Trạng thái hợp lệ, tin nhắn và audit phản ánh đúng thao tác.",
+     "1. IT tiếp nhận. 2. Phân công và trao đổi. 3. Cập nhật tiến trình. 4. Đề nghị phản hồi hoặc giải quyết. 5. Employee xác nhận hoặc mở lại theo quy tắc.",
+     "Chuyển trạng thái không hợp lệ, sai revision hoặc truy cập chéo tenant bị từ chối.",
+     "Vai trò và tài nguyên cùng được kiểm tra; trạng thái phiếu không thay trạng thái lệnh."),
+    ("3.7", "UC04", "Gửi và theo dõi lệnh quản trị", "Admin; Endpoint Agent",
+     "Máy chưa bị thu hồi; loại lệnh nằm trong danh sách cho phép; người gửi có quyền.",
+     "Lệnh được ký; kết quả hoặc trạng thái chưa xác nhận được lưu cùng audit.",
+     "1. Nhập lý do và xác nhận. 2. Máy chủ cấp hạn, nonce và chữ ký. 3. Agent nhận theo lease. 4. Kiểm tra envelope và quyền cục bộ. 5. Gửi biên lai.",
+     "Sai chữ ký, sai máy, hết hạn hoặc nonce đã dùng bị từ chối. Mất phản hồi giao lại cùng envelope; biên lai lặp không ghi đè kết quả gốc.",
+     "Cấm thực thi tùy ý; khóa/cô lập thật chỉ trên lab; Delivered chưa phải đã thực thi."),
+    ("3.8", "UC05", "Bảo trì Agent có phê duyệt", "Employee; Admin; Endpoint Agent",
+     "Yêu cầu PauseAgent hoặc UninstallAgent gắn với máy đang được giao.",
+     "Một lệnh bảo trì có thời hạn được xếp; Agent báo kết quả kiểm chứng được.",
+     "1. Employee gửi yêu cầu. 2. Admin duyệt và nhận OTP. 3. Xác nhận mã qua luồng bảo trì. 4. Máy chủ tiêu thụ mã và xếp lệnh. 5. Agent kiểm tra quyền cục bộ rồi thực hiện.",
+     "Mã sai tăng bộ đếm; đủ 5 lần thì khóa. Mã hết hạn, đã dùng hoặc sai máy bị từ chối. Không nhận biên lai thì giữ trạng thái chưa xác nhận.",
+     "OTP 8 số, hạn 5 phút; không lưu mã gốc; thời lượng pause theo cấu hình tổ chức."),
+]
+
+TC_PATTERNS = {
+    "TC01": "ParallelEnrollmentConsumesTokenOnlyOnce",
+    "TC02": "StaleEnrollmentContextCannotConsumeTokenAgain",
+    "TC03": "EnrollmentRejectsExpiredTokenAndAuditsFailure",
+    "TC04": "RevocationOrTokenExpiryPreventsRecovery(expire: False)",
+    "TC05": "GetMyDeviceReturnsAssignedDeviceAndPrivacyData",
+    "TC06": "TenantIsolationEnforcedForDevicesAndTelemetry",
+    "TC07": "EmployeeCanReportIncidentOnAssignedDeviceOnly",
+    "TC08": "HeartbeatIdempotencyPreventsDuplicateSnapshots",
+    "TC09": "ParallelHeartbeatRetriesCreateOnlyOneSnapshotAndInvalidMetricsCreateNone",
+    "TC10": "OfflineTelemetryUsesCollectionTimeAndRejectsImpossibleTimes",
+    "TC11": "ModifiedOrExpiredSignedRequestsFailBeforeAnEndpointExecutes(change: \"body\")",
+    "TC12": "ProtectedNonceCacheRejectsReplayAcrossProcessRestart",
+    "TC13": "CommandSignatureDetectsTampering",
+    "TC14": "RejectsExpiredAndReplayedCommands",
+    "TC15": "LostPollResponseRedeliversTheSameSignedCommandAfterLeaseWithoutCreatingAReplay",
+    "TC16": "PreviouslyDeliveredCommandAcceptsALateReceiptExactlyOnce",
+    "TC17": "FailedReceiptRetryDoesNotRepeatTheOsAction",
+    "TC18": "EmployeeSelectedImageAndConversationStayInsideTheRequest",
+    "TC20": "EmployeeSelectedImageAndConversationStayInsideTheRequest",
+    "TC21": "FiveWrongCodesLockTheApprovalAndExpiredCodeCannotBeRedeemed",
+    "TC22": "ApprovedPauseSurvivesRestartExpiresAutomaticallyAndCannotRepeatAuthorization",
+    "TC23": "LockAndIsolationAreSimulationOnly",
+    "TC24": "IsolationNeverAppliesRulesUntilRollbackTimerIsVerified",
+    "TC25": "OfflineHeartbeatIsBufferedAndFlushedOnNextSuccessfulCycle",
+}
+
+PARTIAL_TCS = {"TC04", "TC07", "TC11", "TC12", "TC13", "TC14", "TC17", "TC19", "TC20", "TC24", "TC25", "TC26"}
+
+REFERENCES = [
+    ("Đại học Kinh tế Thành phố Hồ Chí Minh", "2025", "Quy định về việc kiểm soát, xử lý hành vi đạo văn, sử dụng trí tuệ nhân tạo (AI) trong các sản phẩm học thuật tại UEH (Quyết định 4002/QĐ-ĐHKT-NCPTGKTC, ngày 18 tháng 12 năm 2025)", "https://dsa.ueh.edu.vn/wp-content/uploads/2025/12/QUY-DINH-DAO-VAN.signed.signed.pdf"),
+    ("Dworkin, M. J.", "2007", "Recommendation for block cipher modes of operation: Galois/Counter Mode (GCM) and GMAC (NIST SP 800-38D)", "https://doi.org/10.6028/NIST.SP.800-38D"),
+    ("Krawczyk, H., Bellare, M., & Canetti, R.", "1997", "HMAC: Keyed-hashing for message authentication (RFC 2104)", "https://www.rfc-editor.org/info/rfc2104"),
+    ("ManageEngine", "n.d.", "Unified endpoint management solution from ManageEngine Endpoint Central", "https://www.manageengine.com/products/desktop-central/endpoint-management.html"),
+    ("Martin, R. C.", "2017", "Clean architecture: A craftsman's guide to software structure and design. Prentice Hall", "https://www.pearson.com/en-us/subject-catalog/p/P200000009528"),
+    ("Microsoft", "2026", "Overview of ASP.NET Core SignalR (ASP.NET Core 10.0)", "https://learn.microsoft.com/en-us/aspnet/core/signalr/introduction?view=aspnetcore-10.0"),
+    ("Moriarty, K., Kaliski, B., Jonsson, J., & Rusch, A.", "2016", "PKCS #1: RSA cryptography specifications version 2.2 (RFC 8017)", "https://www.rfc-editor.org/info/rfc8017"),
+    ("Moriarty, K., Kaliski, B., & Rusch, A.", "2017", "PKCS #5: Password-based cryptography specification version 2.1 (RFC 8018)", "https://www.rfc-editor.org/info/rfc8018"),
+    ("osquery", "n.d.", "Everything in SQL", "https://osquery.readthedocs.io/en/stable/introduction/sql/"),
+    ("OWASP Foundation", "2025", "Application Security Verification Standard 5.0.0", "https://asvs.owasp.org/"),
+    ("PostgreSQL Global Development Group", "2025", "PostgreSQL 18 documentation: Constraints", "https://www.postgresql.org/docs/18/ddl-constraints.html"),
+    ("Rose, S., Borchert, O., Mitchell, S., & Connelly, S.", "2020", "Zero trust architecture (NIST SP 800-207)", "https://doi.org/10.6028/NIST.SP.800-207"),
+    ("Teclib", "n.d.", "Discover GLPI features", "https://www.glpi-project.org/en/features/"),
+    ("Wazuh", "n.d.", "Components: Getting started with Wazuh", "https://documentation.wazuh.com/current/getting-started/components/index.html"),
+]

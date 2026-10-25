@@ -191,18 +191,53 @@ public interface IAssetManagementService
     Task<(ManagementResultStatus Status, string Message)> UpdateAssetProfileAsync(ActorContext actor, Guid deviceId, UpdateAssetProfileRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AssetTimelineItemDto>> GetDeviceTimelineAsync(ActorContext actor, Guid deviceId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<IncidentDto>> GetIncidentsAsync(ActorContext actor, Guid? deviceId = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<IncidentDto>> GetIncidentsAsync(ActorContext actor, Guid? deviceId, PageWindow page, CancellationToken cancellationToken = default);
     Task<(ManagementResultStatus Status, IncidentDto? Incident, string Message)> CreateIncidentAsync(ActorContext actor, CreateIncidentRequest request, CancellationToken cancellationToken = default);
     Task<(ManagementResultStatus Status, string Message)> UpdateIncidentStatusAsync(ActorContext actor, Guid incidentId, UpdateIncidentStatusRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<WorkOrderDto>> GetWorkOrdersAsync(ActorContext actor, Guid? deviceId = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<WorkOrderDto>> GetWorkOrdersAsync(ActorContext actor, Guid? deviceId, PageWindow page, CancellationToken cancellationToken = default);
     Task<(ManagementResultStatus Status, WorkOrderDto? WorkOrder, string Message)> CreateWorkOrderAsync(ActorContext actor, CreateWorkOrderRequest request, CancellationToken cancellationToken = default);
     Task<(ManagementResultStatus Status, string Message)> CompleteWorkOrderAsync(ActorContext actor, Guid workOrderId, CompleteWorkOrderRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AssetLoanDto>> GetAssetLoansAsync(ActorContext actor, Guid? deviceId = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AssetLoanDto>> GetAssetLoansAsync(ActorContext actor, Guid? deviceId, PageWindow page, CancellationToken cancellationToken = default);
     Task<(ManagementResultStatus Status, AssetLoanDto? Loan, string Message)> CreateAssetLoanAsync(ActorContext actor, CreateLoanRequest request, CancellationToken cancellationToken = default);
     Task<(ManagementResultStatus Status, string Message)> ReturnAssetLoanAsync(ActorContext actor, Guid loanId, ReturnLoanRequest request, CancellationToken cancellationToken = default);
 }
 
 public interface IAssetStore
 {
+    Task<T> ExecuteWriteAsync<T>(Func<Task<T>> action, CancellationToken ct) => action();
+    async Task<IReadOnlyDictionary<Guid, AssetDeviceReference>> GetDeviceReferencesAsync(Guid org, IReadOnlyCollection<Guid> ids, CancellationToken ct)
+    {
+        var result = new Dictionary<Guid, AssetDeviceReference>();
+        foreach (var id in ids.Distinct())
+            if (await FindDeviceAsync(org, id, ct) is { } device) result[id] = new(id, device.Name, device.AssignedUserId, device.IsRevoked);
+        return result;
+    }
+    async Task<IReadOnlyDictionary<Guid, string>> GetUserNamesAsync(Guid org, IReadOnlyCollection<Guid> ids, CancellationToken ct)
+    {
+        var result = new Dictionary<Guid, string>();
+        foreach (var id in ids.Distinct())
+            if (await GetUserNameAsync(org, id, ct) is { } name) result[id] = name;
+        return result;
+    }
+    async Task<IReadOnlyList<IncidentTicket>> GetIncidentPageAsync(Guid org, Guid? device, Guid? employee, PageWindow page, CancellationToken ct) =>
+        await FilterPageAsync((await GetIncidentsAsync(org, device, ct)).OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id), x => x.DeviceId, employee, page, org, ct);
+    async Task<IReadOnlyList<WorkOrder>> GetWorkOrderPageAsync(Guid org, Guid? device, Guid? employee, PageWindow page, CancellationToken ct) =>
+        await FilterPageAsync((await GetWorkOrdersAsync(org, device, ct)).OrderBy(x => x.Status == "Completed" ? 1 : 0)
+            .ThenByDescending(x => x.Priority switch { "Critical" => 4, "High" => 3, "Medium" => 2, _ => 1 })
+            .ThenBy(x => x.DueDate ?? DateTimeOffset.MaxValue).ThenBy(x => x.CreatedAt).ThenBy(x => x.Id), x => x.DeviceId, employee, page, org, ct);
+    async Task<IReadOnlyList<AssetLoan>> GetLoanPageAsync(Guid org, Guid? device, PageWindow page, CancellationToken ct) =>
+        await FilterPageAsync((await GetAssetLoansAsync(org, device, ct)).OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id), x => x.DeviceId, null, page, org, ct);
+    private async Task<IReadOnlyList<T>> FilterPageAsync<T>(IEnumerable<T> items, Func<T, Guid> deviceId, Guid? employee, PageWindow page, Guid org, CancellationToken ct)
+    {
+        page.Validate();
+        if (employee is null) return items.Skip(page.Offset).Take(page.Limit).ToArray();
+        var allowed = new List<T>();
+        foreach (var item in items)
+            if (await FindDeviceAsync(org, deviceId(item), ct) is { IsRevoked: false } device && device.AssignedUserId == employee) allowed.Add(item);
+        return allowed.Skip(page.Offset).Take(page.Limit).ToArray();
+    }
     Task<Device?> FindDeviceAsync(Guid organizationId, Guid deviceId, CancellationToken cancellationToken = default);
     Task<User?> FindUserAsync(Guid organizationId, Guid userId, CancellationToken cancellationToken = default);
     Task<string?> GetUserNameAsync(Guid organizationId, Guid? userId, CancellationToken cancellationToken = default);

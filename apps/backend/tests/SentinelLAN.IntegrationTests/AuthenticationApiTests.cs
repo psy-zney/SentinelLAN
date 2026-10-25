@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -16,6 +17,31 @@ namespace SentinelLAN.IntegrationTests;
 
 public sealed class AuthenticationApiTests(SentinelApiFactory factory) : IClassFixture<SentinelApiFactory>
 {
+    [Fact]
+    public async Task WebAndMobileLoginAcceptOnlyEmailAndPasswordForTheConfiguredCompany()
+    {
+        using var client = factory.CreateClient();
+        var credentials = new { email = "admin@sentinellan.local", password = "local-demo-only" };
+        var web = await client.PostAsJsonAsync("/api/v1/auth/login", credentials);
+        Assert.Equal(HttpStatusCode.OK, web.StatusCode);
+        Assert.Equal("Admin", (await web.Content.ReadFromJsonAsync<AuthSessionResponse>())?.Role);
+        var current = await client.GetFromJsonAsync<CurrentSessionResponse>("/api/v1/auth/session");
+        Assert.NotNull(current?.UserId);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/v1/users")).StatusCode);
+
+        using var mobileClient = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+        var mobile = await mobileClient.PostAsJsonAsync("/api/v1/mobile/auth/login", credentials);
+        Assert.Equal(HttpStatusCode.OK, mobile.StatusCode);
+        var session = await mobile.Content.ReadFromJsonAsync<MobileAuthSessionResponse>();
+        Assert.Equal("Admin", session?.User.Role);
+        Assert.Equal("demo", session?.User.OrganizationCode);
+        Assert.Equal(session?.User.Id, current?.UserId);
+
+        var foreign = new { organizationCode = "another-company", credentials.email, credentials.password };
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/v1/auth/login", foreign)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await mobileClient.PostAsJsonAsync("/api/v1/mobile/auth/login", foreign)).StatusCode);
+    }
+
     [Fact]
     public async Task DevelopmentOpenApiIncludesAuthenticationAndCsrfMetadata()
     {
@@ -238,6 +264,7 @@ public sealed class SentinelApiFactory : WebApplicationFactory<Program>
         }
         builder.ConfigureServices(services =>
         {
+            services.AddDataProtection().UseEphemeralDataProtectionProvider();
             services.RemoveAll<SentinelDbContext>();
             services.RemoveAll<DbContextOptions<SentinelDbContext>>();
             services.RemoveAll<IDbContextOptionsConfiguration<SentinelDbContext>>();

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const MobileLoginRequestSchema = z.object({
-  organizationCode: z.string().min(2).max(64),
+  organizationCode: z.string().min(2).max(64).optional(),
   email: z.string().email().min(3).max(320),
   password: z.string().min(1).max(1024),
   appVersion: z.string().optional(),

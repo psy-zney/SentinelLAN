@@ -146,6 +146,7 @@ export function ScannerView({ isActiveScreen = true }: { isActiveScreen?: boolea
 
   const manualCodeModal = (
     <Modal
+      testID="manual-code-modal"
       visible={manualModalOpen}
       animationType="slide"
       transparent

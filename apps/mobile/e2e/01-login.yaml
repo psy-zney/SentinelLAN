@@ -8,10 +8,6 @@ appId: com.sentinellan.employee
 
 # Dùng tài khoản thử được cấp qua biến MAESTRO_ trên máy chạy test.
 - tapOn:
-    id: "org-code-input"
-- inputText: ${MAESTRO_ORG_CODE}
-
-- tapOn:
     id: "email-input"
 - inputText: ${MAESTRO_EMPLOYEE_EMAIL}
 

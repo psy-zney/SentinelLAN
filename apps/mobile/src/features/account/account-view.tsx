@@ -6,12 +6,14 @@ import { useAuth } from '../auth/auth-context';
 import { useI18n } from '../../lib/i18n';
 import { useAppColors, AppButton, AppCard, AppBadge } from '../../components/common';
 import { spacing, typography } from '../../theme/tokens';
+import { userDisplayName, userRoleLabel } from '../../lib/user-presentation';
 
 export function AccountView() {
   const { t, lang, setLang } = useI18n();
   const colors = useAppColors();
   const router = useRouter();
   const { user, logout, logoutAll } = useAuth();
+  const displayName = user ? userDisplayName(user.displayName, user.role, lang) : (lang === 'vi' ? 'Nhân viên' : 'Employee');
 
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -45,6 +47,9 @@ export function AccountView() {
           try {
             await logoutAll();
             router.replace('/login');
+          } catch {
+            Alert.alert(lang === 'vi' ? 'Chưa thu hồi được các phiên' : 'Sessions were not revoked',
+              lang === 'vi' ? 'Máy chủ chưa xác nhận. Hãy kiểm tra kết nối và thử lại; đăng nhập lại nếu phiên đã hết hạn.' : 'The server has not confirmed revocation. Check your connection and retry; sign in again if your session expired.');
           } finally {
             setLoggingOut(false);
           }
@@ -63,16 +68,16 @@ export function AccountView() {
         <View style={styles.userHeader}>
           <View style={[styles.avatarBox, { backgroundColor: colors.primaryLight }]}>
             <Text style={[styles.avatarText, { color: colors.primary }]}>
-              {user?.displayName?.charAt(0).toUpperCase() || 'U'}
+              {displayName.charAt(0).toUpperCase()}
             </Text>
           </View>
           <View style={{ flex: 1, marginLeft: spacing.md }}>
             <Text style={[styles.userName, { color: colors.ink }]}>
-              {user?.displayName || 'Nhân viên'}
+              {displayName}
             </Text>
             <Text style={[styles.userEmail, { color: colors.inkMuted }]}>{user?.email}</Text>
             <View style={{ marginTop: spacing.xs }}>
-              <AppBadge text={user?.role || 'Employee'} variant="info" />
+              <AppBadge text={userRoleLabel(user?.role || 'Employee', lang)} variant="info" />
             </View>
           </View>
         </View>
@@ -80,14 +85,9 @@ export function AccountView() {
         <View style={styles.divider} />
 
         <View style={styles.infoRow}>
-          <Text style={[styles.infoLabel, { color: colors.inkMuted }]}>{t('organization')}:</Text>
-          <Text style={[styles.infoValue, { color: colors.ink }]}>{user?.organizationCode}</Text>
-        </View>
-
-        <View style={styles.infoRow}>
           <Text style={[styles.infoLabel, { color: colors.inkMuted }]}>{t('appVersion')}:</Text>
           <Text style={[styles.infoValue, { color: colors.ink }]}>
-            v{Constants.expoConfig?.version || '1.0.0'} (New Architecture)
+            v{Constants.expoConfig?.version || '1.0.0'}
           </Text>
         </View>
       </AppCard>

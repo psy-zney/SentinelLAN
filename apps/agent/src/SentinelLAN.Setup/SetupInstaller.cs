@@ -21,7 +21,11 @@ internal static class SetupInstaller
 
     public static async Task ConnectAsync(EnrollmentConnectionCode code, IProgress<string> progress)
     {
-        if (IsEnrolled) throw new InvalidOperationException("Máy đã được đăng ký. Không cần dùng mã mới; liên hệ IT nếu cần đăng ký lại.");
+        if (IsEnrolled)
+        {
+            await ResumeAsync(progress);
+            return;
+        }
         if (!string.IsNullOrWhiteSpace(CompanyServerUrl))
         {
             var keyId = Metadata("CommandKeyId");
@@ -40,12 +44,34 @@ internal static class SetupInstaller
             }
         }
         var server = EnrollmentConnectionCode.NormalizeServerUrl(code.ServerUrl);
+        await CheckServerAsync(server, progress);
+        await ConfigureAsync(server, code.Token, existingIdentityOnly: false, progress);
+    }
+
+    public static async Task ResumeAsync(IProgress<string> progress)
+    {
+        progress.Report("Máy đã đăng ký. Đang kiểm tra cấu hình và kết nối hiện có…");
+        if (!IsEnrolled)
+            throw new InvalidOperationException("Máy không còn định danh Agent. Hãy nhập mã do IT cấp để kết nối.");
+        var settingsPath = Path.Combine(DataDirectory, "agent-settings.json");
+        if (!File.Exists(settingsPath))
+            throw new InvalidOperationException("Chưa tìm thấy cấu hình máy đã đăng ký. Nhờ IT khôi phục cấu hình, sau đó bấm Thử lại kết nối.");
+        var server = ExistingAgentConfiguration.ResolveServer(await File.ReadAllTextAsync(settingsPath), CompanyServerUrl);
+        await CheckServerAsync(server, progress);
+        await ConfigureAsync(server, token: null, existingIdentityOnly: true, progress);
+    }
+
+    private static async Task CheckServerAsync(string server, IProgress<string> progress)
+    {
         progress.Report("Đang kiểm tra kết nối tới hệ thống công ty…");
         using var client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(20) };
         using var health = await client.GetAsync(server + "/health/ready");
         if (!health.IsSuccessStatusCode)
             throw new InvalidOperationException("Máy chủ chưa sẵn sàng. Liên hệ IT; mã chưa được sử dụng ở bước kiểm tra này.");
+    }
 
+    private static async Task ConfigureAsync(string server, string? token, bool existingIdentityOnly, IProgress<string> progress)
+    {
         var assembly = Assembly.GetExecutingAssembly();
         var stage = Path.Combine(Path.GetTempPath(), "SentinelLAN-Setup-" + Guid.NewGuid().ToString("N"));
         var directory = Directory.CreateDirectory(stage);
@@ -68,26 +94,38 @@ internal static class SetupInstaller
                 var result = await RunAsync(Path.Combine(Environment.SystemDirectory, "msiexec.exe"),
                     ["/i", msi, "/qn", "/norestart"], null);
                 if (result.ExitCode is not (0 or 3010))
-                    throw new InvalidOperationException("Không thể cài đặt dịch vụ. Nhờ IT kiểm tra quyền cài đặt hoặc bộ cài đang chạy khác.");
+                    throw new InvalidOperationException($"Không thể cài đặt dịch vụ (mã lỗi Windows Installer: {result.ExitCode}). Mã kết nối chưa được gửi. Nhờ IT kiểm tra nhật ký cài đặt Windows.");
             }
             await using (var resource = assembly.GetManifestResourceStream("configure-windows-agent.ps1")
                 ?? throw new InvalidOperationException("Bộ cài thiếu thành phần cấu hình. Hãy tải lại bộ cài do IT chỉ định."))
             await using (var file = File.Create(script)) await resource.CopyToAsync(file);
-            progress.Report("Đang đăng ký máy và chờ trạng thái đầu tiên…");
+            progress.Report(existingIdentityOnly
+                ? "Đang khôi phục dịch vụ và chờ máy xác nhận kết nối…"
+                : "Đang đăng ký máy và chờ trạng thái đầu tiên…");
             // Execute our embedded configuration logic without changing the machine's script policy.
             // Only this fixed loader is in the command line; parameters and token travel over stdin.
-            const string loader = "$ErrorActionPreference = 'Stop'; $setupInput = [Console]::ReadLine() | ConvertFrom-Json; & ([scriptblock]::Create([IO.File]::ReadAllText($setupInput.scriptPath))) -ServerUrl $setupInput.serverUrl -CommandPublicKey $setupInput.commandPublicKey -CommandKeyId $setupInput.commandKeyId -ReadTokenFromStandardInput";
+            const string loader = "$ErrorActionPreference = 'Stop'; $setupInput = [Console]::ReadLine() | ConvertFrom-Json; & ([scriptblock]::Create([IO.File]::ReadAllText($setupInput.scriptPath))) -ServerUrl $setupInput.serverUrl -CommandPublicKey $setupInput.commandPublicKey -CommandKeyId $setupInput.commandKeyId -ReadTokenFromStandardInput -ExistingIdentityOnly:([bool]$setupInput.existingIdentityOnly)";
             var configuration = await RunAsync(Path.Combine(Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe"),
                 ["-NoLogo", "-NoProfile", "-NonInteractive", "-EncodedCommand", Convert.ToBase64String(Encoding.Unicode.GetBytes(loader))],
-                JsonSerializer.Serialize(new { scriptPath = script, serverUrl = server,
-                    commandPublicKey = Metadata("CommandPublicKey"), commandKeyId = Metadata("CommandKeyId") }) + "\n" + code.Token);
+                JsonSerializer.Serialize(new
+                {
+                    scriptPath = script,
+                    serverUrl = server,
+                    commandPublicKey = existingIdentityOnly ? null : Metadata("CommandPublicKey"),
+                    commandKeyId = existingIdentityOnly ? null : Metadata("CommandKeyId"),
+                    existingIdentityOnly
+                }) + (token is null ? "" : "\n" + token));
             if (configuration.ExitCode != 0 || !configuration.Output.Contains("SETUP_STATE:Connected", StringComparison.Ordinal))
             {
-                var message = configuration.Output.Contains("SETUP_STATE:TokenUsed", StringComparison.Ordinal)
+                var message = configuration.Output.Contains("SETUP_STATE:IdentityMissing", StringComparison.Ordinal)
+                    ? "Máy không còn định danh Agent. Hãy nhập mã do IT cấp để kết nối."
+                    : configuration.Output.Contains("SETUP_STATE:TokenUsed", StringComparison.Ordinal)
                     ? "Mã kết nối đã được sử dụng. Vui lòng liên hệ IT để cấp mã mới."
                     : configuration.Output.Contains("SETUP_STATE:TokenExpired", StringComparison.Ordinal)
                         ? "Mã kết nối đã hết hạn. Vui lòng liên hệ IT để cấp mã mới."
-                        : "Chưa xác nhận được kết nối. Nhờ IT kiểm tra mạng, mã và trạng thái Agent trước khi thử lại.";
+                        : existingIdentityOnly
+                            ? "Máy đã đăng ký nhưng chưa xác nhận được kết nối. Kiểm tra mạng rồi bấm Thử lại kết nối; nhờ IT kiểm tra Agent nếu lỗi tiếp diễn."
+                            : "Chưa xác nhận được kết nối. Nhờ IT kiểm tra mạng, mã và trạng thái Agent trước khi thử lại.";
                 throw new InvalidOperationException(message);
             }
         }

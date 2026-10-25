@@ -9,7 +9,6 @@ describe('Zod Validation Schemas', () => {
   describe('MobileLoginRequestSchema', () => {
     it('accepts valid credentials', () => {
       const valid = {
-        organizationCode: 'sentinel-corp',
         email: 'employee@sentinel.local',
         password: 'ValidSecretPassword123!',
       };

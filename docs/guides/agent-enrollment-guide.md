@@ -6,13 +6,21 @@ Admin tạo token enrollment 1–60 phút trong dashboard, ghi lý do và xác n
 
 API cần `SENTINELLAN_AGENT_PUBLIC_URL` là địa chỉ gốc HTTPS truy cập được từ thiết bị công ty (ví dụ `https://sentinel.company.local`). Cấu hình Production Compose mặc định lấy `https://PUBLIC_DOMAIN`; LAN có thể ghi đè bằng tên DNS nội bộ. Không lấy URL từ Host/Forwarded header của người gọi. Development mặc định loopback HTTP để thử trên cùng máy; không cấp mã loopback cho máy nhân viên trong LAN.
 
-`POST /api/v1/enrollment-tokens` giữ `token` cho công cụ IT cũ, thêm `connectionCode` định dạng `SL1.<base64url-json>` chứa `serverUrl`, `token`, `expiresAt`. Đây là đóng gói để giảm thao tác, không phải mã hóa bí mật hay bằng chứng ủy quyền. Không đưa khóa ký lệnh, credential thiết bị hoặc chứng chỉ vào mã. Agent kiểm tra HTTPS/chứng chỉ hệ thống; máy chủ xác nhận token và tiêu thụ trong giao dịch tạo thiết bị. `UsedAt` có optimistic concurrency; đổi thời hạn trong envelope không làm token dùng lại được.
+SelfHost trả `connectionCode` là token một lần, không chứa địa chỉ máy chủ. Bộ cài công ty ghim sẵn HTTPS và khóa công khai xác minh lệnh. Dạng `SL1.<base64url-json>` chỉ thuộc bộ cài tổng quát cũ; không dán SL1 vào bộ cài công ty. Không đưa khóa riêng, credential thiết bị hoặc chứng chỉ vào mã. Agent kiểm tra HTTPS/chứng chỉ hệ thống; máy chủ xác nhận hạn token và tiêu thụ trong giao dịch tạo thiết bị.
+
+`SentinelLAN.Agent.exe` là chương trình dịch vụ; `SentinelLAN.Setup.exe` mới là bộ cài có giao diện. Bản công ty cần build cả hai với `CompanyServerUrl`, `CommandPublicKey` và `CommandKeyId` tương ứng VPS. Khi thiếu cấu hình, Agent báo lỗi thay vì tự dùng localhost. Bản Production từ chối loopback và địa chỉ khác công ty đã ghim; Development chỉ cho phép localhost khi cấu hình rõ ràng.
+
+Trước khi cài, IT chạy `SentinelLAN.Agent.exe --check-configuration` và `SentinelLAN.Setup.exe --check-configuration` qua tiến trình có thu stdout để đối chiếu `ServerUrl`, `CompanyPinned`, `CommandKeyId`. Chế độ này không đăng ký máy, không gửi telemetry và không thay dịch vụ. `agent-release.json` và `SHA256SUMS.txt` đi kèm ghi cấu hình công khai và checksum. Bộ cài hiển thị địa chỉ công ty ngay trên cửa sổ kết nối. Sau cài, cấu hình vận hành nằm ở `%ProgramData%\SentinelLAN\Agent\agent-settings.json`; file này có quyền hạn chế và không được chia sẻ toàn bộ.
 
 ## Windows
 
 Người cài ưu tiên `SentinelLAN.Setup.exe`: nhập một mã kết nối và bấm **Cài đặt và kết nối**. EXE chứa MSI và script cấu hình; MSI chứa configurator, tự mở cửa sổ sau khi cài bằng giao diện và có shortcut Start menu để mở lại. Cài silent MSI vẫn để cấu hình cho IT. Không truyền token qua CLI/MSI property: configurator chuyển token qua stdin của tiến trình cấu hình. Dữ liệu tạm nằm trong ProgramData có ACL hạn chế và token được xóa khi hoàn tất/lỗi.
 
 Cửa sổ chỉ báo thành công sau heartbeat đầu tiên. `enrollment-status.json` chỉ lưu trạng thái và thời điểm, không có token/secret. Lỗi `TokenUsed`/`TokenExpired` được hiển thị riêng. Máy đã có identity không bị configurator ghi đè hoặc tiêu thụ mã khác; thu hồi và đăng ký lại là thao tác IT riêng. Không bật thêm quyền lab hoặc phân phối signing key trong mã kết nối.
+
+Từ bản `0.2.26`, mở setup trên máy đã có identity sẽ tự bỏ qua ô mã, dùng địa chỉ máy chủ trong cấu hình hiện có và chuyển sang kiểm tra/khôi phục dịch vụ. Bộ cài công ty từ chối cấu hình của máy chủ khác. Setup khởi động lại dịch vụ và chờ heartbeat mới; không suy thành công chỉ từ identity hay biên nhận cũ. Thành công có nút **Hoàn tất**; lỗi có **Thử lại kết nối** và **Đóng**. Nếu lần đăng ký trước đã lưu identity nhưng chưa xác nhận heartbeat, lần thử tiếp theo tự tiếp tục bằng identity đó, không dùng lại token. Nếu identity mất trước bước tiếp tục, setup trở lại bước nhập mã. Đóng trong lúc cài/cấu hình sẽ chờ bước đang chạy kết thúc để dọn token và file tạm an toàn.
+
+Nếu bộ cài báo lỗi Windows Installer `1603`, kiểm tra Application Event Log, nguồn `MsiInstaller`, để lấy lỗi cụ thể. Bản `0.2.24` có thể gặp lỗi `1939` khi MSI cấu hình phục hồi dịch vụ; dùng bộ cài `0.2.25` đã sửa. MSI để dịch vụ ở trạng thái chờ; script cấu hình đặt phục hồi bằng `sc.exe` trước khi khởi động, tránh [lỗi đã được Microsoft ghi nhận trong MsiConfigureServices](https://learn.microsoft.com/en-us/windows/win32/msi/msiconfigureservices-action). Lỗi ở bước MSI xảy ra trước khi gửi mã đăng ký; nếu mã đã hết hạn khi thử lại, Admin cần cấp mã mới.
 
 ### Cấu hình nâng cao bằng script (IT)
 

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDeviceUpdates } from "@/hooks/use-device-updates";
 
-export function useLiveQuery<T>(load: () => Promise<T>) {
+export function useLiveQuery<T>(load: () => Promise<T>, realtimeEnabled = true) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState(false);
   const generation = useRef(0);
@@ -22,6 +22,6 @@ export function useLiveQuery<T>(load: () => Promise<T>) {
     refresh();
     return () => { active.current = false; };
   }, [refresh]);
-  useDeviceUpdates(refresh);
+  useDeviceUpdates(refresh, realtimeEnabled);
   return { data, error, refresh };
 }

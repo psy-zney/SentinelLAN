@@ -1,21 +1,24 @@
 import React, { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { AppState } from 'react-native';
-import * as Notifications from 'expo-notifications';
+import type { NotificationResponse } from 'expo-notifications';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../auth/auth-context';
 import { notificationRequestId, refreshEmployeePush } from './push';
+import { nativeNotifications } from './notification-runtime';
 
-Notifications.setNotificationHandler({ handleNotification: async () => ({ shouldPlaySound: true, shouldSetBadge: false, shouldShowBanner: true, shouldShowList: true }) });
 export function EmployeePushObserver() {
   const { status, user, apiClient } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
   useEffect(() => {
     if (status !== 'authenticated' || !user) return;
+    const Notifications = nativeNotifications();
+    if (!Notifications) return;
+    Notifications.setNotificationHandler({ handleNotification: async () => ({ shouldPlaySound: true, shouldSetBadge: false, shouldShowBanner: true, shouldShowList: true }) });
     let mounted = true;
     let handled: string | null = null;
-    const redirect = (response: Notifications.NotificationResponse) => {
+    const redirect = (response: NotificationResponse) => {
       if (!mounted || response.notification.request.identifier === handled) return;
       handled = response.notification.request.identifier;
       const id = notificationRequestId(response.notification.request.content.data);

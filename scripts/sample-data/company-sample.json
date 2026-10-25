@@ -1,0 +1,394 @@
+{
+  "devices": [
+    {
+      "code": "KT-PC-01",
+      "department": "Kế toán",
+      "employee": "Nguyễn Minh Anh",
+      "os": "Windows 11 Pro 24H2",
+      "manufacturer": "Dell",
+      "model": "OptiPlex 7010",
+      "type": "Workstation",
+      "floor": "Tầng 2",
+      "cost": 14500000,
+      "cpu": "Intel Core i5-13400",
+      "ram": "16 GB DDR4",
+      "storage": "512 GB NVMe SSD",
+      "applications": [
+        "Microsoft 365 (mô tả mẫu, không kèm giấy phép)",
+        "Firefox ESR",
+        "7-Zip"
+      ]
+    },
+    {
+      "code": "KT-LT-02",
+      "department": "Kế toán",
+      "employee": "Trần Hoàng Nam",
+      "os": "Windows 11 Pro 24H2",
+      "manufacturer": "Lenovo",
+      "model": "ThinkPad E14 Gen 5",
+      "type": "Laptop",
+      "floor": "Tầng 2",
+      "cost": 18500000,
+      "cpu": "Intel Core i5-13400",
+      "ram": "16 GB DDR4",
+      "storage": "512 GB NVMe SSD",
+      "applications": [
+        "Microsoft 365 (mô tả mẫu, không kèm giấy phép)",
+        "Firefox ESR",
+        "7-Zip"
+      ]
+    },
+    {
+      "code": "NS-PC-01",
+      "department": "Nhân sự",
+      "employee": "Lê Thu Hà",
+      "os": "Windows 11 Pro 24H2",
+      "manufacturer": "Dell",
+      "model": "OptiPlex 7010",
+      "type": "Workstation",
+      "floor": "Tầng 2",
+      "cost": 14500000,
+      "cpu": "Intel Core i5-13400",
+      "ram": "16 GB DDR4",
+      "storage": "512 GB NVMe SSD",
+      "applications": [
+        "Microsoft 365 (mô tả mẫu, không kèm giấy phép)",
+        "Firefox ESR",
+        "7-Zip"
+      ]
+    },
+    {
+      "code": "NS-LT-02",
+      "department": "Nhân sự",
+      "employee": "Phạm Ngọc Mai",
+      "os": "Windows 11 Pro 24H2",
+      "manufacturer": "Lenovo",
+      "model": "ThinkPad E14 Gen 5",
+      "type": "Laptop",
+      "floor": "Tầng 2",
+      "cost": 18500000,
+      "cpu": "Intel Core i5-13400",
+      "ram": "16 GB DDR4",
+      "storage": "512 GB NVMe SSD",
+      "applications": [
+        "Microsoft 365 (mô tả mẫu, không kèm giấy phép)",
+        "Firefox ESR",
+        "7-Zip"
+      ]
+    },
+    {
+      "code": "KD-LT-01",
+      "department": "Kinh doanh",
+      "employee": "Võ Đức Huy",
+      "os": "Windows 11 Pro 24H2",
+      "manufacturer": "Dell",
+      "model": "OptiPlex 7010",
+      "type": "Workstation",
+      "floor": "Tầng 2",
+      "cost": 14500000,
+      "cpu": "Intel Core i5-13400",
+      "ram": "16 GB DDR4",
+      "storage": "512 GB NVMe SSD",
+      "applications": [
+        "Microsoft 365 (mô tả mẫu, không kèm giấy phép)",
+        "Firefox ESR",
+        "7-Zip"
+      ]
+    },
+    {
+      "code": "KD-LT-02",
+      "department": "Kinh doanh",
+      "employee": "Đặng Thanh Tâm",
+      "os": "Windows 11 Pro 24H2",
+      "manufacturer": "Lenovo",
+      "model": "ThinkPad E14 Gen 5",
+      "type": "Laptop",
+      "floor": "Tầng 2",
+      "cost": 18500000,
+      "cpu": "Intel Core i5-13400",
+      "ram": "16 GB DDR4",
+      "storage": "512 GB NVMe SSD",
+      "applications": [
+        "Microsoft 365 (mô tả mẫu, không kèm giấy phép)",
+        "Firefox ESR",
+        "7-Zip"
+      ]
+    },
+    {
+      "code": "TK-PC-01",
+      "department": "Thiết kế",
+      "employee": "Bùi Hải Yến",
+      "os": "Windows 11 Pro 24H2",
+      "manufacturer": "Dell",
+      "model": "OptiPlex 7010",
+      "type": "Workstation",
+      "floor": "Tầng 3",
+      "cost": 14500000,
+      "cpu": "Intel Core i7-13700",
+      "ram": "32 GB DDR4",
+      "storage": "1 TB NVMe SSD",
+      "applications": [
+        "Microsoft 365 (mô tả mẫu, không kèm giấy phép)",
+        "Firefox ESR",
+        "7-Zip",
+        "Figma Desktop (mô tả mẫu)"
+      ]
+    },
+    {
+      "code": "TK-PC-02",
+      "department": "Thiết kế",
+      "employee": "Đỗ Quang Hưng",
+      "os": "Windows 11 Pro 24H2",
+      "manufacturer": "Lenovo",
+      "model": "ThinkPad E14 Gen 5",
+      "type": "Laptop",
+      "floor": "Tầng 3",
+      "cost": 18500000,
+      "cpu": "Intel Core i7-13700",
+      "ram": "32 GB DDR4",
+      "storage": "1 TB NVMe SSD",
+      "applications": [
+        "Microsoft 365 (mô tả mẫu, không kèm giấy phép)",
+        "Firefox ESR",
+        "7-Zip",
+        "Figma Desktop (mô tả mẫu)"
+      ]
+    },
+    {
+      "code": "IT-PC-01",
+      "department": "Kỹ thuật IT",
+      "employee": "Ngô Anh Tuấn",
+      "os": "Windows 11 Pro 24H2",
+      "manufacturer": "Dell",
+      "model": "OptiPlex 7010",
+      "type": "Workstation",
+      "floor": "Tầng 3",
+      "cost": 14500000,
+      "cpu": "Intel Core i5-13400",
+      "ram": "16 GB DDR4",
+      "storage": "512 GB NVMe SSD",
+      "applications": [
+        "Microsoft 365 (mô tả mẫu, không kèm giấy phép)",
+        "Firefox ESR",
+        "7-Zip"
+      ]
+    },
+    {
+      "code": "IT-LT-02",
+      "department": "Kỹ thuật IT",
+      "employee": "Dương Gia Bảo",
+      "os": "Windows 11 Pro 24H2",
+      "manufacturer": "Lenovo",
+      "model": "ThinkPad E14 Gen 5",
+      "type": "Laptop",
+      "floor": "Tầng 3",
+      "cost": 18500000,
+      "cpu": "Intel Core i5-13400",
+      "ram": "16 GB DDR4",
+      "storage": "512 GB NVMe SSD",
+      "applications": [
+        "Microsoft 365 (mô tả mẫu, không kèm giấy phép)",
+        "Firefox ESR",
+        "7-Zip"
+      ]
+    },
+    {
+      "code": "HC-PC-01",
+      "department": "Hành chính",
+      "employee": "Hoàng Phương Linh",
+      "os": "Windows 11 Pro 24H2",
+      "manufacturer": "Dell",
+      "model": "OptiPlex 7010",
+      "type": "Workstation",
+      "floor": "Tầng 3",
+      "cost": 14500000,
+      "cpu": "Intel Core i5-13400",
+      "ram": "16 GB DDR4",
+      "storage": "512 GB NVMe SSD",
+      "applications": [
+        "Microsoft 365 (mô tả mẫu, không kèm giấy phép)",
+        "Firefox ESR",
+        "7-Zip"
+      ]
+    },
+    {
+      "code": "HC-LT-02",
+      "department": "Hành chính",
+      "employee": "Vũ Đức Long",
+      "os": "Windows 11 Pro 24H2",
+      "manufacturer": "Lenovo",
+      "model": "ThinkPad E14 Gen 5",
+      "type": "Laptop",
+      "floor": "Tầng 3",
+      "cost": 18500000,
+      "cpu": "Intel Core i5-13400",
+      "ram": "16 GB DDR4",
+      "storage": "512 GB NVMe SSD",
+      "applications": [
+        "Microsoft 365 (mô tả mẫu, không kèm giấy phép)",
+        "Firefox ESR",
+        "7-Zip"
+      ]
+    }
+  ],
+  "issues": [
+    {
+      "device": 0,
+      "kind": "Incident",
+      "category": "Printer",
+      "title": "Không in được hóa đơn ở máy Kế toán",
+      "description": "Lệnh in bị treo trong hàng đợi. Nhân viên vẫn dùng được phần mềm kế toán.",
+      "response": "Đã tiếp nhận; sẽ kiểm tra hàng đợi in và kết nối máy in phòng Kế toán.",
+      "status": "Open",
+      "canWork": true,
+      "daysAgo": 1
+    },
+    {
+      "device": 2,
+      "kind": "Incident",
+      "category": "Network",
+      "title": "Không truy cập được thư mục dùng chung",
+      "description": "Máy Nhân sự báo không tìm thấy thư mục hồ sơ chung. Chưa tiếp tục được công việc.",
+      "response": "Đang chờ IT kiểm tra đường mạng và quyền thư mục nội bộ.",
+      "status": "Open",
+      "canWork": false,
+      "daysAgo": 1
+    },
+    {
+      "device": 4,
+      "kind": "Incident",
+      "category": "Slow",
+      "title": "Laptop chạy chậm khi mở nhiều bảng tính",
+      "description": "Mở đồng thời nhiều bảng tính và trình duyệt thì máy phản hồi chậm.",
+      "response": "Đã ghi nhận, cần kiểm tra tài nguyên và các ứng dụng khởi động cùng Windows.",
+      "status": "Open",
+      "canWork": true,
+      "daysAgo": 2
+    },
+    {
+      "device": 6,
+      "kind": "Incident",
+      "category": "Application",
+      "title": "Ứng dụng thiết kế thoát khi xuất tệp",
+      "description": "Khi xuất tệp đồ họa lớn, ứng dụng tự đóng và chưa xuất được thành phẩm.",
+      "response": "Chưa xử lý; dự kiến kiểm tra nhật ký ứng dụng và ổ đĩa trống.",
+      "status": "Open",
+      "canWork": false,
+      "daysAgo": 1
+    },
+    {
+      "device": 1,
+      "kind": "Incident",
+      "category": "Printer",
+      "title": "Bản in bị nhòe ở máy Kế toán",
+      "description": "Tài liệu in có vệt mờ dọc trang, đang tạm dùng máy in khác.",
+      "response": "IT đang kiểm tra hộp mực và vệ sinh bộ kéo giấy.",
+      "status": "InProgress",
+      "canWork": true,
+      "daysAgo": 3
+    },
+    {
+      "device": 7,
+      "kind": "Incident",
+      "category": "Slow",
+      "title": "Máy thiết kế nóng và quạt kêu lớn",
+      "description": "Máy nóng khi dựng hình, quạt chạy mạnh kéo dài.",
+      "response": "Đang lên lịch vệ sinh tản nhiệt và kiểm tra nhiệt độ trong ca bảo trì.",
+      "status": "InProgress",
+      "canWork": true,
+      "daysAgo": 2
+    },
+    {
+      "device": 5,
+      "kind": "Incident",
+      "category": "Network",
+      "title": "Wi-Fi chập chờn khi họp trực tuyến",
+      "description": "Cuộc gọi bị ngắt vài lần, mạng có dây vẫn dùng được.",
+      "response": "Đã điều chỉnh cấu hình mẫu; đang chờ nhân viên xác nhận sau buổi họp tiếp theo.",
+      "status": "AwaitingEmployee",
+      "canWork": true,
+      "daysAgo": 4
+    },
+    {
+      "device": 3,
+      "kind": "Incident",
+      "category": "Application",
+      "title": "Không mở được tệp PDF từ email",
+      "description": "Tệp PDF tải về không mở trong ứng dụng mặc định.",
+      "response": "Đã khôi phục liên kết mở PDF; nhân viên xác nhận mở được tài liệu.",
+      "status": "Resolved",
+      "canWork": true,
+      "daysAgo": 7
+    },
+    {
+      "device": 8,
+      "kind": "Incident",
+      "category": "Network",
+      "title": "Máy IT mất kết nối sau khi đổi cáp",
+      "description": "Máy không nhận địa chỉ mạng sau khi đổi chỗ ngồi.",
+      "response": "Đã thay dây mạng lỗi, kiểm tra IP và truy cập dịch vụ nội bộ thành công.",
+      "status": "Resolved",
+      "canWork": false,
+      "daysAgo": 8
+    },
+    {
+      "device": 10,
+      "kind": "Incident",
+      "category": "Printer",
+      "title": "Máy Hành chính chọn sai khổ giấy",
+      "description": "Tài liệu A4 bị in thu nhỏ do cấu hình máy in sai khổ giấy.",
+      "response": "Đã đặt lại khổ A4 và in thử thành công; yêu cầu đã đóng.",
+      "status": "Closed",
+      "canWork": true,
+      "daysAgo": 10
+    },
+    {
+      "device": 9,
+      "kind": "InstallApp",
+      "category": "Application",
+      "title": "Xin cài công cụ kết nối máy chủ cho IT",
+      "description": "Cần công cụ SSH để kiểm tra máy chủ được phân công; đây là yêu cầu mẫu.",
+      "response": "Yêu cầu đã ghi nhận hoàn tất trong dữ liệu mẫu; không có lệnh cài thật hoặc biên lai Agent.",
+      "status": "Resolved",
+      "canWork": true,
+      "daysAgo": 6
+    },
+    {
+      "device": 11,
+      "kind": "InstallApp",
+      "category": "Application",
+      "title": "Xin cài trình duyệt cho máy Hành chính",
+      "description": "Cần trình duyệt phụ để kiểm tra biểu mẫu nội bộ; đây là yêu cầu mẫu.",
+      "response": "Nhân viên đã xác nhận tình huống mẫu; yêu cầu đóng, không khẳng định đã cài trên thiết bị thật.",
+      "status": "Closed",
+      "canWork": true,
+      "daysAgo": 9
+    }
+  ],
+  "apps": [
+    {
+      "name": "Firefox ESR — Windows x64",
+      "version": "153.5.1esr",
+      "description": "Trình duyệt cho máy văn phòng. Nguồn Mozilla chính thức, bản tiếng Anh, MSI x64.",
+      "packageUrl": "https://manager.zney295.id.vn/downloads/windows-x64/firefox-153.5.1esr-x64.msi",
+      "sha256": "B15660F2D7DC4D0DFDA05E4E1499EC090BC554A517FE35DAE821106835868FDD",
+      "publisherThumbprint": "6663D5C4FDAF9EFD5F823A26C9C410DC9928C44A"
+    },
+    {
+      "name": "PuTTY — Windows x64",
+      "version": "0.85",
+      "description": "Công cụ SSH gọn nhẹ dành cho IT. Nguồn dự án PuTTY chính thức, MSI x64.",
+      "packageUrl": "https://manager.zney295.id.vn/downloads/windows-x64/putty-0.85-x64.msi",
+      "sha256": "2213EBACF962B709411D654A40087508A694756BC4E41C5A1C24AD86596B2511",
+      "publisherThumbprint": "66C298D018034F29B8EA1D6E90F5497FE305D2E8"
+    }
+  ],
+  "alerts": [
+    "Tình huống giả lập: CPU máy Kế toán tăng khi xử lý báo cáo cuối tháng.",
+    "Tình huống giả lập: cần kiểm tra hàng đợi in.",
+    "Tình huống giả lập: máy Nhân sự thiếu kết nối thư mục chung.",
+    "Tình huống giả lập: ổ đĩa máy Kinh doanh cần dọn dữ liệu tạm.",
+    "Đã xử lý giả lập: khôi phục kết nối mạng máy IT.",
+    "Đã xử lý giả lập: đặt lại khổ giấy máy Hành chính."
+  ]
+}

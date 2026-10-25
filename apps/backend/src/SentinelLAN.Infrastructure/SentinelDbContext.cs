@@ -52,6 +52,16 @@ public sealed class SentinelDbContext(DbContextOptions<SentinelDbContext> option
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<LoginAttemptBucket>().HasKey(x => x.PartitionHash);
+        modelBuilder.Entity<LoginAttemptBucket>().Property(x => x.PartitionHash).HasMaxLength(64);
+        modelBuilder.Entity<LoginAttemptBucket>().HasIndex(x => x.ExpiresAt);
+        modelBuilder.Entity<User>().HasIndex(x => new { x.OrganizationId, x.DisplayName, x.Id });
+        modelBuilder.Entity<SelfServiceRequest>().HasIndex(x => new { x.OrganizationId, x.UserId, x.DeviceId, x.CreatedAt, x.Id });
+        modelBuilder.Entity<SelfServiceMessage>().HasIndex(x => new { x.OrganizationId, x.RequestId, x.CreatedAt, x.Id });
+        modelBuilder.Entity<SelfServiceNotification>().HasIndex(x => new { x.OrganizationId, x.UserId, x.CreatedAt, x.Id });
+        modelBuilder.Entity<SelfServiceAttachment>().HasIndex(x => new { x.OrganizationId, x.CreatedAt, x.UploadedByUserId });
+        modelBuilder.Entity<IncidentTicket>().HasIndex(x => new { x.OrganizationId, x.CreatedAt, x.Id });
+        modelBuilder.Entity<AssetLoan>().HasIndex(x => new { x.OrganizationId, x.CreatedAt, x.Id });
         modelBuilder.Entity<Department>().Property(x => x.Revision).IsConcurrencyToken();
         modelBuilder.Entity<OperationalOutboxMessage>().Property(x => x.Kind).HasMaxLength(30);
         modelBuilder.Entity<OperationalOutboxMessage>().HasIndex(x => new { x.ProcessedAt, x.CreatedAt });

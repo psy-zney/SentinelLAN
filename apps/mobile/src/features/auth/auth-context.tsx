@@ -9,7 +9,7 @@ import { MobileLoginRequest } from '../../lib/validation/schemas';
 import Constants from 'expo-constants';
 import { useQueryClient } from '@tanstack/react-query';
 import { disableEmployeePush, forgetEmployeePush } from '../self-service/push';
-import * as Notifications from 'expo-notifications';
+import { clearNotificationResponse } from '../self-service/notification-runtime';
 
 export type AuthStatus =
   | 'bootstrapping'
@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setInMemoryAccessToken(null);
     TokenVault.wipeAll().catch(() => {});
     void forgetEmployeePush().catch(() => {});
-    void Notifications.clearLastNotificationResponseAsync().catch(() => {});
+    void clearNotificationResponse().catch(() => {});
     queryClient.clear();
     setUser(null);
     setStatus('session-expired');
@@ -113,7 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     try {
       if (user) await disableEmployeePush(apiClient, user.id).catch(() => {});
-      await Notifications.clearLastNotificationResponseAsync().catch(() => {});
+      await clearNotificationResponse().catch(() => {});
       await apiClient.logout();
     } finally {
       queryClient.clear();
@@ -123,15 +123,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logoutAll = async () => {
-    try {
-      if (user) await disableEmployeePush(apiClient, user.id).catch(() => {});
-      await Notifications.clearLastNotificationResponseAsync().catch(() => {});
-      await apiClient.logoutAll();
-    } finally {
-      queryClient.clear();
-      setUser(null);
-      setStatus('unauthenticated');
-    }
+    if (user) await disableEmployeePush(apiClient, user.id).catch(() => {});
+    await apiClient.logoutAll();
+    await clearNotificationResponse().catch(() => {});
+    queryClient.clear();
+    setUser(null);
+    setStatus('unauthenticated');
   };
 
   const dismissSessionExpired = () => {

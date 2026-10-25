@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,29 @@ import {
   TextStyle,
   TextInputProps,
   useColorScheme,
+  AccessibilityInfo,
+  Animated,
 } from 'react-native';
 import { lightColors, darkColors, spacing, radii, typography, minTouchTarget } from '../theme/tokens';
+
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
+export function useReducedMotion() {
+  const [reduced, setReduced] = useState(true);
+  useEffect(() => {
+    let active = true;
+    let changed = false;
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', value => {
+      changed = true;
+      if (active) setReduced(value);
+    });
+    void AccessibilityInfo.isReduceMotionEnabled().then(value => {
+      if (active && !changed) setReduced(value);
+    }).catch(() => { /* Keep motion disabled if the setting is unavailable. */ });
+    return () => { active = false; subscription.remove(); };
+  }, []);
+  return reduced;
+}
 
 export function useAppColors() {
   const isDark = useColorScheme() === 'dark';
@@ -40,6 +61,15 @@ export function AppButton({
   accessibilityLabel,
 }: ButtonProps) {
   const colors = useAppColors();
+  const reducedMotion = useReducedMotion();
+  const pressScale = useRef(new Animated.Value(1)).current;
+  function animatePress(pressed: boolean) {
+    Animated.timing(pressScale, {
+      toValue: pressed && !reducedMotion ? 0.98 : 1,
+      duration: reducedMotion ? 0 : 110,
+      useNativeDriver: true,
+    }).start();
+  }
 
   const getBackgroundColor = () => {
     if (disabled || loading) return colors.border;
@@ -73,12 +103,14 @@ export function AppButton({
   };
 
   return (
-    <TouchableOpacity
+    <AnimatedTouchable
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel || title}
       accessibilityState={{ disabled: disabled || loading, busy: loading }}
-      activeOpacity={0.8}
+      activeOpacity={0.9}
+      onPressIn={() => animatePress(true)}
+      onPressOut={() => animatePress(false)}
       onPress={onPress}
       disabled={disabled || loading}
       style={[
@@ -89,6 +121,7 @@ export function AppButton({
           borderWidth: variant === 'outline' ? 1.5 : 0,
         },
         style,
+        { transform: [{ scale: reducedMotion ? 1 : pressScale }] },
       ]}
     >
       {loading ? (
@@ -96,7 +129,7 @@ export function AppButton({
       ) : (
         <Text style={[styles.buttonText, { color: getTextColor() }]}>{title}</Text>
       )}
-    </TouchableOpacity>
+    </AnimatedTouchable>
   );
 }
 

@@ -80,6 +80,7 @@ public sealed class ForwardedHeadersTests
         builder.Services.AddAuthentication();
         builder.Services.AddAuthorization();
         builder.Services.AddRateLimiter(_ => { });
+        builder.Services.AddSingleton<IngressRequestBudget>();
         var app = builder.Build();
         try
         {

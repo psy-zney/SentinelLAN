@@ -287,7 +287,7 @@ export function VpsStatusView() {
         </button>
       </div>
       {error !== null ? <p role="alert">{error === 403
-        ? label("Chỉ Admin của đơn vị vận hành được xem tình trạng VPS.", "Only the operating organization's Admin can view this VPS.")
+        ? label("Bạn cần quyền quản trị hệ thống để xem tình trạng máy chủ.", "You need administrator access to view this server.")
         : t("error")}</p> : null}
       {!data && error === null ? <p role="status">{t("loading")}</p> : null}
       {data && !snapshot ? <p role="status">{vi ? data.message : data.configured ? "Host status is unavailable. Check the collector." : "Host monitoring is not configured."}</p> : null}

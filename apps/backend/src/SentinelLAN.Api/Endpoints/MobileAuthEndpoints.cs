@@ -28,7 +28,7 @@ public static class MobileAuthEndpoints
                 "Bearer",
                 new MobileUserInfo(result.UserId, result.Email, result.DisplayName, result.Role, result.OrganizationId, result.OrganizationCode)
             ));
-        }).AllowAnonymous().RequireRateLimiting("sensitive");
+        }).AllowAnonymous().RequireRateLimiting("sensitive").AddEndpointFilter<LoginThrottleFilter>();
 
         mobileAuth.MapPost("/refresh", async (MobileRefreshRequest request, HttpContext http, SentinelLAN.Application.AuthenticationService authentication, CancellationToken ct) =>
         {

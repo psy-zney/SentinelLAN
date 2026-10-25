@@ -21,6 +21,14 @@ public sealed class SelfServiceDirectory(SentinelDbContext db) : ISelfServiceDir
 
 public sealed class SelfServiceCommands(SentinelDbContext db, ICommandSigner signer) : ISelfServiceCommands
 {
+    public async Task<IReadOnlyDictionary<Guid, (DeviceCommand? Command, CommandResult? Result)>> GetManyAsync(Guid org, IReadOnlyCollection<Guid> ids, CancellationToken ct)
+    {
+        var selected = ids.Distinct().ToArray();
+        if (selected.Length == 0) return new Dictionary<Guid, (DeviceCommand?, CommandResult?)>();
+        var rows = await db.Commands.AsNoTracking().Where(x => x.OrganizationId == org && selected.Contains(x.Id))
+            .Select(x => new { Command = x, Result = db.CommandResults.AsNoTracking().FirstOrDefault(r => r.OrganizationId == org && r.CommandId == x.Id) }).ToListAsync(ct);
+        return rows.ToDictionary(x => x.Command.Id, x => ((DeviceCommand?)x.Command, x.Result));
+    }
     public DeviceCommand Queue(Guid org, Guid device, Guid actor, string type, string reason, string parameter, DateTimeOffset now, DateTimeOffset expiresAt)
     {
         if (type is not ("InstallApprovedApp" or "PauseAgent" or "UninstallAgent" or "IsolateNetwork")) throw new InvalidOperationException("Unsupported self-service command.");
