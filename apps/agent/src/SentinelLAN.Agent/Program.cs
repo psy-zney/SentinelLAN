@@ -24,7 +24,8 @@ if (maintenanceDialog)
     return;
 }
 var checkConfiguration = args.Contains("--check-configuration", StringComparer.Ordinal);
-var builder = Host.CreateApplicationBuilder(args.Where(argument => argument is not ("--desktop-companion" or "--check-configuration")).ToArray());
+var hostArguments = args.Where(argument => argument is not ("--desktop-companion" or "--check-configuration")).ToArray();
+var builder = Host.CreateApplicationBuilder(hostArguments);
 if (OperatingSystem.IsWindows())
 {
     builder.Services.AddWindowsService(options => options.ServiceName = "SentinelLANAgent");
@@ -33,7 +34,7 @@ if (OperatingSystem.IsWindows())
         var settingsPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
             "SentinelLAN", "Agent", "agent-settings.json");
-        builder.Configuration.AddJsonFile(settingsPath, optional: true, reloadOnChange: false);
+        builder.Configuration.AddAgentSettings(settingsPath, hostArguments);
     }
 }
 
@@ -73,6 +74,8 @@ if (checkConfiguration)
         CompanyPinned = companyServer is not null,
         CommandKeyId = commandKeyId,
         HasCommandPublicKey = !string.IsNullOrWhiteSpace(commandPublicKey),
+        CommandPublicKeySha256 = string.IsNullOrWhiteSpace(commandPublicKey) ? null : Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Convert.FromBase64String(commandPublicKey))).ToLowerInvariant(),
+        SourceRevision = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+').ElementAtOrDefault(1),
         Version = Assembly.GetExecutingAssembly().GetName().Version?.ToString()
     }));
     return;

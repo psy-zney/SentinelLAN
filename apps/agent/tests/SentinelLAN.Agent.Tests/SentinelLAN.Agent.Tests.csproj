@@ -9,6 +9,9 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
@@ -21,6 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\SentinelLAN.Agent.Core\SentinelLAN.Agent.Core.csproj" />
     <ProjectReference Include="..\..\src\SentinelLAN.Agent.Infrastructure\SentinelLAN.Agent.Infrastructure.csproj" />
+    <Compile Include="..\..\src\SentinelLAN.Agent\AgentConfiguration.cs" Link="AgentConfiguration.cs" />
     <Compile Include="..\..\src\SentinelLAN.Setup\SetupWorkflow.cs" Link="Setup\SetupWorkflow.cs" />
     <Compile Include="..\..\src\SentinelLAN.Setup\ExistingAgentConfiguration.cs" Link="Setup\ExistingAgentConfiguration.cs" />
     <ProjectReference Include="..\..\..\..\packages\enrollment\SentinelLAN.Enrollment.csproj" />

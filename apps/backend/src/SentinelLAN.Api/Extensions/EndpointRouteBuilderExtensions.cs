@@ -25,6 +25,7 @@ public static class EndpointRouteBuilderExtensions
         v1.MapMyDeviceEndpoints();
         v1.MapAgentEndpoints();
         v1.MapAgentAuthenticationEndpoints();
+        v1.MapAgentCompatibilityEndpoints();
         v1.MapCommandEndpoints();
         v1.MapPolicyEndpoints();
         v1.MapAlertEndpoints();

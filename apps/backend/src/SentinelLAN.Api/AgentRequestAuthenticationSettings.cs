@@ -13,6 +13,7 @@ public sealed record AgentRequestAuthenticationSettings(bool DevelopmentLegacyEn
                 throw new InvalidOperationException("SENTINELLAN_AGENT_LEGACY_AUTH_UNTIL must be a UTC expiry no more than seven days ahead.");
             until = parsed;
         }
-        return new(environment.IsDevelopment() && !configuration.GetValue<bool>("SENTINELLAN_REQUIRE_SIGNED_AGENT_REQUESTS"), until);
+        return new(environment.IsDevelopment() && !(configuration.GetValue<bool>("SENTINELLAN_AGENT_REQUIRE_SIGNED_REQUESTS") ||
+            configuration.GetValue<bool>("SENTINELLAN_REQUIRE_SIGNED_AGENT_REQUESTS")), until);
     }
 }

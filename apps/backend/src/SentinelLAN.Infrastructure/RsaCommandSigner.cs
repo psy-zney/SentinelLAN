@@ -27,6 +27,12 @@ public sealed class RsaCommandSigner : ICommandSigner, IDisposable
         this.keyId = keyId;
     }
 
+    public string KeyId => keyId;
+    public string PublicKeySha256
+    {
+        get { lock (gate) return Convert.ToHexString(SHA256.HashData(key.ExportSubjectPublicKeyInfo())).ToLowerInvariant(); }
+    }
+
     public string Sign(DeviceCommand command)
     {
         lock (gate)

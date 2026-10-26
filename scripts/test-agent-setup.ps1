@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('Connected', 'TokenUsed', 'TokenExpired', 'ConnectionFailed', 'IdentityMissing')]
+    [ValidateSet('Connected', 'TokenUsed', 'TokenExpired', 'ConnectionFailed', 'ServerUpgradeRequired', 'IdentityMissing')]
     [string]$Scenario = 'Connected',
     [switch]$ExistingIdentity,
     [switch]$ExistingIdentityOnly

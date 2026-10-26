@@ -97,7 +97,7 @@ try {
         if (Test-Path -LiteralPath $statusPath) {
             $state = (Get-Content -LiteralPath $statusPath -Raw | ConvertFrom-Json).state
             if ($state -eq 'Connected') { $connected = $true; break }
-            if ($state -in @('TokenUsed', 'TokenExpired', 'EnrollmentRejected', 'ConnectionFailed')) {
+            if ($state -in @('TokenUsed', 'TokenExpired', 'EnrollmentRejected', 'ConnectionFailed', 'ServerUpgradeRequired')) {
                 Write-Output "SETUP_STATE:$state"
                 throw 'Connection setup was not confirmed.'
             }

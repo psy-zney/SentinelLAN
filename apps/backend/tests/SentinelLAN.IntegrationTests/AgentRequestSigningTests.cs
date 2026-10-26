@@ -25,13 +25,16 @@ public sealed class AgentRequestSigningTests(SentinelApiFactory factory) : IClas
         services.AddSingleton(new AgentRequestAuthenticationSettings(allowDevelopmentLegacy, null));
     }));
 
-    [Fact]
-    public async Task SignedRequestsInteroperateWithAgentAndReplayIsRejectedWithoutTransmittingTheDeviceSecret()
+    [Theory]
+    [InlineData("0.2.24")]
+    [InlineData("1.0.2")]
+    [InlineData("9.9.0")]
+    public async Task SignedRequestsInteroperateWithAgentAndReplayIsRejectedWithoutTransmittingTheDeviceSecret(string agentVersion)
     {
         using var api = CreateApi();
         using var client = api.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
         var identity = await SeedAsync(api);
-        var payload = Encoding.UTF8.GetBytes("{\"idempotencyKey\":\"signed-once\",\"cpuPercent\":10,\"ramPercent\":20,\"diskPercent\":30,\"osVersion\":\"Fixture\",\"agentVersion\":\"test\"}");
+        var payload = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new { idempotencyKey = "signed-once", cpuPercent = 10, ramPercent = 20, diskPercent = 30, osVersion = "Fixture", agentVersion });
         var headers = AgentRequestSigner.Headers(identity, "POST", "/api/v1/agent/heartbeat", payload);
         Assert.DoesNotContain("X-SentinelLAN-Device-Secret", headers.Keys);
         Assert.Equal(HttpStatusCode.Accepted, (await client.SendAsync(Request("/api/v1/agent/heartbeat", payload, headers))).StatusCode);

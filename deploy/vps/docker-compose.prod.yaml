@@ -20,6 +20,8 @@ services:
     build:
       context: ../..
       dockerfile: deploy/docker/api.Dockerfile
+      args:
+        SOURCE_REVISION: ${SENTINELLAN_SOURCE_REVISION:-}
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Production
@@ -38,6 +40,7 @@ services:
       SENTINELLAN_DATA_ENCRYPTION_KEY: ${SENTINELLAN_DATA_ENCRYPTION_KEY:?Set a Base64 32-byte data encryption key}
       SENTINELLAN_WEB_ORIGINS: ${SENTINELLAN_WEB_ORIGINS:-https://${PUBLIC_DOMAIN:?Set PUBLIC_DOMAIN}}
       SENTINELLAN_AGENT_PUBLIC_URL: ${SENTINELLAN_AGENT_PUBLIC_URL:-https://${PUBLIC_DOMAIN}}
+      SENTINELLAN_EXPO_PUSH_ENABLED: ${SENTINELLAN_EXPO_PUSH_ENABLED:-false}
       SENTINELLAN_AGENT_REQUIRE_SIGNED_REQUESTS: ${SENTINELLAN_AGENT_REQUIRE_SIGNED_REQUESTS:-}
       SENTINELLAN_AGENT_LEGACY_AUTH_UNTIL: ${SENTINELLAN_AGENT_LEGACY_AUTH_UNTIL:-}
       SENTINELLAN_REDIS_CONNECTION: ${SENTINELLAN_REDIS_CONNECTION:-}
@@ -76,6 +79,7 @@ services:
       context: ../..
       dockerfile: deploy/docker/web.Dockerfile
       args:
+        SOURCE_REVISION: ${SENTINELLAN_SOURCE_REVISION:-}
         WEB_APP: company
         NEXT_PUBLIC_API_URL: ""
     restart: unless-stopped
@@ -89,6 +93,7 @@ services:
       context: ../..
       dockerfile: deploy/docker/web.Dockerfile
       args:
+        SOURCE_REVISION: ${SENTINELLAN_SOURCE_REVISION:-}
         WEB_APP: employee
         NEXT_PUBLIC_API_URL: ""
     restart: unless-stopped

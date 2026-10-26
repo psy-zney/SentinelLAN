@@ -20,6 +20,8 @@ $agent = Read-Configuration (Join-Path $output 'SentinelLAN.Agent.exe')
 $setup = Read-Configuration (Join-Path $output 'SentinelLAN.Setup.exe')
 foreach ($binary in @($agent, $setup)) {
     if (-not $binary.CompanyPinned -or -not $binary.HasCommandPublicKey -or
+        $binary.CommandPublicKeySha256 -ne $company.commandPublicKeySha256 -or
+        ($env:GITHUB_SHA -and $binary.SourceRevision -ne $env:GITHUB_SHA) -or
         $binary.ServerUrl -ne $company.serverUrl -or $binary.CommandKeyId -ne $company.commandKeyId -or
         ([Version]$binary.Version) -ne ([Version]"$Version.0")) {
         throw 'Setup and Agent must share the expected version, HTTPS origin and command verification key.'

@@ -123,7 +123,9 @@ internal static class SetupInstaller
                     ? "Mã kết nối đã được sử dụng. Vui lòng liên hệ IT để cấp mã mới."
                     : configuration.Output.Contains("SETUP_STATE:TokenExpired", StringComparison.Ordinal)
                         ? "Mã kết nối đã hết hạn. Vui lòng liên hệ IT để cấp mã mới."
-                        : existingIdentityOnly
+                        : configuration.Output.Contains("SETUP_STATE:ServerUpgradeRequired", StringComparison.Ordinal)
+                        ? "Máy chủ chưa hỗ trợ giao thức xác thực của Agent. Nhờ IT cập nhật máy chủ; không cần dùng lại mã kết nối."
+                    : existingIdentityOnly
                             ? "Máy đã đăng ký nhưng chưa xác nhận được kết nối. Kiểm tra mạng rồi bấm Thử lại kết nối; nhờ IT kiểm tra Agent nếu lỗi tiếp diễn."
                             : "Chưa xác nhận được kết nối. Nhờ IT kiểm tra mạng, mã và trạng thái Agent trước khi thử lại.";
                 throw new InvalidOperationException(message);

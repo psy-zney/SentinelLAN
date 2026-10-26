@@ -18,6 +18,10 @@ internal static class Program
                 CompanyPinned = !string.IsNullOrWhiteSpace(server),
                 CommandKeyId = Metadata("CommandKeyId"),
                 HasCommandPublicKey = !string.IsNullOrWhiteSpace(Metadata("CommandPublicKey")),
+                CommandPublicKeySha256 = Metadata("CommandPublicKey") is { Length: > 0 } publicKey
+                    ? Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Convert.FromBase64String(publicKey))).ToLowerInvariant() : null,
+                SourceRevision = assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+                    .Cast<System.Reflection.AssemblyInformationalVersionAttribute>().SingleOrDefault()?.InformationalVersion.Split('+').ElementAtOrDefault(1),
                 MsiPayloadIncluded = assembly.GetManifestResourceNames().Contains("SentinelLAN.Agent.msi", StringComparer.Ordinal),
                 MsiSha256 = package is null ? null : Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(package)),
                 Version = assembly.GetName().Version?.ToString()

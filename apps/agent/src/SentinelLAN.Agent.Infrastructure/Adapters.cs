@@ -258,7 +258,7 @@ public sealed class AgentApi(HttpClient httpClient, string deviceName, IEnrollme
     {
         using var request = CreateAuthenticatedRequest(HttpMethod.Post, "/api/v1/agent/commands/poll", identity);
         using var response = await SendAuthenticatedAsync(request, identity, cancellationToken);
-        if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
+        if (response.StatusCode is System.Net.HttpStatusCode.NoContent or System.Net.HttpStatusCode.NotFound or System.Net.HttpStatusCode.MethodNotAllowed) return null;
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<RemoteCommand>(cancellationToken);
     }
@@ -275,7 +275,7 @@ public sealed class AgentApi(HttpClient httpClient, string deviceName, IEnrollme
     {
         using var request = CreateAuthenticatedRequest(HttpMethod.Get, "/api/v1/agent/policy", identity);
         using var response = await SendAuthenticatedAsync(request, identity, cancellationToken);
-        if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
+        if (response.StatusCode is System.Net.HttpStatusCode.NoContent or System.Net.HttpStatusCode.NotFound or System.Net.HttpStatusCode.MethodNotAllowed) return null;
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<AgentPolicySnapshot>(cancellationToken);
     }

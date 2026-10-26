@@ -40,6 +40,12 @@ public sealed class Worker(ILogger<Worker> logger, IDeviceIdentityStore identity
                 await identityStore.SaveAsync(upgraded, stoppingToken);
                 identity = upgraded;
             }
+            catch (HttpRequestException error) when (error.StatusCode is System.Net.HttpStatusCode.NotFound or System.Net.HttpStatusCode.MethodNotAllowed)
+            {
+                await ReportAsync("ServerUpgradeRequired", stoppingToken);
+                logger.LogWarning("The server does not support Agent request-signing bootstrap. IT must update the backend; unsigned requests were not sent.");
+                return;
+            }
             catch (Exception error) when (!stoppingToken.IsCancellationRequested && error is HttpRequestException or IOException or TaskCanceledException)
             {
                 logger.LogWarning("Agent request signing is not yet provisioned; retrying the credential transition.");
