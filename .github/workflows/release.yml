@@ -1,9 +1,10 @@
-name: Release SentinelLAN Agent
+name: Release SentinelLAN Setup
 
 on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -13,12 +14,6 @@ jobs:
     name: Verify Agent
     runs-on: ubuntu-latest
     steps:
-      - name: Validate release tag
-        run: |
-          if [[ ! "$GITHUB_REF" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-            echo "Release requires a vX.Y.Z tag." >&2
-            exit 1
-          fi
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
@@ -27,7 +22,7 @@ jobs:
         run: dotnet test apps/agent/tests/SentinelLAN.Agent.Tests/SentinelLAN.Agent.Tests.csproj -c Release
 
   build-windows:
-    name: Build Windows MSI and EXE
+    name: Build and verify Windows Setup
     needs: verify-agent
     runs-on: windows-latest
     steps:
@@ -35,101 +30,68 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-      - name: Build Agent packages
+      - name: Run Windows Agent and setup tests
         shell: pwsh
         run: |
-          $version = $env:GITHUB_REF_NAME.TrimStart('v').Split('-')[0]
-          ./deploy/agent/build-msi.ps1 -Version $version
-      - name: Stage Windows files
+          dotnet test apps/agent/tests/SentinelLAN.Agent.Tests/SentinelLAN.Agent.Tests.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Windows Agent tests failed.' }
+          foreach ($scenario in @('Connected', 'TokenUsed', 'TokenExpired', 'ConnectionFailed')) {
+            'ci-one-use-fixture' | pwsh -NoProfile -File scripts/test-agent-setup.ps1 -Scenario $scenario
+            if ($LASTEXITCODE -ne 0) { throw "Setup test failed: $scenario" }
+          }
+          foreach ($scenario in @('Connected', 'ConnectionFailed')) {
+            pwsh -NoProfile -File scripts/test-agent-setup.ps1 -Scenario $scenario -ExistingIdentity -ExistingIdentityOnly
+            if ($LASTEXITCODE -ne 0) { throw "Resume test failed: $scenario" }
+          }
+          pwsh -NoProfile -File scripts/test-agent-setup.ps1 -Scenario IdentityMissing -ExistingIdentityOnly
+          if ($LASTEXITCODE -ne 0) { throw 'Missing identity test failed.' }
+      - name: Build matched company Agent and Setup
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force dist/release-windows | Out-Null
-          Copy-Item dist/windows-x64/SentinelLAN.Agent.msi dist/release-windows/
-          Copy-Item dist/windows-x64/SentinelLAN.Agent.exe dist/release-windows/
-          Copy-Item dist/windows-x64/SentinelLAN.Setup.exe dist/release-windows/
-          Copy-Item deploy/agent/configure-windows-agent.ps1 dist/release-windows/
+          $version = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME.TrimStart('v').Split('-')[0] } else { '1.0.1' }
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Expected vX.Y.Z release tag.' }
+          $company = Get-Content deploy/agent/company-release.json -Raw | ConvertFrom-Json
+          ./deploy/agent/build-msi.ps1 -Version $version -CompanyServerUrl $company.serverUrl -CommandPublicKey $company.commandPublicKey -CommandKeyId $company.commandKeyId
+          ./scripts/verify-agent-release.ps1 -Version $version
       - uses: actions/upload-artifact@v4
         with:
-          name: windows-agent
-          path: dist/release-windows/
+          name: windows-setup
+          path: dist/windows-x64/SentinelLAN.Setup.exe
           if-no-files-found: error
-
-  build-linux:
-    name: Build Linux Agent
-    needs: verify-agent
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-      - name: Publish Linux binary
-        run: |
-          dotnet publish apps/agent/src/SentinelLAN.Agent/SentinelLAN.Agent.csproj \
-            -c Release -r linux-x64 --self-contained true \
-            -p:PublishSingleFile=true -o dist/linux-x64
-      - name: Stage Linux files
-        run: |
-          mkdir -p dist/release-linux
-          cp dist/linux-x64/SentinelLAN.Agent dist/release-linux/
-          cp deploy/agent/install-linux-agent.sh dist/release-linux/
-          cp deploy/agent/sentinellan-agent.service dist/release-linux/
       - uses: actions/upload-artifact@v4
         with:
-          name: linux-agent
-          path: dist/release-linux/
+          name: setup-verification
+          path: |
+            dist/windows-x64/configuration-check.json
+            dist/windows-x64/SHA256SUMS.txt
+            dist/windows-x64/agent-release.json
           if-no-files-found: error
 
   publish:
-    name: Publish Agent-only GitHub Release
-    needs: [build-windows, build-linux]
+    name: Publish Setup EXE only
+    if: github.ref_type == 'tag'
+    needs: build-windows
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: windows-agent
+          name: windows-setup
           path: release-assets/
-      - uses: actions/download-artifact@v4
-        with:
-          name: linux-agent
-          path: release-assets/
-      - name: Verify asset allowlist and checksums
-        working-directory: release-assets
+      - name: Verify only the installer is published
         run: |
-          expected=(
-            SentinelLAN.Agent.msi
-            SentinelLAN.Agent.exe
-            SentinelLAN.Setup.exe
-            configure-windows-agent.ps1
-            SentinelLAN.Agent
-            install-linux-agent.sh
-            sentinellan-agent.service
-          )
-          for file in "${expected[@]}"; do test -s "$file"; done
-          test "$(find . -maxdepth 1 -type f | wc -l)" -eq "${#expected[@]}"
-          sha256sum "${expected[@]}" > SHA256SUMS.txt
+          test -s release-assets/SentinelLAN.Setup.exe
+          test "$(find release-assets -type f | wc -l)" -eq 1
+          python3 scripts/write-agent-release-notes.py release-assets/SentinelLAN.Setup.exe > release-notes.md
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "SentinelLAN Agent ${{ github.ref_name }}"
+          name: "SentinelLAN Setup ${{ github.ref_name }}"
           tag_name: ${{ github.ref_name }}
           prerelease: ${{ contains(github.ref_name, '-') }}
-          files: |
-            release-assets/SentinelLAN.Agent.msi
-            release-assets/SentinelLAN.Agent.exe
-            release-assets/SentinelLAN.Setup.exe
-            release-assets/configure-windows-agent.ps1
-            release-assets/SentinelLAN.Agent
-            release-assets/install-linux-agent.sh
-            release-assets/sentinellan-agent.service
-            release-assets/SHA256SUMS.txt
+          files: release-assets/SentinelLAN.Setup.exe
           fail_on_unmatched_files: true
-          body: |
-            Agent only: no VPS credentials, database, certificate or deployment environment is bundled.
-            Windows: open SentinelLAN.Setup.exe and paste the single-use connection code issued by your company's IT. No URL or command is required. The MSI also includes the connection window and a Start menu shortcut.
-            SentinelLAN.Agent.exe is the secondary Windows option for IT.
-            Linux: download SentinelLAN.Agent, install-linux-agent.sh and sentinellan-agent.service into one directory, then follow the download and installation guide.
-            Guide: https://github.com/psy-zney/SentinelLAN/blob/main/docs/downloads.md
-          generate_release_notes: true
+          body_path: release-notes.md
+          make_latest: true

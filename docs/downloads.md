@@ -8,28 +8,14 @@ Với bản dùng nội bộ, ưu tiên liên kết bộ cài trên chính máy 
 
 Mở [GitHub Releases](https://github.com/psy-zney/SentinelLAN/releases) và chọn bản do IT chỉ định. Nếu chưa có bản phát hành hoặc thiếu gói phù hợp, liên hệ IT; không tải từ nguồn khác.
 
-| Hệ điều hành | Tệp từ cùng bản phát hành |
-|---|---|
-| Windows x64 | `SentinelLAN.Setup.exe` hoặc `SentinelLAN.Agent.msi`, `SHA256SUMS.txt` |
-| Linux x64 với systemd | `SentinelLAN.Agent`, `install-linux-agent.sh`, `sentinellan-agent.service`, `SHA256SUMS.txt` |
-
-`SentinelLAN.Setup.exe` là bộ cài có giao diện, chứa MSI và thành phần cấu hình. MSI cũng chứa cửa sổ kết nối và lối tắt trong Start menu. `SentinelLAN.Agent.exe` vẫn là binary dịch vụ cho IT triển khai thủ công. Bản phát hành cũ chưa có Setup.exe vẫn dùng script cấu hình của chính bản đó. Điện thoại không cài các gói Agent này.
+Bản phát hành mới chỉ có **`SentinelLAN.Setup.exe` cho Windows x64**. EXE chứa Agent, MSI nội bộ đã sửa và trình cấu hình; không tải Agent.exe hoặc MSI rời từ release cũ. Các gói Linux chỉ còn trong release lịch sử.
 
 ## Kiểm tra tệp
 
-Đối chiếu SHA-256 với `SHA256SUMS.txt` từ cùng bản phát hành. Checksum giúp phát hiện tải lỗi/thay đổi tệp, không thay thế xác minh nguồn tải.
-
-Windows PowerShell:
+Đối chiếu SHA-256 trong phần mô tả của chính release đã tải. Checksum giúp phát hiện tải lỗi/thay đổi tệp, không thay thế xác minh nguồn tải.
 
 ```powershell
-Get-FileHash .\SentinelLAN.Agent.msi -Algorithm SHA256
 Get-FileHash .\SentinelLAN.Setup.exe -Algorithm SHA256
-```
-
-Linux, trong thư mục vừa tải:
-
-```bash
-sha256sum -c SHA256SUMS.txt --ignore-missing
 ```
 
 ## Windows
@@ -38,7 +24,7 @@ sha256sum -c SHA256SUMS.txt --ignore-missing
 2. Dán **mã kết nối** vào ô duy nhất, bấm **Cài đặt và kết nối**. Không cần nhập địa chỉ máy chủ hoặc nhớ lệnh.
 3. Chờ kiểm tra mạng, cài dịch vụ, đăng ký thiết bị và gửi trạng thái đầu tiên. Chỉ khi hoàn tất mới hiện **Kết nối thành công**.
 
-Nếu dùng MSI, hoàn tất bộ cài rồi nhập mã trong cửa sổ kết nối tự mở. Có thể mở lại **SentinelLAN - Ket noi thiet bi** từ Start menu. Không đưa mã vào thuộc tính MSI hay tham số dòng lệnh. Thành phần cấu hình đã nằm trong bộ cài; script riêng chỉ dành cho IT khi cần cấu hình nâng cao.
+Không dùng MSI 0.2.24: bản đó có thể lỗi Windows Installer 1939. Setup mới chứa bản sửa và tự cài dịch vụ. Có thể mở lại **SentinelLAN - Ket noi thiet bi** từ Start menu. Không đưa mã vào tham số dòng lệnh.
 
 Máy đã đăng ký không cần mã mới khi bật lại. Bộ cài không tự ghi đè định danh đã có. Khi báo mã đã dùng/hết hạn, nhờ IT cấp mã mới. Nếu mất kết nối sau bước đăng ký, nhờ IT kiểm tra máy đã xuất hiện chưa trước khi thử lại: mã có thể đã được dùng thành công ở máy chủ.
 
