@@ -30,7 +30,7 @@ echo "Encrypted and signed backup created: $target"
 # Save recovery configuration separately; this includes the key for encrypted server credentials.
 temporary="$backup_dir/.config-$stamp-$$.tmp"
 trap 'rm -f -- "$temporary"' EXIT
-encrypt_stream "$temporary" < /opt/sentinellan/shared/.env
+encrypt_stream "$temporary" < "${SENTINELLAN_ENV_FILE:-/opt/sentinellan/shared/.env}"
 test -s "$temporary"
 chmod 600 "$temporary"
 mv -- "$temporary" "$backup_dir/config-$stamp.env.cms"

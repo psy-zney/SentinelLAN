@@ -17,14 +17,14 @@ Agent đời rất cũ chưa biết ký request cần nâng cấp một lần. B
 
 Release chỉ chứa `SentinelLAN.Setup.exe`; checksum và source commit nằm trong mô tả GitHub Release. API/company/employee images có OCI revision label; API gắn commit vào assembly khi build. Mỗi bản release phải build từ commit đã push và tag chính xác, không dùng lại asset cũ cùng tên.
 
-Trên VPS có checkout sạch của tag được chọn, GitHub CLI đã đăng nhập, TLS hiện có và file môi trường được bảo vệ:
+Trên VPS có checkout sạch của tag được chọn, Python 3, Docker Compose, TLS hiện có và file môi trường được bảo vệ:
 
 ```bash
-python3 deploy/vps/deploy-github-release.py --tag v1.0.2 --check-only
-python3 deploy/vps/deploy-github-release.py --tag v1.0.2
+sudo python3 deploy/vps/deploy-github-release.py --tag v1.0.3 --check-only
+sudo python3 deploy/vps/deploy-github-release.py --tag v1.0.3
 ```
 
-Script từ chối checkout bẩn/tag sai, release draft/prerelease, source commit không khớp hoặc bộ asset khác một Setup EXE. Kiểm tra env bằng Compose không in giá trị. Download installer qua GitHub CLI, xác minh SHA-256 trước khi build/up. Chỉ thay bộ cài được tải trên VPS sau khi endpoint API xác nhận đúng commit và fingerprint public key ký lệnh khớp Setup. Giữ installer trước ở `SentinelLAN.Setup.previous.exe`; file `agent-release.json` ghi version/commit/hash công khai. Không tự đổi signing key, token, database volume hoặc chứng chỉ.
+Script từ chối checkout bẩn/tag sai, release draft/prerelease, source commit không khớp hoặc bộ asset khác một Setup EXE. Khôi phục cấu hình từ chuỗi Compose đang chạy, bao gồm override riêng, TLS, network và biến môi trường thực tế. Snapshot chứa cấu hình bí mật có quyền 0600 trong thư mục root-only. Không di chuyển symlink `current` vì PostgreSQL có thể đang bind-mount cấu hình từ đó. Kiểm tra env bằng Compose không in giá trị. Download installer từ GitHub bằng HTTPS, xác minh SHA-256 trước khi build. Sau build chạy backup database và `.env` bằng CMS mã hóa trước khi up. Chỉ recreate API/company/employee, hai sidecar TLS và nginx của project `sentinellan-prod`; không recreate PostgreSQL hay các project khác. Chỉ thay bộ cài được tải trên VPS sau khi endpoint API xác nhận đúng commit và fingerprint public key ký lệnh khớp Setup. Giữ installer trước trong thư mục snapshot root-only; file `agent-release.json` ghi version/commit/hash công khai. Không tự đổi signing key, token, database volume hoặc chứng chỉ.
 
 Trước triển khai cần giữ bản sao lưu theo quy trình vận hành hiện có; thay schema database cần kế hoạch rollback riêng. Script không đảm bảo rollback database và không thay thế nghiệm thu enrollment/heartbeat từ máy Windows thật.
 

@@ -5,6 +5,8 @@ import sys
 import unittest
 from unittest.mock import patch
 
+sys.path.insert(0, str(Path(__file__).parents[1]))
+
 spec = importlib.util.spec_from_file_location('release_deployer', Path(__file__).parents[1] / 'deploy-github-release.py')
 deployer = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(deployer)
@@ -17,30 +19,33 @@ class ReleaseDeploymentTests(unittest.TestCase):
 
         def command(*args, capture=True):
             calls.append(args)
+            if args[:2] == ('git', '-c'):
+                args = ('git',) + args[3:]
             if args[:2] == ('git', 'status'):
                 return dirty
             if args[:2] == ('git', 'rev-parse'):
                 return commit
             if args[:2] == ('git', 'rev-list'):
                 return tagged_commit or commit
-            if args[0] == 'gh':
-                return json.dumps(release)
             return ''
 
         with patch.object(sys, 'argv', ['deploy', '--tag', 'v1.0.2', '--env-file', __file__, '--check-only']), \
                 patch.object(deployer, 'run', command), patch.object(deployer.os, 'chdir'), \
+                patch.object(deployer, 'public_json', return_value=release), \
+                patch.object(deployer, 'active_plan', side_effect=lambda path: (calls.append(('active_plan', path)) or ({}, {}))), \
+                patch.object(deployer.Path, 'is_file', return_value=True), \
                 patch.dict(deployer.os.environ, {}, clear=False):
             deployer.main()
         return calls
 
     @staticmethod
     def release():
-        return {'assets': [{'name': 'SentinelLAN.Setup.exe'}], 'draft': False, 'prerelease': False,
+        return {'assets': [{'name': 'SentinelLAN.Setup.exe', 'browser_download_url': 'https://github.com/psy-zney/SentinelLAN/releases/download/v1.0.2/SentinelLAN.Setup.exe'}], 'draft': False, 'prerelease': False,
                 'body': 'Source commit: `' + 'a' * 40 + '`\n```text\n' + 'b' * 64 + '\n```'}
 
     def test_valid_release_checks_compose_without_starting_services(self):
         calls = self.check_release(self.release())
-        self.assertIn(('bash', 'deploy/vps/compose-secure.sh', 'config', '--quiet'), calls)
+        self.assertTrue(any(args[0] == 'active_plan' for args in calls))
         self.assertFalse(any('build' in args or 'up' in args for args in calls))
 
     def test_dirty_checkout_rejected(self):

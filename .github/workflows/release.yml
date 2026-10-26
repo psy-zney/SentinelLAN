@@ -21,7 +21,7 @@ jobs:
       - name: Check deployment preflight guards
         run: |
           bash -n deploy/vps/compose-secure.sh
-          python3 -m unittest discover -s deploy/vps/tests -p test_release_deployment.py -v
+          python3 -m unittest discover -s deploy/vps/tests -p 'test_*deployment.py' -v
       - name: Run Agent tests
         run: dotnet test apps/agent/tests/SentinelLAN.Agent.Tests/SentinelLAN.Agent.Tests.csproj -c Release
 
@@ -52,7 +52,7 @@ jobs:
       - name: Build matched company Agent and Setup
         shell: pwsh
         run: |
-          $version = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME.TrimStart('v').Split('-')[0] } else { '1.0.2' }
+          $version = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME.TrimStart('v').Split('-')[0] } else { '1.0.3' }
           if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Expected vX.Y.Z release tag.' }
           $company = Get-Content deploy/agent/company-release.json -Raw | ConvertFrom-Json
           ./deploy/agent/build-msi.ps1 -Version $version -CompanyServerUrl $company.serverUrl -CommandPublicKey $company.commandPublicKey -CommandKeyId $company.commandKeyId
