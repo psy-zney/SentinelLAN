@@ -25,6 +25,28 @@ jobs:
       - name: Run Agent tests
         run: dotnet test apps/agent/tests/SentinelLAN.Agent.Tests/SentinelLAN.Agent.Tests.csproj -c Release
 
+  verify-web:
+    name: Verify clean web image (${{ matrix.portal }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        portal: [company, employee]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production Docker image
+        run: |
+          docker build --build-arg WEB_APP=${{ matrix.portal }} --build-arg SOURCE_REVISION=${{ github.sha }} -f deploy/docker/web.Dockerfile -t sentinellan-web:check .
+      - name: Verify standalone login page
+        run: |
+          docker run -d --name sentinellan-web-check -p 127.0.0.1:3300:3000 sentinellan-web:check
+          curl --fail --silent --retry 10 --retry-all-errors --retry-delay 2 --max-time 15 --output /dev/null http://127.0.0.1:3300/${{ matrix.portal }}/login
+      - name: Show startup log on failure
+        if: failure()
+        run: docker logs sentinellan-web-check || true
+      - name: Remove test container
+        if: always()
+        run: docker rm -f sentinellan-web-check || true
+
   build-windows:
     name: Build and verify Windows Setup
     needs: verify-agent
@@ -52,7 +74,7 @@ jobs:
       - name: Build matched company Agent and Setup
         shell: pwsh
         run: |
-          $version = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME.TrimStart('v').Split('-')[0] } else { '1.0.3' }
+          $version = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME.TrimStart('v').Split('-')[0] } else { '1.0.4' }
           if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Expected vX.Y.Z release tag.' }
           $company = Get-Content deploy/agent/company-release.json -Raw | ConvertFrom-Json
           ./deploy/agent/build-msi.ps1 -Version $version -CompanyServerUrl $company.serverUrl -CommandPublicKey $company.commandPublicKey -CommandKeyId $company.commandKeyId
@@ -74,7 +96,7 @@ jobs:
   publish:
     name: Publish Setup EXE only
     if: github.ref_type == 'tag'
-    needs: build-windows
+    needs: [build-windows, verify-web]
     runs-on: ubuntu-latest
     permissions:
       contents: write

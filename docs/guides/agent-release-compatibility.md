@@ -20,8 +20,8 @@ Release chỉ chứa `SentinelLAN.Setup.exe`; checksum và source commit nằm t
 Trên VPS có checkout sạch của tag được chọn, Python 3, Docker Compose, TLS hiện có và file môi trường được bảo vệ:
 
 ```bash
-sudo python3 deploy/vps/deploy-github-release.py --tag v1.0.3 --check-only
-sudo python3 deploy/vps/deploy-github-release.py --tag v1.0.3
+sudo python3 deploy/vps/deploy-github-release.py --tag v1.0.4 --check-only
+sudo python3 deploy/vps/deploy-github-release.py --tag v1.0.4
 ```
 
 Script từ chối checkout bẩn/tag sai, release draft/prerelease, source commit không khớp hoặc bộ asset khác một Setup EXE. Khôi phục cấu hình từ chuỗi Compose đang chạy, bao gồm override riêng, TLS, network và biến môi trường thực tế. Snapshot chứa cấu hình bí mật có quyền 0600 trong thư mục root-only. Không di chuyển symlink `current` vì PostgreSQL có thể đang bind-mount cấu hình từ đó. Kiểm tra env bằng Compose không in giá trị. Download installer từ GitHub bằng HTTPS, xác minh SHA-256 trước khi build. Sau build chạy backup database và `.env` bằng CMS mã hóa trước khi up. Chỉ recreate API/company/employee, hai sidecar TLS và nginx của project `sentinellan-prod`; không recreate PostgreSQL hay các project khác. Chỉ thay bộ cài được tải trên VPS sau khi endpoint API xác nhận đúng commit và fingerprint public key ký lệnh khớp Setup. Giữ installer trước trong thư mục snapshot root-only; file `agent-release.json` ghi version/commit/hash công khai. Không tự đổi signing key, token, database volume hoặc chứng chỉ.
@@ -31,3 +31,5 @@ Trước triển khai cần giữ bản sao lưu theo quy trình vận hành hi�
 ## Giới hạn kiểm chứng hiện tại
 
 Đã kiểm tra kết nối GitHub và chạy các regression tương thích trong cloud. SSH từ phiên cloud tới `149.118.50.176:22` bị từ chối, nên chưa đọc được commit đang chạy trên VPS, chưa chạy deploy script trên VPS và chưa xác nhận heartbeat của máy người dùng. Không coi commit đã push hoặc bộ test tự động là bằng chứng đã đồng bộ production.
+
+Bản 1.0.4 sửa cài dependency workspace cho Docker web: hai portal khai báo phụ thuộc vào `@sentinellan/web-ui`, và bước cài Docker chọn cả workspace UI. Release bắt buộc build sạch image Company/Employee rồi kiểm tra trang đăng nhập standalone trước khi publish. Lỗi build ở 1.0.3 dừng trước backup/recreate nên không chứng minh dịch vụ đang chạy đã thay đổi.

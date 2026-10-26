@@ -9,7 +9,10 @@ COPY packages/api-client/package.json packages/api-client/package.json
 COPY packages/shared-config/package.json packages/shared-config/package.json
 COPY packages/web-ui/package.json packages/web-ui/package.json
 ARG WEB_APP=company
-RUN npm ci --workspace=@sentinellan/$WEB_APP --include-workspace-root
+# Shared UI is imported by both portals and must be present in filtered workspace installs.
+RUN --mount=type=secret,id=proxy_ca \
+    if [ -f /run/secrets/proxy_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/proxy_ca; fi; \
+    npm ci --workspace=@sentinellan/$WEB_APP --workspace=@sentinellan/web-ui --include-workspace-root --strict-ssl=true
 COPY apps/company apps/company
 COPY apps/employee apps/employee
 COPY packages packages

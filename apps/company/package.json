@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@microsoft/signalr": "10.0.0",
+    "@sentinellan/web-ui": "0.1.0",
     "@zxing/browser": "0.2.1",
     "next": "16.4.2",
     "react": "19.3.0",
