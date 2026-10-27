@@ -27,7 +27,11 @@ export function EmployeePushObserver() {
       void Notifications.clearLastNotificationResponseAsync();
     };
     void Notifications.getLastNotificationResponseAsync().then(response => { if (response) redirect(response); }).catch(() => {});
-    const received = Notifications.addNotificationReceivedListener(() => { void queryClient.invalidateQueries({ queryKey: ['employee-notifications'] }); void queryClient.invalidateQueries({ queryKey: ['support-requests'] }); });
+    const received = Notifications.addNotificationReceivedListener(() => {
+      for (const key of ['employee-notifications', 'support-requests', 'support-request', 'support-messages', 'support-attachments']) {
+        void queryClient.invalidateQueries({ queryKey: [key] });
+      }
+    });
     const responses = Notifications.addNotificationResponseReceivedListener(redirect);
     const refresh = () => { void refreshEmployeePush(apiClient, user.id).catch(() => {}); };
     refresh();

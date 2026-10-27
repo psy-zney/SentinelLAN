@@ -9,7 +9,7 @@ const translations = {
     tabOverview: 'Tổng quan',
     tabScan: 'Quét QR',
     tabMyDevice: 'Máy của tôi',
-    tabIncidents: 'Sự cố',
+    tabIncidents: 'Yêu cầu',
     tabAccount: 'Tài khoản',
 
     // Common
@@ -136,7 +136,7 @@ const translations = {
     tabOverview: 'Overview',
     tabScan: 'Scan QR',
     tabMyDevice: 'My Device',
-    tabIncidents: 'Incidents',
+    tabIncidents: 'Requests',
     tabAccount: 'Account',
 
     // Common

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { AppState, ScrollView, Text } from 'react-native';
+import { AppState, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { Redirect, useFocusEffect } from 'expo-router';
 import { AppButton, useAppColors } from '../../components/common';
 import { useAuth } from '../auth/auth-context';
@@ -22,11 +22,15 @@ export function useActiveScreen() {
   useEffect(() => { const listener = AppState.addEventListener('change', value => setActive(value === 'active')); return () => listener.remove(); }, []);
   return focused && active && status === 'authenticated';
 }
-export function ServicePage({ children }: { children: React.ReactNode }) {
+export function ServicePage({ children, onRefresh, refreshing = false }: { children: React.ReactNode; onRefresh?: () => void; refreshing?: boolean }) {
   const colors = useAppColors();
   const { status } = useAuth();
   if (status !== 'authenticated') return <Redirect href="/" />;
-  return <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxxl }}>{children}</ScrollView>;
+  return <ScrollView style={{ flex: 1, backgroundColor: colors.background }}
+    refreshControl={onRefresh ? <RefreshControl testID="service-refresh" tintColor={colors.primary} refreshing={refreshing} onRefresh={onRefresh} /> : undefined}
+    contentContainerStyle={{ flexGrow: 1, padding: spacing.lg, paddingBottom: spacing.xxxl }}>
+    <View style={{ width: '100%', maxWidth: 960, alignSelf: 'center', gap: spacing.md }}>{children}</View>
+  </ScrollView>;
 }
 export function ServiceText({ children, heading = false }: { children: React.ReactNode; heading?: boolean }) {
   const colors = useAppColors();

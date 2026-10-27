@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Headset, Server, UsersRound } from 'lucide-react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { AppButton, AppCard, AppInput, useAppColors } from '../../components/common';
-import { ActionRow, StatusPill } from '../../components/management';
+import { ActionRow, ResourceMeter, StatusPill } from '../../components/management';
 import { connectionStatus, displayDate, displayDeviceName, isSampleDevice } from '../../lib/device-presentation';
 import { ApiError } from '../../lib/api/client';
 import { useAuth } from '../auth/auth-context';
@@ -31,12 +32,12 @@ export function OperatorOverview({ scope }: { scope: string }) {
 
   const dashboard = useQuery({
     queryKey: ['operator-dashboard', scope], queryFn: () => apiClient.operatorDashboard(),
-    enabled: active, gcTime: 0, refetchInterval: active ? 15000 : false,
+    enabled: active, staleTime: 0, gcTime: 0, refetchInterval: active ? 15000 : false,
   });
   const devices = useQuery({
     queryKey: ['operator-devices', scope, offset, appliedSearch, status],
     queryFn: ({ signal }) => apiClient.operatorDevices(offset, 100, { search: appliedSearch, status }, signal),
-    enabled: active, gcTime: 0, refetchInterval: active ? 15000 : false,
+    enabled: active, staleTime: 0, gcTime: 0, refetchInterval: active ? 15000 : false,
   });
   const denied = [dashboard.error, devices.error].some(error => error instanceof ApiError && [401, 403].includes(error.status));
   const summary = denied ? undefined : dashboard.data;
@@ -53,7 +54,7 @@ export function OperatorOverview({ scope }: { scope: string }) {
     } },
   ]);
 
-  return <ServicePage>
+  return <ServicePage onRefresh={() => { void dashboard.refetch(); void devices.refetch(); }} refreshing={dashboard.isRefetching || devices.isRefetching}>
     <View style={{ gap: 6, paddingVertical: 8 }}>
       <Text accessibilityRole="header" style={{ color: colors.ink, fontSize: 28, lineHeight: 36, fontWeight: '700' }}>Quản trị công ty</Text>
       <Text style={{ color: colors.inkMuted, fontSize: 16, lineHeight: 24 }}>Theo dõi máy tính và xử lý công việc IT.</Text>
@@ -68,11 +69,12 @@ export function OperatorOverview({ scope }: { scope: string }) {
           </View>)}
       </View>
       <Text style={{ color: colors.inkMuted, fontSize: 14, lineHeight: 21, marginTop: 12 }}>{summary.onlineDevices}/{summary.totalDevices} máy đang kết nối</Text>
+      {summary.totalDevices > 0 ? <ResourceMeter label="Tỷ lệ máy đang kết nối" value={summary.onlineDevices / summary.totalDevices * 100} /> : null}
     </AppCard> : dashboard.isPending ? <ServiceText>Đang tải tình trạng công ty…</ServiceText> : null}
     <View style={[styles.group, { borderColor: colors.border }]}>
-      <ActionRow title="Xử lý yêu cầu từ nhân viên" description="Xem hàng đợi và tiến độ hỗ trợ" onPress={() => router.push('/support-requests')} />
-      <ActionRow title="Theo dõi VPS" description="CPU, bộ nhớ và dịch vụ máy chủ" onPress={() => router.push('/vps-status')} />
-      <ActionRow title="Quản lý tài khoản công ty" description="Danh sách và trạng thái tài khoản" onPress={() => router.push('/company-users')} />
+      <ActionRow icon={Headset} title="Xử lý yêu cầu từ nhân viên" description="Xem hàng đợi và tiến độ hỗ trợ" onPress={() => router.push('/support-requests')} />
+      <ActionRow icon={Server} title="Theo dõi VPS" description="CPU, bộ nhớ và dịch vụ máy chủ" onPress={() => router.push('/vps-status')} />
+      <ActionRow icon={UsersRound} title="Quản lý tài khoản công ty" description="Danh sách và trạng thái tài khoản" onPress={() => router.push('/company-users')} />
     </View>
     <View style={{ gap: 6, marginTop: 12 }}>
       <ServiceText heading>Thiết bị công ty</ServiceText>

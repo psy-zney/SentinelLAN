@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Image, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../features/auth/auth-context';
 import { useAppColors, AppButton, OfflineBanner } from '../components/common';
@@ -64,7 +64,7 @@ export default function SplashScreen() {
     <View style={[styles.container, { backgroundColor: colors.primary }]}>
       <View style={styles.brandBox}>
         <View style={styles.logoCircle}>
-          <Text style={styles.logoText}>S</Text>
+          <Image accessibilityLabel="SentinelLAN" source={require('../../assets/icon.png')} style={{ width: 68, height: 68, borderRadius: 18 }} />
         </View>
         <Text style={styles.brandName}>SentinelLAN</Text>
         <Text style={styles.brandTagline}>Secure Endpoint Governance</Text>
@@ -92,11 +92,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
-  },
-  logoText: {
-    fontSize: 40,
-    fontWeight: '900',
-    color: '#0b6b5f',
   },
   brandName: {
     fontSize: 26,

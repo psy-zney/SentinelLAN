@@ -27,9 +27,9 @@ export function RequestDetailView() {
   const [consent, setConsent] = useState(false);
   const messageKey = useRef(requestKey());
   const pendingMessage = useRef<string | null>(null);
-  const request = useQuery({ queryKey: ['support-request', requestId], queryFn: () => apiClient.supportRequest(requestId), enabled: active && id.success, refetchInterval: active ? 5000 : false, refetchIntervalInBackground: false });
-  const messages = useQuery({ queryKey: ['support-messages', requestId, messageOffset], queryFn: ({ signal }) => apiClient.supportMessages(requestId, signal, messageOffset), enabled: active && id.success, refetchInterval: active ? 5000 : false, refetchIntervalInBackground: false });
-  const attachments = useQuery({ queryKey: ['support-attachments', requestId], queryFn: () => apiClient.supportAttachments(requestId), enabled: active && id.success });
+  const request = useQuery({ queryKey: ['support-request', requestId], queryFn: () => apiClient.supportRequest(requestId), enabled: active && id.success, staleTime: 0, refetchInterval: active ? 5000 : false, refetchIntervalInBackground: false });
+  const messages = useQuery({ queryKey: ['support-messages', requestId, messageOffset], queryFn: ({ signal }) => apiClient.supportMessages(requestId, signal, messageOffset), enabled: active && id.success, staleTime: 0, refetchInterval: active ? 5000 : false, refetchIntervalInBackground: false });
+  const attachments = useQuery({ queryKey: ['support-attachments', requestId], queryFn: () => apiClient.supportAttachments(requestId), enabled: active && id.success, staleTime: 0, refetchInterval: active ? 5000 : false, refetchIntervalInBackground: false });
   const refresh = async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ['support-request', requestId] }), queryClient.invalidateQueries({ queryKey: ['support-messages', requestId] }), queryClient.invalidateQueries({ queryKey: ['support-attachments', requestId] }), queryClient.invalidateQueries({ queryKey: ['support-requests'] })]); };
   const perform = async (action: () => Promise<unknown>) => { if (busy) return; setBusy(true); setError(undefined); try { await action(); await refresh(); } catch (err) { setError(err); } finally { setBusy(false); } };
   const send = () => { void perform(async () => {

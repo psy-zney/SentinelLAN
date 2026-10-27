@@ -7,6 +7,8 @@ module.exports = {
   moduleNameMapper: {
     // Keep the hoisted renderer on the mobile workspace's React version.
     '^react$': require.resolve('react'),
+    // Jest's native condition otherwise selects Lucide's .mjs entry point.
+    '^lucide-react-native$': require.resolve('lucide-react-native'),
     '^expo-modules-core$': require.resolve('expo-modules-core', { paths: [require.resolve('expo/package.json')] }),
     '^expo-modules-core/(.*)$': require('path').join(require('path').dirname(require.resolve('expo-modules-core/package.json', { paths: [require.resolve('expo/package.json')] })), '$1'),
     '^@/(.*)$': '<rootDir>/src/$1',

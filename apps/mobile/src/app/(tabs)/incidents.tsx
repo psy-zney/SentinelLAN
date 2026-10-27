@@ -1,6 +1,6 @@
 import React from 'react';
-import { IncidentListView } from '../../features/incidents/incident-list-view';
+import { RequestListView } from '../../features/self-service/request-list-view';
 
 export default function IncidentsTab() {
-  return <IncidentListView />;
+  return <RequestListView />;
 }

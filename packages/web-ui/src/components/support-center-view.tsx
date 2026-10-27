@@ -81,7 +81,7 @@ export function SupportCenterView({ initialRequestId = "" }: { initialRequestId?
     <div className="support-content" ref={contentRef} tabIndex={-1}>
     <PageTransition key={tab}>
     {tab === "requests" && <>
-      {employee && createKind && <CreateRequestForm key={`${createKind}-${category}-${requestedAppId}`} kind={createKind} initialCategory={category} catalog={data?.catalog ?? []} initialCatalogId={requestedAppId} onCancel={() => setCreateKind(null)} onCreated={value => { setSelected(value.id); setCreateKind(null); void refresh(); }} />}
+      {employee && createKind && <CreateRequestForm key={`${createKind}-${category}-${requestedAppId}`} kind={createKind} initialCategory={category} catalog={data?.catalog ?? []} initialCatalogId={requestedAppId} onCancel={() => setCreateKind(null)} onCreated={value => { setSelected(value.id); setCreateKind(null); setRequestOffset(0); void refresh(); }} />}
       <div className="support-columns">
         <section className="panel" aria-label="Danh sách yêu cầu">
           <div className="panel-head"><h2>{employee ? "Yêu cầu của tôi" : "Yêu cầu từ nhân viên"}</h2><label>Hiển thị <select value={filter} onChange={event => { setFilter(event.target.value); setRequestOffset(0); }}><option value="active">Đang xử lý</option><option value="all">Tất cả</option></select></label></div>

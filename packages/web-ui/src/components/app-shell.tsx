@@ -9,6 +9,7 @@ import { PageTransition } from "@/components/page-transition";
 import { BackNavigation } from "@/components/back-navigation";
 import { LogoutButton } from "@/components/logout-button";
 import { UiIcon, type IconName } from "@/components/ui-icon";
+import { BrandMark } from "@/components/brand-mark";
 import { ApiClient } from "@/lib/api-client";
 import { homePathForRole } from "@/lib/auth-routing";
 import { useTranslation, type TranslationKey } from "@/lib/i18n";
@@ -111,7 +112,7 @@ export function AppShell({
   if (!session || session.role === "Agent") {
     return (
       <main className="shell-loading" role="status" aria-live="polite">
-        <span className="brand-mark"><UiIcon name="shield" /></span>
+        <span className="brand-mark"><BrandMark /></span>
         <span>{t("loading")}</span>
         <div className="loading-preview" aria-hidden="true"><span /><span /><span /></div>
       </main>
@@ -143,7 +144,7 @@ export function AppShell({
       <a className="skip-link" href="#main-content">{lang === "vi" ? "Đến nội dung chính" : "Skip to content"}</a>
       <aside className="sidebar">
         <Link className="brand" href={homePathForRole(session.role)}>
-          <span className="brand-mark"><UiIcon name="shield" /></span>
+          <span className="brand-mark"><BrandMark /></span>
           <span>SentinelLAN</span>
         </Link>
         <p className="brand-caption">{areaLabel}</p>
@@ -162,7 +163,7 @@ export function AppShell({
             <Dialog.Portal>
               <Dialog.Overlay className="navigation-overlay" />
               <Dialog.Content className="navigation-drawer">
-                <div className="drawer-heading"><Dialog.Title className="brand"><span className="brand-mark"><UiIcon name="shield" /></span>SentinelLAN</Dialog.Title>
+                <div className="drawer-heading"><Dialog.Title className="brand"><span className="brand-mark"><BrandMark /></span>SentinelLAN</Dialog.Title>
                   <Dialog.Close asChild><button className="action-outline icon-button" aria-label={lang === "vi" ? "Đóng menu" : "Close menu"}><UiIcon name="close" /></button></Dialog.Close>
                 </div>
                 <Dialog.Description className="subtitle">{areaLabel}</Dialog.Description>

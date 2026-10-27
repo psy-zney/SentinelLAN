@@ -19,6 +19,7 @@ describe('Employee self-service screens', () => {
     api = new MobileApiClient('https://sentinellan.local');
     jest.spyOn(Auth, 'useAuth').mockReturnValue({ status: 'authenticated', user: { id, email: 'an@example.test', role: 'Employee', displayName: 'An', organizationId: id, organizationCode: 'company' }, apiClient: api, login: jest.fn(), logout: jest.fn(), logoutAll: jest.fn(), retrySession: jest.fn(), dismissSessionExpired: jest.fn() });
     (useLocalSearchParams as jest.Mock).mockReturnValue({});
+    jest.spyOn(api, 'supportRequests').mockResolvedValue([]);
   });
   afterEach(() => jest.restoreAllMocks());
   it('reports an ordinary office problem without asking the employee to rank severity', async () => {

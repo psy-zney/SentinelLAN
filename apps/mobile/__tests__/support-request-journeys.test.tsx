@@ -33,6 +33,7 @@ describe('Support request confirmation and recovery', () => {
     jest.spyOn(api, 'supportRequest').mockResolvedValue(request);
     jest.spyOn(api, 'supportMessages').mockResolvedValue([{ id, requestId: id, authorId: id, authorName: 'IT', body: 'Try printing again', createdAt: request.createdAt }]);
     jest.spyOn(api, 'supportAttachments').mockResolvedValue([{ id, requestId: id, fileName: 'error.png', contentType: 'image/png', size: 1500, createdAt: request.createdAt }]);
+    jest.spyOn(api, 'supportRequests').mockResolvedValue([]);
   });
   afterEach(() => jest.restoreAllMocks());
   it('pages history and opens only the selected request identifier', async () => {
@@ -43,7 +44,7 @@ describe('Support request confirmation and recovery', () => {
     await fireEvent.press(screen.getByText('Gửi yêu cầu mới'));
     expect(push).toHaveBeenLastCalledWith('/request-create');
     await fireEvent.press(screen.getByText('Xem báo cáo sự cố trước đây'));
-    expect(push).toHaveBeenLastCalledWith('/(tabs)/incidents');
+    expect(push).toHaveBeenLastCalledWith('/incident-history');
     await fireEvent.press(screen.getByText('Trang sau')); await screen.findByText('Bạn chưa có yêu cầu nào.');
     expect(load).toHaveBeenCalledWith(100);
     await fireEvent.press(screen.getByText('Trang trước')); await screen.findByText('Request 0');

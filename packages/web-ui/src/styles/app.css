@@ -47,7 +47,7 @@ code { font-size: .9em; overflow-wrap: anywhere; }
 .shell { min-height: 100vh; display: grid; grid-template-columns: 244px minmax(0, 1fr); }
 .sidebar { position: sticky; top: 0; height: 100dvh; overflow-y: auto; background: var(--panel); border-right: 1px solid var(--border); padding: 30px 16px 20px; display: flex; flex-direction: column; }
 .brand { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700; letter-spacing: -.025em; }
-.brand-mark { width: 36px; height: 36px; flex: 0 0 auto; border-radius: 11px; background: var(--accent); color: white; display: grid; place-items: center; font-size: 18px; font-weight: 700; }
+.brand-mark { width: 36px; height: 36px; flex: 0 0 auto; border-radius: 11px; background: white; border: 1px solid var(--border); display: grid; place-items: center; overflow: hidden; }
 .brand-caption { margin: 5px 0 24px 46px; color: var(--muted); font-size: 12px; }
 .nav { display: grid; gap: 4px; }
 .nav-group { margin: 20px 12px 8px; color: var(--muted); font-size: 12px; font-weight: 500; }

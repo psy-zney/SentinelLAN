@@ -1,12 +1,16 @@
 import React, { useRef, useState } from 'react';
-import { Alert, Switch, View, Text } from 'react-native';
+import { Alert, Pressable, Switch, View, Text } from 'react-native';
+import { Check, CircleHelp, Gauge, LayoutGrid, Printer, ShieldAlert, Wifi } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { AppButton, AppInput, useAppColors } from '../../components/common';
+import { AppButton, AppCard, AppInput, useAppColors } from '../../components/common';
 import { SupportCategorySchema, SupportKindSchema, type CreateSupportRequest } from '../../lib/validation/self-service';
 import { useAuth } from '../auth/auth-context';
 import { categories, requestKey, ServicePage, ServiceText, ServiceError } from './shared';
 import { ImageAttachmentPicker, type SelectedAttachment } from './image-attachment';
+import { cacheCreatedRequest } from './request-cache';
+
+const categoryIcons = { Network: Wifi, Printer, Slow: Gauge, Application: LayoutGrid, Suspicious: ShieldAlert, Other: CircleHelp };
 
 export function RequestCreateView() {
   const params = useLocalSearchParams<{ kind?: string; category?: string; catalogAppId?: string; title?: string }>();
@@ -44,6 +48,7 @@ export function RequestCreateView() {
       if (!createdId.current) {
         const request = await apiClient.createSupportRequest({ kind, category, title: title.trim() || categories[category], description: description.trim(), canWork, catalogAppId: params.catalogAppId, appointmentAt, confirmed: true, idempotencyKey: key.current });
         createdId.current = request.id;
+        await cacheCreatedRequest(queryClient, request);
       }
       if (image) await apiClient.uploadSupportAttachment(createdId.current, { fileName: image.fileName, contentType: image.contentType, base64: image.base64 });
       await queryClient.invalidateQueries({ queryKey: ['support-requests'] });
@@ -58,7 +63,20 @@ export function RequestCreateView() {
   };
   return <ServicePage>
     <ServiceText heading>{kind === 'Incident' ? 'Bạn gặp vấn đề gì?' : kind === 'Appointment' ? 'Chọn giờ IT hỗ trợ' : 'Gửi yêu cầu cho IT'}</ServiceText>
-    {kind === 'Incident' ? Object.entries(categories).map(([value, label]) => <AppButton key={value} title={label} variant={category === value ? 'primary' : 'outline'} disabled={submitting || Boolean(createdId.current)} onPress={() => setCategory(value as CreateSupportRequest['category'])} />) : null}
+    {kind === 'Incident' ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+      {Object.entries(categories).map(([value, label]) => {
+        const selected = category === value;
+        const Icon = categoryIcons[value as keyof typeof categoryIcons];
+        return <Pressable key={value} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected, disabled: submitting || Boolean(createdId.current) }}
+          disabled={submitting || Boolean(createdId.current)} onPress={() => setCategory(value as CreateSupportRequest['category'])}
+          style={{ flexBasis: 140, flexGrow: 1, minHeight: 104, padding: 14, borderRadius: 14, borderWidth: 1.5, borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primaryLight : colors.surface, gap: 10 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Icon size={24} color={colors.primary} accessible={false} />{selected ? <Check size={18} color={colors.primary} accessible={false} /> : null}</View>
+          <Text style={{ color: colors.ink, fontSize: 15, lineHeight: 22, fontWeight: '600' }}>{label}</Text>
+        </Pressable>;
+      })}
+    </View> : null}
+    <AppCard style={{ marginBottom: 0, gap: 4 }}>
+    <ServiceText heading>Thông tin gửi IT</ServiceText>
     <AppInput testID="incident-title-input" label="Tiêu đề (có thể để trống khi báo sự cố)" value={title} maxLength={200} editable={!submitting && !createdId.current} onChangeText={setTitle} />
     <AppInput testID="incident-desc-input" label="Mô tả thêm hoặc lý do yêu cầu" value={description} maxLength={2000} multiline editable={!submitting && !createdId.current} onChangeText={setDescription} />
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><Switch accessibilityLabel="Tôi vẫn tiếp tục làm việc được" value={canWork} disabled={submitting || Boolean(createdId.current)} onValueChange={setCanWork} /><Text style={{ flex: 1, color: colors.ink, fontSize: 16 }}>{canWork ? 'Tôi vẫn tiếp tục làm việc được' : 'Tôi không tiếp tục làm việc được'}</Text></View>
@@ -66,5 +84,6 @@ export function RequestCreateView() {
     <ImageAttachmentPicker value={image} onChange={setImage} consent={consent} onConsent={setConsent} disabled={submitting} />
     <ServiceError error={error} />
     <AppButton testID="submit-incident-button" title={createdId.current ? 'Tiếp tục yêu cầu đã gửi' : 'Gửi yêu cầu cho IT'} onPress={confirmSubmit} loading={submitting} disabled={(image !== null && !consent) || (kind !== 'Incident' && title.trim().length < 3) || (kind === 'Privilege' && !params.catalogAppId)} />
+    </AppCard>
   </ServicePage>;
 }

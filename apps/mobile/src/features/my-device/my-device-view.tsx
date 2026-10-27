@@ -13,12 +13,14 @@ import { useAuth } from '../auth/auth-context';
 import { useI18n } from '../../lib/i18n';
 import { useAppColors, AppButton, AppCard, AppBadge } from '../../components/common';
 import { spacing, typography, radii } from '../../theme/tokens';
+import { useActiveScreen } from '../self-service/shared';
 
 export function MyDeviceView() {
   const { t } = useI18n();
   const colors = useAppColors();
   const router = useRouter();
   const { apiClient } = useAuth();
+  const active = useActiveScreen();
 
   const {
     data: deviceData,
@@ -30,6 +32,9 @@ export function MyDeviceView() {
   } = useQuery({
     queryKey: ['my-device'],
     queryFn: () => apiClient.myDevice(),
+    enabled: active,
+    staleTime: 0,
+    refetchInterval: active ? 15000 : false,
   });
 
   if (isLoading) {

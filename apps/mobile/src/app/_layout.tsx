@@ -21,7 +21,7 @@ function RootNavigationLayout() {
   const colors = useAppColors();
   const {user,status} = useAuth();
   const segments = useSegments() as string[];
-  const employeeOnly = ['my-device','incidents','incident-create','incident-detail','request-create','app-catalog','self-service-help'];
+  const employeeOnly = ['my-device','incidents','incident-create','incident-detail','incident-history','request-create','app-catalog','self-service-help'];
   if (status === 'authenticated' && user?.role !== 'Employee' && segments.some(part=>employeeOnly.includes(part))) return <Redirect href="/(tabs)"/>;
   if (status === 'authenticated' && user?.role !== 'Admin' && segments.some(part => ['company-users', 'vps-status', 'device-detail'].includes(part))) return <Redirect href="/(tabs)"/>;
 
@@ -50,6 +50,7 @@ function RootNavigationLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="incident-create" options={{ title: 'Báo sự cố mới' }} />
         <Stack.Screen name="incident-detail" options={{ title: 'Chi tiết sự cố' }} />
+        <Stack.Screen name="incident-history" options={{ title: 'Báo cáo sự cố trước đây' }} />
         <Stack.Screen name="request-create" options={{ title: 'Nhờ IT hỗ trợ' }} />
         <Stack.Screen name="request-detail" options={{ title: 'Tiến độ và trao đổi' }} />
         <Stack.Screen name="company-users" options={{ title: 'Tài khoản công ty' }} />

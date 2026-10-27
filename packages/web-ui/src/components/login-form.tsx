@@ -7,6 +7,7 @@ import { homePathForRole } from "@/lib/auth-routing";
 import { useTranslation } from "@/lib/i18n";
 import { portal, portalAllows, portalBaseUrl, portalHomeUrl } from "@/lib/portal";
 import { UiIcon } from "@/components/ui-icon";
+import { BrandMark } from "@/components/brand-mark";
 
 export function LoginForm() {
   const router = useRouter();
@@ -57,7 +58,7 @@ export function LoginForm() {
   return (
     <form className="login" onSubmit={submit} aria-busy={busy}>
       <div className="login-brand">
-        <div className="brand"><span className="brand-mark" aria-hidden="true"><UiIcon name="shield" /></span><span>SentinelLAN</span></div>
+        <div className="brand"><span className="brand-mark" aria-hidden="true"><BrandMark /></span><span>SentinelLAN</span></div>
         <button
           type="button"
           className="lang-btn"

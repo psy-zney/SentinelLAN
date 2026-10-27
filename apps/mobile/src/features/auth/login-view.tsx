@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Image, ScrollView, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from './auth-context';
 import { useI18n } from '../../lib/i18n';
@@ -50,7 +50,7 @@ export function LoginView() {
         {/* Brand Header */}
         <View style={styles.brandContainer}>
           <View style={[styles.logoBadge, { borderColor: colors.primary }]}>
-            <Text style={[styles.logoText, { color: colors.primary }]}>S</Text>
+            <Image accessibilityLabel="SentinelLAN" source={require('../../../assets/icon.png')} style={{ width: 64, height: 64, borderRadius: 14 }} />
           </View>
           <Text style={[styles.title, { color: colors.ink }]}>{t('loginTitle')}</Text>
           <Text style={[styles.subtitle, { color: colors.inkMuted }]}>{t('loginSubtitle')}</Text>
@@ -111,17 +111,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxl,
   },
   logoBadge: {
-    width: 56,
-    height: 60,
-    borderWidth: 3,
+    width: 72,
+    height: 72,
+    borderWidth: 1,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
-  },
-  logoText: {
-    fontSize: 32,
-    fontWeight: '900',
   },
   title: {
     ...typography.titleLarge,

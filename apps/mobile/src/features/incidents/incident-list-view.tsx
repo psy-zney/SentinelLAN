@@ -15,12 +15,14 @@ import { useI18n } from '../../lib/i18n';
 import { useAppColors, AppButton, AppCard, AppBadge } from '../../components/common';
 import { spacing, typography } from '../../theme/tokens';
 import { IncidentDto } from '../../lib/validation/schemas';
+import { useActiveScreen } from '../self-service/shared';
 
 export function IncidentListView() {
   const { t } = useI18n();
   const colors = useAppColors();
   const router = useRouter();
   const { apiClient } = useAuth();
+  const active = useActiveScreen();
 
   const {
     data: incidents,
@@ -32,6 +34,9 @@ export function IncidentListView() {
   } = useQuery({
     queryKey: ['my-device-incidents'],
     queryFn: () => apiClient.myDeviceIncidents(),
+    enabled: active,
+    staleTime: 0,
+    refetchInterval: active ? 5000 : false,
   });
 
   const getSeverityVariant = (severity: string): 'info' | 'warning' | 'danger' => {

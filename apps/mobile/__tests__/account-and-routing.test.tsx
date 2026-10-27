@@ -30,7 +30,7 @@ jest.mock('expo-router', () => {
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 12, left: 0, right: 0 }) }));
 jest.mock('lucide-react-native', () => {
   const Icon = () => null;
-  return { LayoutDashboard: Icon, QrCode: Icon, Monitor: Icon, Headset: Icon, UserRound: Icon };
+  return { LayoutDashboard: Icon, QrCode: Icon, Monitor: Icon, Headset: Icon, UserRound: Icon, ChevronRight: Icon, ChevronUp: Icon, Server: Icon, UsersRound: Icon };
 });
 
 const id = '00000000-0000-4000-8000-000000000001';

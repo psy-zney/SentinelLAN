@@ -28,6 +28,12 @@ Sau khi nâng SDK, development build/APK cũ cần được build lại.
 Thông báo đẩy trên Android cần development build; Expo Go vẫn mở được ứng dụng
 nhưng không đăng ký thông báo đẩy.
 
+Icon dùng SVG gốc tại `packages/web-ui/assets/brand-mark.svg`. Chạy
+`node scripts/generate-brand-icons.mjs` từ gốc repository để tạo lại favicon,
+Apple touch icon và PNG cho app. Icon launcher, nền adaptive icon và splash
+được áp dụng khi build/cài lại ứng dụng; cập nhật JavaScript không thay icon
+launcher của bản đã cài.
+
 ## Danh sách và chi tiết máy cho Admin
 
 Trong **Tổng quan → Thiết bị công ty**, tìm theo tên máy/hệ điều hành hoặc lọc
@@ -52,6 +58,20 @@ App làm mới mỗi phút khi màn hình đang mở, dừng kiểm tra và hủ
 nền hoặc rời màn hình. Số liệu cũ, thời điểm thu thập lệch, lỗi làm mới, chưa cấu
 hình và mất quyền được hiển thị riêng. Dữ liệu VPS không được lưu xuống thiết bị.
 Nếu API chưa bật giám sát, cần cấu hình bộ thu thập VPS như dashboard web.
+
+## Cập nhật yêu cầu hỗ trợ
+
+Tab **Yêu cầu** và **Tổng quan → Yêu cầu của tôi** dùng chung dữ liệu hỗ trợ.
+Kết quả API tạo yêu cầu được đưa ngay vào cache của trang đầu và trang chi tiết,
+kể cả khi ảnh đính kèm gửi thất bại. Thử gửi ảnh lại không tạo thêm yêu cầu.
+Lịch sử API sự cố cũ vẫn đọc được qua **Xem báo cáo sự cố trước đây**.
+
+Danh sách, thống kê tổng quan, chi tiết, tin nhắn và ảnh làm mới mỗi 5 giây khi
+màn hình đang mở; khi quay lại màn hình hoặc đưa app về trước sẽ tải lại ngay.
+Đây là polling gần realtime, cần kết nối API, không phải luồng WebSocket.
+Thông báo đẩy nhận được cũng đánh dấu dữ liệu liên quan cần tải lại.
+Kéo xuống ở tổng quan hoặc danh sách để làm mới thủ công. Biểu đồ chỉ thống kê
+các yêu cầu đã tải (tối đa 100 ở tổng quan, theo từng trang trong danh sách).
 
 ## Kiểm tra
 

@@ -32,42 +32,57 @@ export function MyDeviceView() {
 
   useEffect(() => {
     let active = true;
+    let pending = false;
 
     const client = new ApiClient();
-    Promise.all([
-      client.myDevice(),
-      client.myDeviceTelemetry(10).catch(() => []),
-      client.myDeviceIncidents().catch(() => [])
-    ])
-      .then(([dev, tele, incs]) => {
-        if (!active) return;
-        setDevice(dev);
-        setTelemetry(tele);
-        setIncidents(incs);
-        setError("");
-        setEmpty(false);
-        setLoading(false);
-      })
-      .catch((cause) => {
-        if (!active) return;
-        setLoading(false);
-        if (cause instanceof ApiError && cause.status === 404) {
-          setDevice(null);
+    const load = () => {
+      if (pending) return;
+      pending = true;
+      void Promise.all([
+        client.myDevice(),
+        client.myDeviceTelemetry(10).catch(() => []),
+        client.myDeviceIncidents().catch(() => [])
+      ])
+        .then(([dev, tele, incs]) => {
+          if (!active) return;
+          setDevice(dev);
+          setTelemetry(tele);
+          setIncidents(incs);
           setError("");
-          setEmpty(true);
-          return;
-        }
-        setDevice(null);
-        setEmpty(false);
-        setError(
-          lang === "vi"
-            ? "Chưa thể tải thiết bị được gán. Hãy liên hệ với Quản trị viên IT của bạn."
-            : "No assigned device could be loaded. Contact your SentinelLAN administrator."
-        );
-      });
+          setEmpty(false);
+          setLoading(false);
+        })
+        .catch((cause) => {
+          if (!active) return;
+          setLoading(false);
+          if (cause instanceof ApiError && cause.status === 404) {
+            setDevice(null);
+            setError("");
+            setEmpty(true);
+            return;
+          }
+          setDevice(null);
+          setEmpty(false);
+          setError(
+            lang === "vi"
+              ? "Chưa thể tải thiết bị được gán. Hãy liên hệ với Quản trị viên IT của bạn."
+              : "No assigned device could be loaded. Contact your SentinelLAN administrator."
+          );
+        }).finally(() => { pending = false; });
+    };
+    load();
+    const tick = () => { if (document.visibilityState === 'visible') load(); };
+    const timer = window.setInterval(tick, 5000);
+    document.addEventListener('visibilitychange', tick);
+    window.addEventListener('focus', tick);
+    window.addEventListener('online', tick);
 
     return () => {
       active = false;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', tick);
+      window.removeEventListener('focus', tick);
+      window.removeEventListener('online', tick);
     };
   }, [lang, reloadKey]);
 
@@ -91,9 +106,8 @@ export function MyDeviceView() {
       setReportDesc("");
       setReportSuccessMessage(t("issueSubmitted"));
 
-      // Refresh incidents
-      const updatedIncidents = await new ApiClient().myDeviceIncidents().catch(() => []);
-      setIncidents(updatedIncidents);
+      // Dispose any older poll before loading the report receipt.
+      setReloadKey(key => key + 1);
     } catch {
       alert(lang === "vi" ? "Không thể gửi báo cáo sự cố. Vui lòng thử lại." : "Failed to submit incident report.");
     } finally {

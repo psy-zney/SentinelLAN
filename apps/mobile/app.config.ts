@@ -57,7 +57,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package: 'com.sentinellan.employee',
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: '#0b6b5f',
+      backgroundColor: '#ffffff',
     },
     permissions: ['android.permission.CAMERA'],
     intentFilters: [
@@ -80,6 +80,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     'expo-router',
+    ['expo-splash-screen', { image: './assets/splash-icon.png', imageWidth: 200, backgroundColor: '#ffffff' }],
     [
       'expo-camera',
       {

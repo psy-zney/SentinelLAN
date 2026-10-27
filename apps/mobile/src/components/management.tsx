@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAppColors } from './common';
+import { ChevronRight, ChevronUp, type LucideIcon } from 'lucide-react-native';
 
 export function StatusPill({ label, tone = 'neutral' }: { label: string; tone?: 'neutral' | 'success' | 'warning' | 'danger' | 'info' }) {
   const colors = useAppColors();
@@ -19,18 +20,19 @@ export function InfoRow({ label, value }: { label: string; value?: string | null
   </View>;
 }
 
-export function ActionRow({ title, description, onPress, expanded }: {
-  title: string; description: string; onPress: () => void; expanded?: boolean;
+export function ActionRow({ title, description, onPress, expanded, icon: Icon }: {
+  title: string; description: string; onPress: () => void; expanded?: boolean; icon?: LucideIcon;
 }) {
   const colors = useAppColors();
   return <Pressable accessibilityRole="button" accessibilityLabel={title}
     accessibilityHint={description} accessibilityState={expanded === undefined ? undefined : { expanded }}
     onPress={onPress} style={({ pressed }) => [styles.action, { borderBottomColor: colors.border, backgroundColor: pressed ? colors.surfaceSubtle : colors.surface }]}>
+    {Icon ? <View style={{ padding: 10, borderRadius: 12, backgroundColor: colors.primaryLight }}><Icon size={22} color={colors.primary} accessible={false} /></View> : null}
     <View style={{ flex: 1, gap: 4 }}>
       <Text style={{ color: colors.ink, fontWeight: '600', fontSize: 16, lineHeight: 23 }}>{title}</Text>
       <Text style={{ color: colors.inkMuted, fontSize: 14, lineHeight: 21 }}>{description}</Text>
     </View>
-    <Text importantForAccessibility="no" accessibilityElementsHidden style={{ color: colors.primary, fontSize: 26 }}>{expanded === true ? '⌃' : '›'}</Text>
+    {expanded ? <ChevronUp size={20} color={colors.primary} accessible={false} /> : <ChevronRight size={20} color={colors.primary} accessible={false} />}
   </Pressable>;
 }
 
