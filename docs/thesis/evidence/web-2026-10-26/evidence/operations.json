@@ -1,0 +1,31 @@
+[
+  {
+    "type": "device_assignment_transfer",
+    "from_device": "ZNEY",
+    "to_device": "SWEETYCANDY",
+    "employee": "dev@gmail.com",
+    "status": "verified",
+    "at_utc": "2026-10-26T08:28:53.311Z"
+  },
+  {
+    "type": "support_request_created",
+    "request_id": "050054ae-b3c0-48b1-8dcd-121be10f9d3e",
+    "title": "NGHIỆM THU ĐỒ ÁN — Hỗ trợ máy SWEETYCANDY",
+    "device": "SWEETYCANDY",
+    "at_utc": "2026-10-26T08:31:15.284Z"
+  },
+  {
+    "type": "support_request_triaged",
+    "request_id": "050054ae-b3c0-48b1-8dcd-121be10f9d3e",
+    "status": "InProgress",
+    "at_utc": "2026-10-26T08:35:00.212Z"
+  },
+  {
+    "type": "safe_command_completed",
+    "command_id": "050ede9a-91e6-4a67-a46a-9162a226a2db",
+    "command": "CollectTelemetryNow",
+    "status": "Succeeded",
+    "message": "Fresh system telemetry collected and acknowledged by the server",
+    "at_utc": "2026-10-26T08:41:28.408Z"
+  }
+]

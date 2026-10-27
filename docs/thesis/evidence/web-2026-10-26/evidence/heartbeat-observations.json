@@ -1,0 +1,16 @@
+[
+  {
+    "observed_at_utc": "2026-10-26T08:52:02.589Z",
+    "device": "SWEETYCANDY",
+    "ui_last_seen": "15:51:56",
+    "agent_version": "1.0.4",
+    "source": "https://manager.zney295.id.vn/employee/my-device"
+  },
+  {
+    "observed_at_utc": "2026-10-26T08:53:38.368Z",
+    "device": "SWEETYCANDY",
+    "ui_last_seen": "15:53:32",
+    "agent_version": "1.0.4",
+    "source": "https://manager.zney295.id.vn/employee/my-device"
+  }
+]

@@ -32,7 +32,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'SentinelLAN',
   slug: 'sentinellan-employee',
+  owner: 'zney295',
   version: '1.0.0',
+  runtimeVersion: { policy: 'appVersion' },
+  updates: { url: 'https://u.expo.dev/44615245-9eed-4aad-aded-4e5681e7d14a' },
   orientation: 'portrait',
   icon: './assets/icon.png',
   scheme: 'sentinellan',
@@ -42,6 +45,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supportsTablet: false,
     bundleIdentifier: 'com.sentinellan.employee',
     infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
       NSCameraUsageDescription:
         'SentinelLAN uses the camera when you choose to scan a computer QR code or photograph an error to send to IT.',
       NSPhotoLibraryUsageDescription:
@@ -90,6 +94,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     apiUrl: configuredApiUrl,
     webUrl: configuredWebUrl,
-    ...(process.env.EXPO_PUBLIC_EAS_PROJECT_ID ? { eas: { projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID } } : {}),
+    eas: { projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID || '44615245-9eed-4aad-aded-4e5681e7d14a' },
   },
 });

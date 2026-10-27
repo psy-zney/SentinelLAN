@@ -1,0 +1,35 @@
+{
+  "observed_at_utc": "2026-10-26T11:26:04.448Z",
+  "responses": [
+    {
+      "path": "/health/ready",
+      "status": 200,
+      "data": {
+        "status": "ready"
+      }
+    },
+    {
+      "path": "/api/v1/agent/compatibility",
+      "status": 200,
+      "data": {
+        "version": "1.0.0+af4fb1d3860f7623f49529c5f6ce01d0c9334350",
+        "commit": "af4fb1d3860f7623f49529c5f6ce01d0c9334350",
+        "commandKeyId": "20261009-admin-employee-97dba4",
+        "commandPublicKeySha256": "1390cd4425fa6c9db8ed4cf25fa91b62c57d0bb9bd0a458d6fd06639e4a92b9d",
+        "protocolVersion": 1,
+        "authentication": [
+          "hmac-sha256-v1"
+        ],
+        "features": [
+          "enrollment-recovery",
+          "request-signing-upgrade",
+          "heartbeat",
+          "commands",
+          "policy",
+          "agent-wake"
+        ],
+        "exactVersionRequired": false
+      }
+    }
+  ]
+}

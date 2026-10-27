@@ -1,0 +1,430 @@
+[
+  {
+    "id": "W00-admin-login",
+    "file": "screenshots/W00-admin-login.png",
+    "title": "Trang đăng nhập quản trị",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/login",
+    "captured_at_utc": "2026-10-26T08:19:33.849Z",
+    "sha256": "51b806904c758f08c25675eaa305547670f1e0ac2ac79bc062343ac98072346b",
+    "captured_at_local": "2026-10-26T15:19:33.849000+07:00"
+  },
+  {
+    "id": "W01-employee-login",
+    "file": "screenshots/W01-employee-login.png",
+    "title": "Trang đăng nhập nhân viên",
+    "role": "Employee",
+    "url": "https://manager.zney295.id.vn/employee/login",
+    "captured_at_utc": "2026-10-26T08:20:53.689Z",
+    "sha256": "7a339e9aac53810b0bd060ff92114dca54e386b8dd90c642fc929d8547018953",
+    "captured_at_local": "2026-10-26T15:20:53.689000+07:00"
+  },
+  {
+    "id": "W02-admin-dashboard",
+    "file": "screenshots/W02-admin-dashboard.png",
+    "title": "Tổng quan quản trị trên hệ thống production",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/dashboard",
+    "captured_at_utc": "2026-10-26T08:23:17.670Z",
+    "sha256": "e36e52fe9a42e2d74faa1b4d4940e0233287639f3c2643247ab207acd09961b3",
+    "captured_at_local": "2026-10-26T15:23:17.670000+07:00"
+  },
+  {
+    "id": "W03-admin-device-list",
+    "file": "screenshots/W03-admin-device-list.png",
+    "title": "Thiết bị SWEETYCANDY đang kết nối trước phân công",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/devices",
+    "captured_at_utc": "2026-10-26T08:23:49.622Z",
+    "sha256": "67075dcf19a787a743884f2fd617cbb1fcd3a3df2453843aa64ccafedfda4062",
+    "captured_at_local": "2026-10-26T15:23:49.622000+07:00"
+  },
+  {
+    "id": "W04-admin-device-hardware",
+    "file": "screenshots/W04-admin-device-hardware.png",
+    "title": "Thông tin phần cứng và bảo vệ thiết bị SWEETYCANDY",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/devices/7918a8e8-0ae5-44b6-b925-714d8e4dfc6e",
+    "captured_at_utc": "2026-10-26T08:25:28.457Z",
+    "sha256": "038036e6a31f4cbed3ed627a3cd59696aa0dc5e7259c1c8a49da3850f9fd3d8e",
+    "captured_at_local": "2026-10-26T15:25:28.457000+07:00"
+  },
+  {
+    "id": "W05-assign-device-confirmation",
+    "file": "screenshots/W05-assign-device-confirmation.png",
+    "title": "Xác nhận giao SWEETYCANDY cho nhân viên",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/devices/7918a8e8-0ae5-44b6-b925-714d8e4dfc6e",
+    "captured_at_utc": "2026-10-26T08:26:39.441Z",
+    "sha256": "4f4e9e43b6439c5d360cdcde78148ca00d787a6b1984cafacc6de667c80a3907",
+    "captured_at_local": "2026-10-26T15:26:39.441000+07:00"
+  },
+  {
+    "id": "W06-employee-before-handover",
+    "file": "screenshots/W06-employee-before-handover.png",
+    "title": "Máy ZNEY đang được giao trước khi chuyển phân công",
+    "role": "Employee",
+    "url": "https://manager.zney295.id.vn/employee/my-device",
+    "captured_at_utc": "2026-10-26T08:27:50.491Z",
+    "sha256": "20141bcce4c50a5a051f8314ee9b8e062fe3d30b4218d11b56342323eba25934",
+    "note": "Ảnh trước thao tác; ZNEY chưa kết nối, không dùng làm bằng chứng heartbeat của SWEETYCANDY.",
+    "captured_at_local": "2026-10-26T15:27:50.491000+07:00"
+  },
+  {
+    "id": "W07-assign-sweetycandy",
+    "file": "screenshots/W07-assign-sweetycandy.png",
+    "title": "Form giao máy SWEETYCANDY cho Employee",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/devices/7918a8e8-0ae5-44b6-b925-714d8e4dfc6e",
+    "captured_at_utc": "2026-10-26T08:28:21.519Z",
+    "sha256": "0562a315b949123fb111f8b2d3146c88cba797617fbbc51bbb61989df307df19",
+    "captured_at_local": "2026-10-26T15:28:21.519000+07:00"
+  },
+  {
+    "id": "W08-admin-assigned-device",
+    "file": "screenshots/W08-admin-assigned-device.png",
+    "title": "SWEETYCANDY đã được giao cho nhân viên và đang Online",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/devices/7918a8e8-0ae5-44b6-b925-714d8e4dfc6e",
+    "captured_at_utc": "2026-10-26T08:28:53.176Z",
+    "sha256": "ae64df0b72bb202f95a7964e500c0f34f354d2a59939ce966740e6b3fa3e4a56",
+    "captured_at_local": "2026-10-26T15:28:53.176000+07:00"
+  },
+  {
+    "id": "W09-admin-device-online",
+    "file": "screenshots/W09-admin-device-online.png",
+    "title": "Trạng thái Online, CPU/RAM và người sử dụng của SWEETYCANDY",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/devices/7918a8e8-0ae5-44b6-b925-714d8e4dfc6e",
+    "captured_at_utc": "2026-10-26T08:28:53.311Z",
+    "sha256": "87fa27c38d9bb30312b791d9fadc38414f3b12f0596cf00704134770c6c4d465",
+    "captured_at_local": "2026-10-26T15:28:53.311000+07:00"
+  },
+  {
+    "id": "W10-employee-assigned-device",
+    "file": "screenshots/W10-employee-assigned-device.png",
+    "title": "Employee xem máy SWEETYCANDY vừa được giao",
+    "role": "Employee",
+    "url": "https://manager.zney295.id.vn/employee/my-device",
+    "captured_at_utc": "2026-10-26T08:28:55.721Z",
+    "sha256": "91a1cd88369a0f2744f9c45cca84778aa035ab6e3e1a3b0240daaa2adee057b5",
+    "captured_at_local": "2026-10-26T15:28:55.721000+07:00"
+  },
+  {
+    "id": "W11-employee-support-home",
+    "file": "screenshots/W11-employee-support-home.png",
+    "title": "Cổng hỗ trợ IT dành cho nhân viên",
+    "role": "Employee",
+    "url": "https://manager.zney295.id.vn/employee/support",
+    "captured_at_utc": "2026-10-26T08:30:05.639Z",
+    "sha256": "d07819383028c2d852805f22f555219da459244df516f95ac30b5d5ea7f0dcc1",
+    "captured_at_local": "2026-10-26T15:30:05.639000+07:00"
+  },
+  {
+    "id": "W12-employee-create-request",
+    "file": "screenshots/W12-employee-create-request.png",
+    "title": "Nhân viên mô tả yêu cầu hỗ trợ nghiệm thu trên máy được giao",
+    "role": "Employee",
+    "url": "https://manager.zney295.id.vn/employee/support",
+    "captured_at_utc": "2026-10-26T08:31:02.890Z",
+    "sha256": "90d91caac35c365700d236c80bc7621b99ea5a118dd35f210932b934f794346d",
+    "captured_at_local": "2026-10-26T15:31:02.890000+07:00"
+  },
+  {
+    "id": "W13-employee-request-created",
+    "file": "screenshots/W13-employee-request-created.png",
+    "title": "Yêu cầu hỗ trợ đã tạo thành công trên SWEETYCANDY",
+    "role": "Employee",
+    "url": "https://manager.zney295.id.vn/employee/support",
+    "captured_at_utc": "2026-10-26T08:31:15.284Z",
+    "sha256": "293057956a851420ba13e561f3fa47c43655ff83a02d90bde6e5cd27913947ef",
+    "request_id": "050054ae-b3c0-48b1-8dcd-121be10f9d3e",
+    "captured_at_local": "2026-10-26T15:31:15.284000+07:00"
+  },
+  {
+    "id": "W14-employee-image-preview",
+    "file": "screenshots/W14-employee-image-preview.png",
+    "title": "Xem trước ảnh minh chứng và yêu cầu đồng ý trước khi gửi",
+    "role": "Employee",
+    "url": "https://manager.zney295.id.vn/employee/support",
+    "captured_at_utc": "2026-10-26T08:32:26.911Z",
+    "sha256": "6027857172d684529a2701d9d45d781845c3da30a0c66f26e329cedc69096d1b",
+    "request_id": "050054ae-b3c0-48b1-8dcd-121be10f9d3e",
+    "captured_at_local": "2026-10-26T15:32:26.911000+07:00"
+  },
+  {
+    "id": "W15-employee-image-consent",
+    "file": "screenshots/W15-employee-image-consent.png",
+    "title": "Nhân viên xác nhận đồng ý gửi ảnh đã chọn",
+    "role": "Employee",
+    "url": "https://manager.zney295.id.vn/employee/support",
+    "captured_at_utc": "2026-10-26T08:32:26.997Z",
+    "sha256": "9b9135fb8c8cfd8b88f5dd1efbe01683af7359ee756017b188804a4eee81c06c",
+    "request_id": "050054ae-b3c0-48b1-8dcd-121be10f9d3e",
+    "captured_at_local": "2026-10-26T15:32:26.997000+07:00"
+  },
+  {
+    "id": "W16-employee-after-image-upload",
+    "file": "screenshots/W16-employee-after-image-upload.png",
+    "title": "Yêu cầu hỗ trợ sau khi gửi ảnh minh chứng",
+    "role": "Employee",
+    "url": "https://manager.zney295.id.vn/employee/support",
+    "captured_at_utc": "2026-10-26T08:32:44.599Z",
+    "sha256": "b7858d24b61723fe28999eafb05a25b0d07313c2f1e5387f25d4e49d8e8903a3",
+    "request_id": "050054ae-b3c0-48b1-8dcd-121be10f9d3e",
+    "attachment_http_status": 200,
+    "captured_at_local": "2026-10-26T15:32:44.599000+07:00"
+  },
+  {
+    "id": "W17-admin-support-queue",
+    "file": "screenshots/W17-admin-support-queue.png",
+    "title": "Admin tiếp nhận yêu cầu hỗ trợ mới từ Employee",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/support",
+    "captured_at_utc": "2026-10-26T08:32:48.041Z",
+    "sha256": "fbfec94eb119d8ebb4dcc7c298941eae553f606f76e268a4909f2874e1e2fac0",
+    "request_id": "050054ae-b3c0-48b1-8dcd-121be10f9d3e",
+    "captured_at_local": "2026-10-26T15:32:48.041000+07:00"
+  },
+  {
+    "id": "W18-admin-request-triage",
+    "file": "screenshots/W18-admin-request-triage.png",
+    "title": "Admin phân công và tiếp nhận xử lý yêu cầu nghiệm thu",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/support",
+    "captured_at_utc": "2026-10-26T08:34:26.340Z",
+    "sha256": "b1f6be1aefa2e10f70165f3e294211dddd4e14b88db34e9df41c628c3f3cec83",
+    "request_id": "050054ae-b3c0-48b1-8dcd-121be10f9d3e",
+    "captured_at_local": "2026-10-26T15:34:26.340000+07:00"
+  },
+  {
+    "id": "W19-admin-request-in-progress",
+    "file": "screenshots/W19-admin-request-in-progress.png",
+    "title": "Yêu cầu nghiệm thu được Admin tiếp nhận và phân công xử lý",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/support",
+    "captured_at_utc": "2026-10-26T08:34:57.922Z",
+    "sha256": "96cab194acaea7bf23c04d3409b9bfaae4ea4cbfd8afbc6949813f773614deab",
+    "request_id": "050054ae-b3c0-48b1-8dcd-121be10f9d3e",
+    "captured_at_local": "2026-10-26T15:34:57.922000+07:00"
+  },
+  {
+    "id": "W20-employee-request-progress",
+    "file": "screenshots/W20-employee-request-progress.png",
+    "title": "Employee thấy trạng thái và người phụ trách sau khi IT tiếp nhận",
+    "role": "Employee",
+    "url": "https://manager.zney295.id.vn/employee/support",
+    "captured_at_utc": "2026-10-26T08:35:00.212Z",
+    "sha256": "659813af745d936426b7201c90937cd71a7f89eb0327882389a059214c542558",
+    "request_id": "050054ae-b3c0-48b1-8dcd-121be10f9d3e",
+    "captured_at_local": "2026-10-26T15:35:00.212000+07:00"
+  },
+  {
+    "id": "W21-safe-telemetry-command",
+    "file": "screenshots/W21-safe-telemetry-command.png",
+    "title": "Xác nhận lệnh cập nhật thông số máy SWEETYCANDY",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/devices/7918a8e8-0ae5-44b6-b925-714d8e4dfc6e",
+    "captured_at_utc": "2026-10-26T08:38:58.670Z",
+    "sha256": "09d6416f1a567b0130c1bfa4e25adeaa32b7f4fdbbbe888f8bcf9e85635385d1",
+    "captured_at_local": "2026-10-26T15:38:58.670000+07:00"
+  },
+  {
+    "id": "W22-command-success-receipt",
+    "file": "screenshots/W22-command-success-receipt.png",
+    "title": "Lệnh CollectTelemetryNow thành công và có biên lai Agent",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/commands",
+    "captured_at_utc": "2026-10-26T08:41:28.407Z",
+    "sha256": "7e7260c63bdf2862a532f7c08702a15a74a1885f3ad58b22176f4d5cc895d565",
+    "command_id": "050ede9a-91e6-4a67-a46a-9162a226a2db",
+    "captured_at_local": "2026-10-26T15:41:28.407000+07:00"
+  },
+  {
+    "id": "W23-vps-overview",
+    "file": "screenshots/W23-vps-overview.png",
+    "title": "Giám sát VPS Oracle qua giao diện quản trị",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/vps",
+    "captured_at_utc": "2026-10-26T08:38:59.701Z",
+    "sha256": "514bf12ea5052bdd37752085a1fcf538a1a2f3697296d2a6f9db7e5425a69de4",
+    "captured_at_local": "2026-10-26T15:38:59.701000+07:00"
+  },
+  {
+    "id": "W24-vps-docker-sentinellan",
+    "file": "screenshots/W24-vps-docker-sentinellan.png",
+    "title": "Bảy container SentinelLAN trong màn hình giám sát Docker",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/vps",
+    "captured_at_utc": "2026-10-26T08:42:39.566Z",
+    "sha256": "cd911f122de752be86f36aaf000fa6322a6cf4328f0392f2f8b704954cf4f5ad",
+    "captured_at_local": "2026-10-26T15:42:39.566000+07:00"
+  },
+  {
+    "id": "W25-vps-api-image",
+    "file": "screenshots/W25-vps-api-image.png",
+    "title": "Image API trên VPS khớp commit release af4fb1d",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/vps",
+    "captured_at_utc": "2026-10-26T08:43:55.578Z",
+    "sha256": "ed6006f50545ece11598b0c7d14833d2d6ad54190dbf4281afa0f061fc374583",
+    "observed_revision": "af4fb1d3860f7623f49529c5f6ce01d0c9334350",
+    "captured_at_local": "2026-10-26T15:43:55.578000+07:00"
+  },
+  {
+    "id": "W26-vps-services",
+    "file": "screenshots/W26-vps-services.png",
+    "title": "Danh sách dịch vụ trên VPS trong chế độ giám sát",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/vps",
+    "captured_at_utc": "2026-10-26T08:43:59.825Z",
+    "sha256": "42926008bd86399d6c8a18295c27c06ad8f96b853d8d50e5207fab718afaee10",
+    "captured_at_local": "2026-10-26T15:43:59.825000+07:00"
+  },
+  {
+    "id": "W27-vps-sentinellan-topology",
+    "file": "screenshots/W27-vps-sentinellan-topology.png",
+    "title": "Đường đi API, web và PostgreSQL trong nhánh SentinelLAN",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/vps",
+    "captured_at_utc": "2026-10-26T08:45:32.486Z",
+    "sha256": "b9f2a71647599c5896095bd8b37b10e038724af9aeabfd37d960bf4a68516958",
+    "note": "Sơ đồ theo cấu hình triển khai và snapshot do giao diện giám sát cung cấp.",
+    "captured_at_local": "2026-10-26T15:45:32.486000+07:00"
+  },
+  {
+    "id": "W28-vps-cpu",
+    "file": "screenshots/W28-vps-cpu.png",
+    "title": "Chi tiết CPU VPS và các container đang chạy",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/vps",
+    "captured_at_utc": "2026-10-26T08:47:09.446Z",
+    "sha256": "caf8d8825480e8f8fb02e835e11bf2bcc5ab11e999bf50bbf5c083ee33b33573",
+    "captured_at_local": "2026-10-26T15:47:09.446000+07:00"
+  },
+  {
+    "id": "W29-vps-memory",
+    "file": "screenshots/W29-vps-memory.png",
+    "title": "Chi tiết bộ nhớ VPS và mức dùng theo container",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/vps",
+    "captured_at_utc": "2026-10-26T08:47:12.672Z",
+    "sha256": "0522d24e48ec31d3a018e29e6e2bf456a82bb79394c68d07854dc7fad926cf88",
+    "captured_at_local": "2026-10-26T15:47:12.672000+07:00"
+  },
+  {
+    "id": "W30-vps-disk",
+    "file": "screenshots/W30-vps-disk.png",
+    "title": "Giám sát dung lượng theo thành phần và dịch vụ trên VPS",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/vps",
+    "captured_at_utc": "2026-10-26T08:48:34.452Z",
+    "sha256": "c4fe033b91c0a4ed4e216615297888b43000b7564abeb3fd7a6c7e3a5ac29e32",
+    "captured_at_local": "2026-10-26T15:48:34.452000+07:00"
+  },
+  {
+    "id": "W31-vps-listening-ports",
+    "file": "screenshots/W31-vps-listening-ports.png",
+    "title": "Danh sách cổng đang nghe trên VPS ở chế độ chỉ đọc",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/vps",
+    "captured_at_utc": "2026-10-26T08:48:37.676Z",
+    "sha256": "da90e69e899ed96b31c66a0ae528d1efb6299bbf3503a4c623143a257b7d17b3",
+    "captured_at_local": "2026-10-26T15:48:37.676000+07:00"
+  },
+  {
+    "id": "W32-audit-operations",
+    "file": "screenshots/W32-audit-operations.png",
+    "title": "Audit ghi nhận phân công thiết bị, hỗ trợ và lệnh an toàn",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/audit-logs",
+    "captured_at_utc": "2026-10-26T08:48:51.748Z",
+    "sha256": "8c6747486b73f68c86b3d095061d75086e5e0b2a5e70e93ee5a8bb4a6172bfe6",
+    "captured_at_local": "2026-10-26T15:48:51.748000+07:00"
+  },
+  {
+    "id": "W33-audit-command-issued",
+    "file": "screenshots/W33-audit-command-issued.png",
+    "title": "Audit ghi nhận thời điểm ban hành lệnh có lý do",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/audit-logs",
+    "captured_at_utc": "2026-10-26T08:49:56.942Z",
+    "sha256": "0b27b29ba95c7c3792e40131d11430086aa6489cf7ba440ee4b48a51de04c7f8",
+    "note": "Kết quả cuối của lệnh nằm tại W22/W32; trạng thái Đang chờ ở đây là kết quả sự kiện lúc phát lệnh.",
+    "captured_at_local": "2026-10-26T15:49:56.942000+07:00"
+  },
+  {
+    "id": "W34-protection-policies",
+    "file": "screenshots/W34-protection-policies.png",
+    "title": "Danh sách cấu hình bảo vệ và giới hạn áp dụng hiển thị trên web",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/policies",
+    "captured_at_utc": "2026-10-26T08:49:57.014Z",
+    "sha256": "1e516d61dceea98cbf34ae792636546acf7dc880542215f267edae11610787f4",
+    "note": "Có cấu hình mẫu; không gửi RefreshPolicy và không thay đổi chính sách Windows trong phiên này.",
+    "captured_at_local": "2026-10-26T15:49:57.014000+07:00"
+  },
+  {
+    "id": "W35-device-alerts",
+    "file": "screenshots/W35-device-alerts.png",
+    "title": "Cảnh báo thực tế của SWEETYCANDY và các tình huống mẫu được đánh dấu",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/alerts",
+    "captured_at_utc": "2026-10-26T08:51:59.999Z",
+    "sha256": "2ef6e77192f5a85f63c9d29282b99daa497eee3f81c1d80c3aabfec5f5506a37",
+    "note": "Không thay đổi trạng thái cảnh báo; chưa kết luận máy nhiễm mã độc từ nhãn Cần IT kiểm tra.",
+    "captured_at_local": "2026-10-26T15:51:59.999000+07:00"
+  },
+  {
+    "id": "W36-employee-live-heartbeat",
+    "file": "screenshots/W36-employee-live-heartbeat.png",
+    "title": "Employee quan sát heartbeat mới và phiên bản Agent 1.0.4",
+    "role": "Employee",
+    "url": "https://manager.zney295.id.vn/employee/my-device",
+    "captured_at_utc": "2026-10-26T08:52:02.757Z",
+    "sha256": "90d036ddc096a440a41136288a8219f47c3fe9a0fd4bdbccec130a2bcd14c908",
+    "captured_at_local": "2026-10-26T15:52:02.757000+07:00"
+  },
+  {
+    "id": "W37-device-use-history",
+    "file": "screenshots/W37-device-use-history.png",
+    "title": "Lịch sử sử dụng hiển thị của thiết bị SWEETYCANDY",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/devices/7918a8e8-0ae5-44b6-b925-714d8e4dfc6e",
+    "captured_at_utc": "2026-10-26T08:53:33.087Z",
+    "sha256": "f07f5821e99918fbc4d4eaaeed497b2d0f430aefb847e05abe1103ad1965dd07",
+    "note": "Ảnh giao diện lịch sử; sự kiện phân công đã được xác minh riêng trong audit W32.",
+    "captured_at_local": "2026-10-26T15:53:33.087000+07:00"
+  },
+  {
+    "id": "W38-admin-received-image",
+    "file": "screenshots/W38-admin-received-image.png",
+    "title": "Admin mở được ảnh đính kèm của yêu cầu hỗ trợ",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/support",
+    "captured_at_utc": "2026-10-26T08:53:36.299Z",
+    "sha256": "87e5d7296bd6004268209b5878f91275238c0865485ede41f9a8c25e2c0b7d6d",
+    "request_id": "050054ae-b3c0-48b1-8dcd-121be10f9d3e",
+    "captured_at_local": "2026-10-26T15:53:36.299000+07:00"
+  },
+  {
+    "id": "W39-internal-accounts",
+    "file": "screenshots/W39-internal-accounts.png",
+    "title": "Vai trò và trạng thái tài khoản nội bộ Admin và Employee",
+    "role": "Admin",
+    "url": "https://manager.zney295.id.vn/company/users",
+    "captured_at_utc": "2026-10-26T08:52:00.074Z",
+    "sha256": "71a4038178d1b76dd208b28a366d4d765200b8cbd54f67c273190d6570fcc230",
+    "captured_at_local": "2026-10-26T15:52:00.074000+07:00"
+  },
+  {
+    "id": "W40-employee-heartbeat-next",
+    "file": "screenshots/W40-employee-heartbeat-next.png",
+    "title": "Heartbeat mới ở lượt quan sát kế tiếp của Employee",
+    "role": "Employee",
+    "url": "https://manager.zney295.id.vn/employee/my-device",
+    "captured_at_utc": "2026-10-26T08:53:38.487Z",
+    "sha256": "b4d14f1ffdf8db4ffef092c22e4aaff30d9bdf7b06edc2c16d5226030ec028ad",
+    "captured_at_local": "2026-10-26T15:53:38.487000+07:00"
+  }
+]

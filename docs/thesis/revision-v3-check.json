@@ -1,0 +1,21 @@
+{
+  "pages": 54,
+  "heading1": 7,
+  "heading2": 41,
+  "heading3": 3,
+  "toc_fields": [
+    " TOC \\o \"1-3\" \\h \\z ",
+    " TOC \\t \"SLN Table Caption,1\" \\h \\z ",
+    " TOC \\t \"SLN Figure Caption,1\" \\h \\z "
+  ],
+  "page_references_verified": 85,
+  "dot_leaders": 85,
+  "self_citations": 0,
+  "author_name_on_cover_only": true,
+  "user_abstract_preserved": true,
+  "declaration_absent": true,
+  "font": "TimesNewRomanPSMT and variants embedded",
+  "source_sha256": "0eab5998409ab06c4ee1bdacb314dd93a45cbd897b2b8d239c2f098d7f5fcd72",
+  "docx_sha256": "bba7d1c22354de9621cc9ed45b8a1d3e540f84c6b9777c84bc8b1da78e8241b4",
+  "pdf_sha256": "be0f4d8052a9c840bad605b266dbee91f1959245401c73455c6f558658cb6665"
+}

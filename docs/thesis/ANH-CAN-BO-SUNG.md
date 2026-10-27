@@ -1,3 +1,5 @@
+> Cập nhật 27/10/2026: danh sách dưới đây đối chiếu bản gốc 24/10. Bản v3.1 và bộ 41 ảnh web ngày 26/10 đã được thêm; xem [hồ sơ hiện tại](README.md). Bằng chứng web đã bổ sung, còn mobile native và các nghiệm thu OS vẫn cần thực hiện riêng.
+
 # Ảnh cần bổ sung cho đồ án SentinelLAN
 
 Đối chiếu trực tiếp file `SentinelLAN-Do-an-da-sua-2026-10-24.docx` do tác giả cung cấp. File Word được lưu nguyên bản, không chỉnh nội dung hoặc cập nhật số liệu trong lần thêm này.
